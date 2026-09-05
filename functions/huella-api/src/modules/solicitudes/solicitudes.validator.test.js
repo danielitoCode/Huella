@@ -32,7 +32,7 @@ describe('validateCreate', () => {
 
 describe('validateGetByCode', () => {
   it('acepta código válido', () => {
-    expect(validateGetByCode({ codigo: 'HUE-2026-AB12CD' }).codigo).toBe('HUE-2026-AB12CD');
+    expect(validateGetByCode({ codigo: 'HUE-2026-AB23CD' }).codigo).toBe('HUE-2026-AB23CD');
   });
 
   it('rechaza código inválido', () => {
