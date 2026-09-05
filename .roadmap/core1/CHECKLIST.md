@@ -11,7 +11,7 @@
 
 - [x] **0.1** Rama `core1` creada desde `master`
 - [x] **0.2** Directorio `.roadmap/core1` y este checklist publicados
-- [x] **0.3** Primer PR de este archivo mergeado a `master` (deja el roadmap visible en la rama principal)
+- [x] **0.3** Primer PR de este archivo mergeado a `master` (roadmap visible en la rama principal)
 
 ---
 
@@ -20,14 +20,30 @@
 *Sin esto el código de functions y el front no tienen backend real.*
 
 - [x] **1.1** Proyecto Appwrite + plataforma Web (`localhost` + dominio futuro)
-- [x] **1.2** Database `huella` y tabla/colección `solicitudes` (schema acordado: varchar/enum/text, sin fechas propias; índices `codigo`, `email`, `estado`, `diditSessionId`)
+- [x] **1.2** Database `huella` y tabla/colección `solicitudes` (schema + índices)
 - [x] **1.3** Colección `kyc_verifications` + índices
 - [x] **1.4** Colección `webhook_events` (`event_id` unique) + índices
-- [x] **1.5** Colección `operadores` (o labels/team Appwrite Auth) lista para backoffice
+- [x] **1.5** Colección `operadores` lista para backoffice
+- [x] **1.5b** Colección `auditoria` (trazas de estado)
 - [x] **1.6** API Key de servidor con scopes mínimos + variables en `.env` local (desde `.env.example`)
 - [ ] **1.7** Functions desplegadas: `huella-api` y `huella-webhooks` (entrypoint, env, execute permissions)
 
 **Criterio de cierre §1:** un `POST` de prueba a `huella-api` con `action: "solicitudes.getByCode"` responde JSON estructurado (aunque sea NOT_FOUND).
+
+**Estado §1:** schema completo en Console. Solo falta **1.7** deploy de las dos functions.
+
+### Guía rápida deploy 1.7
+
+| Function | Root en repo | Entrypoint | Runtime |
+|----------|--------------|------------|---------|
+| `huella-api` | `functions/huella-api` | `src/index.js` | Node 18+ |
+| `huella-webhooks` | `functions/huella-webhooks` | `src/index.js` | Node 18+ |
+
+**Env `huella-api`:** `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY`, `APPWRITE_DATABASE_ID`, `APPWRITE_COLLECTION_SOLICITUDES_ID`, `APPWRITE_COLLECTION_KYC_ID`, `PUBLIC_APP_URL`, `DIDIT_API_KEY`, `DIDIT_WORKFLOW_ID`, `ADMIN_USER_IDS` (opcional), `RESEND_API_KEY` / `EMAIL_FROM` (opcional).
+
+**Env `huella-webhooks`:** mismos `APPWRITE_*` + `APPWRITE_COLLECTION_WEBHOOK_EVENTS_ID` + `DIDIT_WEBHOOK_SECRET`.
+
+**Execute:** `huella-api` → `any` + users; `huella-webhooks` → `any`.
 
 ---
 
@@ -124,8 +140,8 @@
 
 | PR | Objetivos | Título orientativo |
 |----|-----------|--------------------|
-| A | 0.3 | `docs: roadmap core1 checklist` |
-| B | 1.x | `chore: appwrite schema + functions deploy notes` (si hay archivos) |
+| A | 0.3 | `docs: roadmap core1 checklist` (hecho) |
+| B | 1.x update | `docs: §1 schema completo, pendiente deploy functions` |
 | C | 2.x–4.x | `feat: alta y tracking reales vía huella-api` |
 | D | 5.x–6.x | `feat: auth operadores + backoffice real` |
 | E | 7.x–8.x | `feat: KYC Didit + webhook` |
