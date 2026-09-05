@@ -1,56 +1,49 @@
-# Functions serverless — Huella
+# Functions — Huella (Appwrite)
 
-Espacio de **diseño e implementación** de funciones backend.
-Aquí viven las operaciones que no deben ejecutarse en el navegador: secretos, Didit, envío de correos, escritura privilegiada, webhooks, etc.
-
-## Principios
-
-1. Una function = un caso de uso claro (crear sesión KYC, enviar email de tracking, recibir webhook, …).
-2. Sin secretos en el repo: solo variables de entorno.
-3. Diseño primero en `.md`; implementación en TypeScript (o el runtime que se elija) cuando el contrato esté estable.
-4. Independientes del framework del frontend (Vite/Svelte): se despliegan en Vercel, Cloudflare Workers, Netlify, Supabase Edge, AWS Lambda, etc.
-
-## Mapa de functions previstas
+Plan Free: **máximo 2 Functions**. Arquitectura modular por dominio de API.
 
 ```
 functions/
-├── README.md                 ← este archivo
-├── _shared/                  ← tipos, helpers, validación de env (diseño)
-│   └── contracts.md
-├── kyc/
-│   ├── create-session.md     ← crear sesión Didit y vincular a solicitud
-│   └── webhook.md            ← recibir resultado Didit
-├── email/
-│   ├── send-tracking.md      ← correo con código + enlace al crear solicitud
-│   ├── send-status-update.md ← cambio de estado al familiar
-│   └── send-kyc-link.md      ← enlace de verificación Didit
-├── solicitudes/
-│   ├── create.md             ← alta desde web pública (genera código)
-│   ├── get-by-code.md        ← tracking público por código
-│   └── admin-update.md       ← cambio de estado / notas (backoffice, auth)
-└── auth/
-    └── operator-login.md     ← login de operadores (fase 1)
+├── huella-api/          # API de acciones (cliente → backend)
+│   └── actions:
+│       solicitudes.create | getByCode | marcarSinVerificar
+│       didit.createSession
+│       email.send
+└── huella-webhooks/     # Gateway webhooks externos
+    └── providers:
+        didit (stripe preparado)
 ```
 
-## Variables de entorno (referencia)
+## Principio
 
-| Variable | Uso |
-|----------|-----|
-| `DIDIT_API_KEY` | Clave API Didit |
-| `DIDIT_WORKFLOW_ID` | Workflow de verificación configurado en consola Didit |
-| `DIDIT_WEBHOOK_SECRET` | Validación de firma del webhook |
-| `EMAIL_PROVIDER_*` | Credenciales del proveedor de correo (Resend, SES, …) |
-| `DATABASE_URL` / equivalente | Persistencia |
-| `JWT_SECRET` / `SESSION_SECRET` | Tokens de tracking y sesión de operadores |
-| `PUBLIC_APP_URL` | Base URL para construir enlaces de seguimiento y KYC |
+- **NO** una Function por endpoint.
+- Nueva capacidad = **módulo + ruta**, no nueva Function.
 
-## Orden de implementación sugerido
+## Dominio
 
-1. Contratos compartidos (`_shared/contracts.md`)
-2. `solicitudes/create` + `email/send-tracking`
-3. `solicitudes/get-by-code`
-4. `auth/operator-login` + `solicitudes/admin-update`
-5. `kyc/create-session` + `kyc/webhook` + `email/send-kyc-link`
-6. Resto de emails de estado
+Estados solicitud: `pendiente` → `sin_verificar` → `verificado` → `cerrado`
 
-Los archivos `.md` de cada function describen: trigger, input, output, efectos, errores y dependencias de políticas.
+KYC (Didit) se dispara en `solicitudes.marcarSinVerificar` (operador).
+El webhook Didit es la **fuente de verdad** para pasar a `verificado`.
+
+## Deploy (Console Appwrite)
+
+1. Crear Function `huella-api` · Node 18+ · entrypoint `src/index.js` · root `functions/huella-api`
+2. Crear Function `huella-webhooks` · igual con root `functions/huella-webhooks`
+3. Variables de entorno (ver README de cada una)
+4. Execute permissions: `huella-api` → `any` + users; `huella-webhooks` → `any`
+
+## Colecciones extra
+
+### `kyc_verifications`
+| Campo | Tipo | Required |
+| solicitud_id | varchar 36 | sí |
+| user_id | varchar 36 | no |
+| didit_session_id | varchar 64 | sí |
+| status | varchar 32 | sí |
+| codigo_seguimiento | varchar 32 | no |
+| verified_at | datetime | no |
+
+### `webhook_events`
+| event_id | varchar 128 unique |
+| provider | varchar 32 |
