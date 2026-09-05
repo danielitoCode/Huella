@@ -11,7 +11,7 @@
 
 - [x] **0.1** Rama `core1` creada desde `master`
 - [x] **0.2** Directorio `.roadmap/core1` y este checklist publicados
-- [ ] **0.3** Primer PR de este archivo mergeado a `master` (deja el roadmap visible en la rama principal)
+- [x] **0.3** Primer PR de este archivo mergeado a `master` (deja el roadmap visible en la rama principal)
 
 ---
 
@@ -19,11 +19,11 @@
 
 *Sin esto el código de functions y el front no tienen backend real.*
 
-- [ ] **1.1** Proyecto Appwrite + plataforma Web (`localhost` + dominio futuro)
-- [ ] **1.2** Database `huella` y tabla/colección `solicitudes` (schema acordado: varchar/enum/text, sin fechas propias; índices `codigo`, `email`, `estado`, `diditSessionId`)
+- [x] **1.1** Proyecto Appwrite + plataforma Web (`localhost` + dominio futuro)
+- [x] **1.2** Database `huella` y tabla/colección `solicitudes` (schema acordado: varchar/enum/text, sin fechas propias; índices `codigo`, `email`, `estado`, `diditSessionId`)
 - [ ] **1.3** Colección `kyc_verifications` + índices
 - [ ] **1.4** Colección `webhook_events` (`event_id` unique) + índices
-- [ ] **1.5** Colección `operadores` (o labels/team Appwrite Auth) lista para backoffice
+- [x] **1.5** Colección `operadores` (o labels/team Appwrite Auth) lista para backoffice
 - [ ] **1.6** API Key de servidor con scopes mínimos + variables en `.env` local (desde `.env.example`)
 - [ ] **1.7** Functions desplegadas: `huella-api` y `huella-webhooks` (entrypoint, env, execute permissions)
 
