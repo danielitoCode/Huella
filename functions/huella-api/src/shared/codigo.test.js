@@ -5,8 +5,9 @@ describe('codigoSeguimiento', () => {
   it('genera formato HUE-YYYY-XXXXXX', () => {
     const codigo = generarCodigoSeguimiento(new Date('2026-09-05T12:00:00Z'));
     expect(codigo).toMatch(/^HUE-2026-[A-Z2-9]{6}$/);
-    // alfabeto sin 0, 1, I, O
-    expect(codigo).not.toMatch(/[01IO]/);
+    const suffix = codigo.split('-')[2];
+    // alfabeto de generación sin 0, 1, I, O
+    expect(suffix).not.toMatch(/[01IO]/);
   });
 
   it('esCodigoValido acepta formato correcto', () => {
