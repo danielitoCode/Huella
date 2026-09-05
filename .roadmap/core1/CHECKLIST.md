@@ -11,140 +11,104 @@
 
 - [x] **0.1** Rama `core1` creada desde `master`
 - [x] **0.2** Directorio `.roadmap/core1` y este checklist publicados
-- [x] **0.3** Primer PR de este archivo mergeado a `master` (roadmap visible en la rama principal)
+- [x] **0.3** Primer PR de este archivo mergeado a `master`
 
 ---
 
 ## 1. Fundación Appwrite (infra en Console)
 
-*Sin esto el código de functions y el front no tienen backend real.*
-
-- [x] **1.1** Proyecto Appwrite + plataforma Web (`localhost` + dominio futuro)
-- [x] **1.2** Database `huella` y tabla/colección `solicitudes` (schema + índices)
+- [x] **1.1** Proyecto Appwrite + plataforma Web
+- [x] **1.2** Database `huella` + `solicitudes`
 - [x] **1.3** Colección `kyc_verifications` + índices
-- [x] **1.4** Colección `webhook_events` (`event_id` unique) + índices
-- [x] **1.5** Colección `operadores` lista para backoffice
-- [x] **1.5b** Colección `auditoria` (trazas de estado)
-- [x] **1.6** API Key de servidor con scopes mínimos + variables en `.env` local (desde `.env.example`)
-- [ ] **1.7** Functions desplegadas: `huella-api` y `huella-webhooks` (entrypoint, env, execute permissions)
+- [x] **1.4** Colección `webhook_events` + índices
+- [x] **1.5** Colección `operadores`
+- [x] **1.5b** Colección `auditoria`
+- [x] **1.6** API Key + `.env` local
+- [ ] **1.6b** Marco de pruebas unitarias + CI independientes (web / api / webhooks) — **en curso en core1**
+- [ ] **1.7** Functions desplegadas: `huella-api` y `huella-webhooks` (solo tras 1.6b verde)
 
-**Criterio de cierre §1:** un `POST` de prueba a `huella-api` con `action: "solicitudes.getByCode"` responde JSON estructurado (aunque sea NOT_FOUND).
+**Criterio de cierre §1:** tests de functions en verde + `POST` de prueba a `huella-api` responde JSON estructurado.
 
-**Estado §1:** schema completo en Console. Solo falta **1.7** deploy de las dos functions.
+**Estado:** schema OK. Pruebas/CI en rama `core1`. Deploy (1.7) después de CI verde.
 
 ### Guía rápida deploy 1.7
 
-| Function | Root en repo | Entrypoint | Runtime |
-|----------|--------------|------------|---------|
-| `huella-api` | `functions/huella-api` | `src/index.js` | Node 18+ |
-| `huella-webhooks` | `functions/huella-webhooks` | `src/index.js` | Node 18+ |
+| Function | Root | Entrypoint |
+|----------|------|------------|
+| `huella-api` | `functions/huella-api` | `src/index.js` |
+| `huella-webhooks` | `functions/huella-webhooks` | `src/index.js` |
 
-**Env `huella-api`:** `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID`, `APPWRITE_API_KEY`, `APPWRITE_DATABASE_ID`, `APPWRITE_COLLECTION_SOLICITUDES_ID`, `APPWRITE_COLLECTION_KYC_ID`, `PUBLIC_APP_URL`, `DIDIT_API_KEY`, `DIDIT_WORKFLOW_ID`, `ADMIN_USER_IDS` (opcional), `RESEND_API_KEY` / `EMAIL_FROM` (opcional).
-
-**Env `huella-webhooks`:** mismos `APPWRITE_*` + `APPWRITE_COLLECTION_WEBHOOK_EVENTS_ID` + `DIDIT_WEBHOOK_SECRET`.
-
-**Execute:** `huella-api` → `any` + users; `huella-webhooks` → `any`.
+**Prerequisito:** `cd functions/huella-api && npm test` y `cd functions/huella-webhooks && npm test` en verde.
 
 ---
 
 ## 2. Cliente Appwrite en el frontend
 
-- [ ] **2.1** Dependencia `appwrite` (Web SDK) en el proyecto Vite
-- [ ] **2.2** Cliente singleton (`src/lib/appwrite/client.ts`) con `VITE_APPWRITE_*`
-- [ ] **2.3** Helper `executeApi(action, payload)` → `functions.createExecution(huella-api)`
-- [ ] **2.4** IDs de functions en env (`VITE_APPWRITE_FUNCTION_API_ID`, opcional webhooks solo server)
-
-**Criterio de cierre §2:** desde el navegador se puede invocar la function y ver respuesta success/error sin secretos en el client bundle.
+- [ ] **2.1** Dependencia `appwrite` (Web SDK)
+- [ ] **2.2** Cliente singleton `src/lib/appwrite/client.ts`
+- [ ] **2.3** Helper `executeApi(action, payload)`
+- [ ] **2.4** IDs de functions en env
 
 ---
 
 ## 3. Flujo público — crear solicitud
 
-- [ ] **3.1** Formulario de alta cableado a `solicitudes.create` (no mock)
-- [ ] **3.2** Validación de campos alineada al dominio (nombreFamiliar, email, nombrePersona, relacion, descripcion)
-- [ ] **3.3** Pantalla de confirmación con **código de seguimiento** y enlace al tracking
-- [ ] **3.4** Email de tracking enviado (Resend o stub documentado en logs de la function)
-
-**Criterio de cierre §3:** un familiar completa el formulario y recibe código; el documento existe en Appwrite en estado `pendiente`.
+- [ ] **3.1** Formulario → `solicitudes.create`
+- [ ] **3.2** Validación dominio
+- [ ] **3.3** Confirmación con código
+- [ ] **3.4** Email tracking
 
 ---
 
 ## 4. Flujo público — tracking
 
-- [ ] **4.1** Ruta/vista de seguimiento por código llama `solicitudes.getByCode`
-- [ ] **4.2** UI muestra solo datos públicos (estado, mensajePublico, fechas `$createdAt`/`$updatedAt`)
-- [ ] **4.3** Manejo de código inválido / no encontrado
-
-**Criterio de cierre §4:** con el código de §3 se consulta el estado real desde Appwrite.
+- [ ] **4.1** Vista → `solicitudes.getByCode`
+- [ ] **4.2** Solo datos públicos
+- [ ] **4.3** Código inválido / no encontrado
 
 ---
 
-## 5. Auth operadores (backoffice)
+## 5. Auth operadores
 
-- [ ] **5.1** Login operador con Appwrite Account (email/password o método elegido en políticas)
-- [ ] **5.2** Sesión en el client SDK; guards de rutas admin
-- [ ] **5.3** `ADMIN_USER_IDS` (o labels) configurado para acciones `auth: admin` en `huella-api`
-- [ ] **5.4** Logout y estado de sesión en la UI
-
-**Criterio de cierre §5:** un operador entra al área admin; un anónimo no puede ejecutar `solicitudes.marcarSinVerificar`.
+- [ ] **5.1** Login Appwrite Account
+- [ ] **5.2** Guards admin
+- [ ] **5.3** `ADMIN_USER_IDS`
+- [ ] **5.4** Logout
 
 ---
 
 ## 6. Backoffice — listado y detalle
 
-- [ ] **6.1** Acción API o queries Appwrite: listar solicitudes (filtros por `estado`)
-- [ ] **6.2** Vista listado admin (reemplazar datos mock)
-- [ ] **6.3** Vista detalle: datos de la solicitud + notas internas (solo operador)
-- [ ] **6.4** Acción cerrar solicitud (motivo interno obligatorio) vía dominio/API
-
-**Criterio de cierre §6:** el operador ve y abre solicitudes reales creadas en §3.
+- [ ] **6.1** Listar solicitudes
+- [ ] **6.2** Vista listado real
+- [ ] **6.3** Detalle + notas
+- [ ] **6.4** Cerrar solicitud
 
 ---
 
-## 7. KYC Didit (inicio desde backoffice)
+## 7. KYC Didit
 
-- [ ] **7.1** Botón/flujo “Marcar sin verificar / iniciar KYC” → `solicitudes.marcarSinVerificar`
-- [ ] **7.2** Transición `pendiente` → `sin_verificar` + `diditSessionId` persistido
-- [ ] **7.3** Fila en `kyc_verifications` creada
-- [ ] **7.4** Email con enlace de verificación al familiar
-- [ ] **7.5** (Opcional UI) mostrar URL de sesión al operador para reenvío
-
-**Criterio de cierre §7:** tras la acción, tracking muestra estado `sin_verificar` y existe sesión Didit real (o error Didit controlado si faltan keys en staging).
+- [ ] **7.1** `marcarSinVerificar`
+- [ ] **7.2** Estado `sin_verificar` + sessionId
+- [ ] **7.3** Fila `kyc_verifications`
+- [ ] **7.4** Email KYC
+- [ ] **7.5** URL al operador (opcional)
 
 ---
 
-## 8. Webhook Didit (fuente de verdad)
+## 8. Webhook Didit
 
-- [ ] **8.1** URL pública de `huella-webhooks` configurada en consola Didit
-- [ ] **8.2** `DIDIT_WEBHOOK_SECRET` en la function
-- [ ] **8.3** Evento `Approved` → solicitud `verificado` + `kycResultado`
-- [ ] **8.4** Idempotencia: reenvío del mismo `event_id` no duplica efectos
-- [ ] **8.5** Estados intermedios / Declined / Expired actualizan `kyc_verifications` sin marcar verificado por el front
-
-**Criterio de cierre §8:** un webhook de prueba (o sesión real) deja la solicitud en `verificado` solo por el webhook.
+- [ ] **8.1** URL en Didit
+- [ ] **8.2** `DIDIT_WEBHOOK_SECRET`
+- [ ] **8.3** Approved → `verificado`
+- [ ] **8.4** Idempotencia `event_id`
+- [ ] **8.5** Estados intermedios sin marcar verificado desde el front
 
 ---
 
-## 9. Calidad y cierre del ciclo Core 1
+## 9. Calidad y cierre Core 1
 
-- [ ] **9.1** Tests de dominio siguen verdes; añadir tests de adaptadores críticos si aplica
-- [ ] **9.2** CI en PR a master en verde
-- [ ] **9.3** README actualizado (cómo correr local + variables + IDs de functions)
-- [ ] **9.4** Checklist Core 1 revisado; objetivos abiertos movidos a `core2` si quedan fuera de alcance
-
-**Criterio de cierre Core 1:** recorrido E2E manual documentado: alta → email/código → tracking → login admin → KYC → webhook → tracking `verificado`.
-
----
-
-## Orden de PRs sugerido (desde `core1` → `master`)
-
-| PR | Objetivos | Título orientativo |
-|----|-----------|--------------------|
-| A | 0.3 | `docs: roadmap core1 checklist` (hecho) |
-| B | 1.x update | `docs: §1 schema completo, pendiente deploy functions` |
-| C | 2.x–4.x | `feat: alta y tracking reales vía huella-api` |
-| D | 5.x–6.x | `feat: auth operadores + backoffice real` |
-| E | 7.x–8.x | `feat: KYC Didit + webhook` |
-| F | 9.x | `chore: cierre core1` |
-
-Se pueden agrupar o partir según tamaño del diff; la regla es **un PR = valor verificable**.
+- [ ] **9.1** Tests dominio + functions verdes
+- [ ] **9.2** CI gate (web + api + webhooks) en verde en PR a master
+- [ ] **9.3** README actualizado
+- [ ] **9.4** Objetivos abiertos → core2 si aplica

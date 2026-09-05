@@ -12,7 +12,12 @@
     "check": "npm run typecheck && npm run typecheck:node",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ci": "npm run typecheck && npm run typecheck:node && npm test && npm run build"
+    "test:api": "npm test --prefix functions/huella-api",
+    "test:webhooks": "npm test --prefix functions/huella-webhooks",
+    "test:functions": "npm run test:api && npm run test:webhooks",
+    "test:all": "npm test && npm run test:functions",
+    "ci": "npm run typecheck && npm run typecheck:node && npm test && npm run build",
+    "ci:all": "npm run ci && npm run test:functions"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",

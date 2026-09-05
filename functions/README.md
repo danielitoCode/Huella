@@ -5,45 +5,43 @@ Plan Free: **máximo 2 Functions**. Arquitectura modular por dominio de API.
 ```
 functions/
 ├── huella-api/          # API de acciones (cliente → backend)
-│   └── actions:
-│       solicitudes.create | getByCode | marcarSinVerificar
-│       didit.createSession
-│       email.send
 └── huella-webhooks/     # Gateway webhooks externos
-    └── providers:
-        didit (stripe preparado)
 ```
 
-## Principio
+## Pruebas locales (antes de desplegar)
 
-- **NO** una Function por endpoint.
-- Nueva capacidad = **módulo + ruta**, no nueva Function.
+Cada function tiene su propio `package.json`, Vitest y CI.
 
-## Dominio
+```bash
+# Solo API
+cd functions/huella-api && npm install && npm test
 
-Estados solicitud: `pendiente` → `sin_verificar` → `verificado` → `cerrado`
+# Solo webhooks
+cd functions/huella-webhooks && npm install && npm test
 
-KYC (Didit) se dispara en `solicitudes.marcarSinVerificar` (operador).
-El webhook Didit es la **fuente de verdad** para pasar a `verificado`.
+# Desde la raíz del monorepo
+npm run test:api
+npm run test:webhooks
+npm run test:functions   # ambas
+npm run test:all         # web + functions
+```
 
-## Deploy (Console Appwrite)
+## CI
 
-1. Crear Function `huella-api` · Node 18+ · entrypoint `src/index.js` · root `functions/huella-api`
-2. Crear Function `huella-webhooks` · igual con root `functions/huella-webhooks`
-3. Variables de entorno (ver README de cada una)
-4. Execute permissions: `huella-api` → `any` + users; `huella-webhooks` → `any`
+| Workflow | Responsabilidad |
+|----------|-----------------|
+| `CI` | Gate global: jobs `web` + `huella-api` + `huella-webhooks` (todos deben pasar) |
+| `CI web` | Solo frontend (path filter) |
+| `CI huella-api` | Solo API (path filter) |
+| `CI huella-webhooks` | Solo webhooks (path filter) |
 
-## Colecciones extra
+En branch protection de `master`, exigir los checks del workflow **CI** (`web`, `huella-api`, `huella-webhooks`).
 
-### `kyc_verifications`
-| Campo | Tipo | Required |
-| solicitud_id | varchar 36 | sí |
-| user_id | varchar 36 | no |
-| didit_session_id | varchar 64 | sí |
-| status | varchar 32 | sí |
-| codigo_seguimiento | varchar 32 | no |
-| verified_at | datetime | no |
+## Deploy
 
-### `webhook_events`
-| event_id | varchar 128 unique |
-| provider | varchar 32 |
+Solo después de tests verdes en local y CI:
+
+1. Console Appwrite → crear/actualizar Function
+2. Root: `functions/huella-api` o `functions/huella-webhooks`
+3. Entrypoint: `src/index.js`
+4. Variables de entorno (ver README de cada una)
