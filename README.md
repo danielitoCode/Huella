@@ -1,45 +1,33 @@
 # Huella
 
-Plataforma dirigida a familiares cubanos que han perdido seres queridos en la guerra Rusia-Ucrania.
+Plataforma de apoyo a familiares cubanos afectados por el conflicto Rusia-Ucrania.
+
+## Estados de una solicitud
+
+```
+pendiente → sin_verificar → verificado → cerrado
+```
+
+| Estado | Significado |
+|--------|-------------|
+| **pendiente** | Solicitud recibida |
+| **sin_verificar** | Contacto/hallazgo confirmado; se envía KYC (Didit) |
+| **verificado** | Identidad confirmada |
+| **cerrado** | Proceso finalizado |
+
+KYC **no** se pide al enviar: solo al pasar a `sin_verificar`.
 
 ## Arquitectura
 
-El proyecto se divide en dos zonas principales:
-
-### 1. Web pública (`/`) – Familiares / Clientes
-- Información sobre la plataforma
-- Formulario para enviar solicitudes
-- Seguimiento de solicitudes (futuro)
-
-### 2. Backoffice (`/admin`) – Operador / Administrador
-- Login de acceso
-- Dashboard con resumen
-- Gestión de solicitudes recibidas
-- Detalle y acciones sobre cada solicitud
-
-## Estructura del código
+Clean Architecture **feature-first**:
 
 ```
 src/
-├── components/          # Componentes compartidos
-│   ├── Header.svelte
-│   └── Layout.svelte
-├── lib/
-│   ├── stores/
-│   │   └── router.ts    # Navegación simple por estado
-│   └── types.ts         # Tipos compartidos
-├── pages/
-│   ├── public/          # Zona de familiares
-│   │   ├── Home.svelte
-│   │   └── Solicitud.svelte
-│   └── admin/           # Backoffice
-│       ├── Login.svelte
-│       ├── Dashboard.svelte
-│       ├── Solicitudes.svelte
-│       └── SolicitudDetalle.svelte
-├── App.svelte
-├── app.css
-└── main.ts
+  core/features/<feature>/{domain,application,di}
+  infrastructure/          # navegación, adaptadores generales, fakes de test
+  pages/                   # UI Svelte
+functions/                 # diseño de serverless (KYC, email, …)
+.policies/                 # reglas de negocio
 ```
 
 ## Desarrollo
@@ -47,8 +35,11 @@ src/
 ```bash
 npm install
 npm run dev
+npm test
 ```
 
 ## Stack
 
 - Svelte 5 + TypeScript + Vite
+- Vitest (tests de dominio y casos de uso por feature)
+- Didit (KYC) vía functions serverless

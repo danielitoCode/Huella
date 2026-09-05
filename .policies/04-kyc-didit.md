@@ -1,61 +1,35 @@
 # Política de verificación KYC (Didit)
 
-## Proveedor
+## Cuándo se dispara
 
-**Didit** (https://didit.me) — API v3 de verificación de identidad.
+**Únicamente** al transicionar la solicitud de `pendiente` a `sin_verificar`
+(confirmación de hallazgo/contacto e inicio de negociaciones).
 
-- Autenticación: header `x-api-key`
-- Flujo principal: crear sesión (`POST /v3/session/`) con `workflow_id`
-- Resultados: webhook + consulta de sesión
-- La API key y el webhook secret **nunca** salen del backend / functions serverless
+No se pide KYC al crear la solicitud ni para consultar el tracking.
 
-> Nota: el usuario ya dispone de clave de API. Se configurará como variable de entorno `DIDIT_API_KEY` (y `DIDIT_WORKFLOW_ID`, `DIDIT_WEBHOOK_SECRET`).
+## Flujo
 
-## Cuándo se exige KYC
+1. Operador confirma contacto/hallazgo → caso de uso `MarcarSinVerificar`.
+2. Function `kyc/create-session` crea sesión Didit (`vendor_data` = id o código de la solicitud).
+3. Function `email/send-kyc-link` envía el enlace hosted al email del familiar.
+4. Familiar completa el flujo Didit.
+5. Webhook → caso de uso `MarcarVerificado` (si Approved) o registro de rechazo/expiración.
+6. Estado de la solicitud pasa a `verificado` cuando la identidad queda aprobada.
 
-KYC **no** es obligatorio para enviar la solicitud inicial.
+## Estados de la solicitud vs resultado Didit
 
-Se solicita cuando:
+| Resultado Didit | Efecto en solicitud |
+|-----------------|---------------------|
+| Approved | `sin_verificar` → `verificado` |
+| Declined / Failed | Se mantiene `sin_verificar`; se registra fallo; operador decide (reintento o cierre) |
+| Expired | Se mantiene `sin_verificar`; se puede reenviar enlace |
 
-1. El operador, al revisar el caso, lo marca como necesario (riesgo, repatriación, trámites formales, etc.).
-2. Reglas automáticas futuras (monto, tipo de gestión, país de documentos) lo disparen.
+## Datos retenidos en Huella
 
-Estados posibles del bloque KYC dentro de una solicitud:
-
-| Estado KYC | Significado |
-|------------|-------------|
-| `no_requerido` | Por defecto al crear la solicitud |
-| `solicitado` | Se generó sesión Didit y se envió enlace al familiar |
-| `en_progreso` | El familiar abrió el flujo |
-| `aprobado` | Didit devolvió Approved |
-| `rechazado` | Didit devolvió Declined / Failed |
-| `expirado` | Sesión caducó sin completar |
-
-## Flujo técnico (resumen)
-
-1. Operador (o regla) solicita KYC → function `kyc/create-session`.
-2. Function crea sesión en Didit con `vendor_data` = `solicitud_id` (o código de seguimiento).
-3. Se guarda `session_id` Didit en la solicitud y se pasa KYC a `solicitado`.
-4. Se envía al familiar el enlace de verificación (hosted flow de Didit) por correo.
-5. Didit notifica por **webhook** → function `kyc/webhook`.
-6. Webhook verifica firma, actualiza estado KYC de la solicitud y notifica al operador (y opcionalmente al familiar con mensaje genérico “verificación completada”).
-
-## Datos que se conservan
-
-- `session_id` Didit
-- Estado final (`aprobado` / `rechazado` / …)
-- Timestamp
-- Referencia mínima necesaria para auditoría
-
-**No** se deben almacenar en Huella imágenes de documentos ni selfies si Didit ya las custodia; solo el veredicto y metadatos acordados con la política de privacidad.
+- `diditSessionId`, resultado, timestamps.
+- No almacenar imágenes de documentos/selfies si Didit las custodia.
 
 ## Seguridad
 
-- Todas las llamadas a Didit se hacen desde **functions serverless**, nunca desde el navegador.
-- El webhook debe validar la firma con `DIDIT_WEBHOOK_SECRET`.
-- Rate limit y auth en los endpoints que el backoffice use para disparar KYC.
-
-## Relación con otras políticas
-
-- La solicitud puede seguir en `en_proceso` mientras el KYC está `solicitado` o `en_progreso`.
-- Un KYC `rechazado` no implica automáticamente el rechazo de la solicitud: el operador decide (política 03).
+- Llamadas a Didit solo desde functions/backend.
+- Webhook con validación de firma (`DIDIT_WEBHOOK_SECRET`).

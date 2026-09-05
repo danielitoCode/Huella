@@ -1,68 +1,45 @@
-# Política de administración de peticiones (backoffice)
+# Política de administración de peticiones
 
 ## Objetivo
 
-Definir cómo un operador acepta, rechaza, actualiza o descarta una solicitud, y qué queda visible para el familiar.
+Reglas para que el operador mueva una solicitud entre los estados canónicos y dispare KYC en el momento correcto.
 
-## Estados y transiciones permitidas
+## Momento clave: `pendiente` → `sin_verificar`
 
-```
-pendiente ──► en_revision ──► en_proceso ──► resuelta
-     │              │              │
-     │              ├──────────────┴──► rechazada
-     │              │
-     └──────────────┴──────────────────► descartada
-```
+Se marca **Sin verificar** cuando el operador confirma que:
 
-| Transición | Quién | Condición | Efecto hacia el familiar |
-|------------|-------|-----------|---------------------------|
-| `pendiente` → `en_revision` | Operador | Asume el caso | Correo: "Tu solicitud está en revisión" |
-| `en_revision` → `en_proceso` | Operador | **Aceptación** | Correo: caso aceptado + posibles siguientes pasos |
-| `en_revision` / `en_proceso` → `rechazada` | Operador | Motivo obligatorio (interno + mensaje público opcional) | Correo con mensaje genérico o el público definido |
-| cualquiera → `descartada` | Operador o Admin | Motivo interno obligatorio (spam, duplicado, petición del titular, etc.) | No notificar, o mensaje neutro si ya había comunicación |
-| `en_proceso` → `resuelta` | Operador | Cierre del caso | Correo de cierre |
+- se ha localizado información relevante sobre la persona buscada (fallecida o no), **y/o**
+- se ha establecido contacto con el familiar / se inician negociaciones o gestiones formales.
 
-## Aceptación
+Al confirmar esa transición el sistema **debe**:
 
-- Implica pasar a `en_proceso`.
-- El operador puede dejar notas internas y mensajes públicos.
-- Puede solicitar **KYC** al familiar en este punto (o antes, si el riesgo lo justifica). Ver política 04.
+1. Cambiar estado a `sin_verificar`.
+2. Crear sesión KYC en Didit.
+3. Enviar al familiar el enlace de verificación por email.
+4. Registrar auditoría (quién, cuándo, motivo/nota).
 
-## Rechazo
+No se envía KYC en `pendiente` ni de forma masiva automática sin esta confirmación humana (salvo reglas futuras explícitas).
 
-- Motivo **interno** obligatorio (solo backoffice).
-- Mensaje **público** opcional (lo que verá el familiar en el tracking y en el correo).
-- Una vez rechazada, no se reabre automáticamente; se puede crear una nueva solicitud o reabrir manualmente por un admin con justificación.
+## `sin_verificar` → `verificado`
 
-## Descarte
+- Preferente: webhook de Didit con resultado Approved.
+- El operador no debería marcar “verificado” a mano salvo contingencia documentada (fallo de webhook + evidencia).
 
-Uso reservado para:
+## → `cerrado`
 
-- Spam o contenido malicioso
-- Duplicados evidentes
-- Solicitud explícita de borrado por el titular
-- Casos fuera de alcance de la plataforma
-
-El descarte debe quedar en el log de auditoría. Los datos pueden anonimizarse según política de retención.
-
-## Asignación
-
-- Fase 1: cola compartida (cualquier operador puede tomar un caso).
-- Fase 2: asignación explícita a un operador; solo él (o un admin) modifica el caso salvo escalado.
+- Desde cualquier estado, con **motivo interno** obligatorio.
+- Mensaje público opcional para el tracking y el correo de cierre.
+- Cerrar desde `pendiente` implica que no se llegó a negociaciones (no procede, duplicado, etc.).
 
 ## Visibilidad
 
-| Dato | Familiar (tracking) | Operador |
-|------|---------------------|----------|
+| Dato | Familiar | Operador |
+|------|----------|----------|
 | Estado | Sí | Sí |
-| Descripción original | Sí (la suya) | Sí |
+| Mensaje público | Sí | Sí |
 | Notas internas | No | Sí |
-| Mensajes públicos del operador | Sí | Sí |
-| Resultado KYC detallado | No (solo “verificado” / “pendiente”) | Sí |
-| Datos de otros casos | No | Según rol |
+| Detalle KYC Didit | No (solo verificado / pendiente de verificar) | Sí |
 
-## Reglas de oro
+## Auditoría
 
-1. Ningún cambio de estado sin registro de `quién` + `cuándo` + `motivo` (cuando aplique).
-2. El familiar nunca ve notas internas.
-3. El descarte no es un “borrado silencioso” sin traza: siempre hay auditoría.
+Todo cambio de estado: `actor`, `timestamp`, `estadoAnterior`, `estadoNuevo`, `motivo` cuando aplique.

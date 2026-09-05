@@ -2,70 +2,46 @@
 
 ## Objetivo
 
-Definir cómo un familiar crea, consulta y recibe actualizaciones de una solicitud sin necesidad de cuenta.
+Definir el ciclo de vida de una solicitud y qué ve el familiar en cada estado.
 
-## Actores
+## Estados
 
-- **Familiar / solicitante**: persona que envía la petición (web pública).
-- **Sistema**: genera código de seguimiento, envía notificaciones y expone el estado.
-- **Operador**: gestiona la petición en el backoffice (ver política 03).
+| Estado | Quién lo provoca | Qué significa | Visible al familiar |
+|--------|------------------|---------------|---------------------|
+| `pendiente` | Sistema al crear | Solicitud recibida; cola de revisión | Sí — “Recibida, en espera de revisión” |
+| `sin_verificar` | Operador al confirmar hallazgo/contacto e iniciar negociaciones | Se envió enlace de verificación KYC | Sí — “Te enviamos un enlace para verificar tu identidad” |
+| `verificado` | Sistema (webhook Didit) o operador si aplica | Identidad confirmada; negociaciones pueden avanzar con certeza | Sí — “Identidad verificada” |
+| `cerrado` | Operador | Caso finalizado | Sí — “Proceso cerrado” + mensaje público opcional |
 
-## Ciclo de vida de una solicitud
+## Transiciones permitidas
 
 ```
-[Borrador local] → Enviada → Pendiente → (En revisión | En proceso) → Resuelta | Rechazada | Descartada
+pendiente ──► sin_verificar ──► verificado ──► cerrado
+     │              │                │
+     └──────────────┴────────────────┴──► cerrado   (cierre anticipado justificado)
 ```
 
-| Estado | Visible al familiar | Descripción |
-|--------|---------------------|-------------|
-| `pendiente` | Sí | Recibida, aún no revisada por un operador |
-| `en_revision` | Sí | Un operador la está evaluando |
-| `en_proceso` | Sí | Aceptada y en gestión activa |
-| `resuelta` | Sí | Cerrada con resultado positivo o informativo |
-| `rechazada` | Sí | No procede; se informa el motivo genérico |
-| `descartada` | No (o mensaje neutro) | Eliminada por spam, duplicado o solicitud del titular |
+- No se salta de `pendiente` a `verificado` sin pasar por el flujo de KYC (salvo excepción documentada por admin).
+- De `pendiente` se puede ir a `cerrado` si el caso no procede (fuera de alcance, duplicado, etc.) con motivo interno.
 
 ## Creación (web pública)
 
-1. El familiar completa el formulario (nombre, email, teléfono opcional, datos del fallecido, relación, descripción).
-2. El sistema valida campos obligatorios y formato de email.
-3. Se genera un **código de seguimiento** único e irrepetible (formato sugerido: `HUE-YYYY-XXXXXX`).
-4. Se persiste la solicitud en estado `pendiente`.
-5. Se envía correo de confirmación con:
-   - Código de seguimiento
-   - Enlace directo de consulta (token firmado, caducidad configurable)
-   - Resumen de lo enviado
-6. Se muestra en pantalla el código y un mensaje de éxito.
+1. Formulario: nombre familiar, email, teléfono opcional, nombre de la persona buscada/fallecida, relación, descripción.
+2. Validación de campos y email.
+3. Generación de **código de seguimiento** (`HUE-YYYY-XXXXXX`).
+4. Persistencia en estado `pendiente`.
+5. Correo de confirmación con código + enlace de tracking.
+6. **No** se solicita KYC en este paso.
 
-**No se exige login ni KYC en este paso.**
+## Consulta (tracking sin login)
 
-## Consulta / tracking (sin login)
+- Entrada: código o enlace firmado.
+- Salida pública: estado, fechas, mensaje público.
+- No se exponen notas internas ni datos de otros casos.
 
-- Entrada: código de seguimiento **o** enlace con token.
-- El sistema muestra solo:
-  - Estado actual
-  - Fecha de creación y última actualización
-  - Mensajes públicos que el operador haya marcado como visibles
-- No se exponen notas internas del backoffice ni datos de otros casos.
-- Límite de intentos fallidos de código (rate limit) para evitar enumeración.
+## Qué ve el familiar según estado
 
-## Actualizaciones al familiar
-
-- Cada cambio de estado relevante dispara un correo (y opcionalmente SMS).
-- El correo incluye el nuevo estado y el enlace de seguimiento.
-- El familiar no puede editar la solicitud una vez enviada; solo puede añadir información si el operador lo habilita o abriendo un nuevo caso vinculado.
-
-## Datos mínimos obligatorios
-
-- Nombre completo del familiar
-- Email válido
-- Nombre del ser querido fallecido
-- Relación
-- Descripción / relato
-
-Opcional: teléfono, documentos adjuntos (fase posterior), preferencia de contacto.
-
-## Retención y borrado
-
-- El titular puede solicitar el borrado de sus datos (derecho de supresión).
-- Las solicitudes `descartadas` o `rechazadas` antiguas pueden anonimizarse según política de retención (definir plazo, ej. 24 meses).
+- **pendiente**: confirmación de recepción.
+- **sin_verificar**: aviso de que debe completar verificación (y que el enlace fue enviado por email).
+- **verificado**: confirmación de identidad verificada; el equipo continúa.
+- **cerrado**: cierre del proceso y, si existe, mensaje público del operador.
