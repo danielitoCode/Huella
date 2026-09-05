@@ -21,10 +21,10 @@
 
 - [x] **1.1** Proyecto Appwrite + plataforma Web (`localhost` + dominio futuro)
 - [x] **1.2** Database `huella` y tabla/colección `solicitudes` (schema acordado: varchar/enum/text, sin fechas propias; índices `codigo`, `email`, `estado`, `diditSessionId`)
-- [ ] **1.3** Colección `kyc_verifications` + índices
-- [ ] **1.4** Colección `webhook_events` (`event_id` unique) + índices
+- [x] **1.3** Colección `kyc_verifications` + índices
+- [x] **1.4** Colección `webhook_events` (`event_id` unique) + índices
 - [x] **1.5** Colección `operadores` (o labels/team Appwrite Auth) lista para backoffice
-- [ ] **1.6** API Key de servidor con scopes mínimos + variables en `.env` local (desde `.env.example`)
+- [x] **1.6** API Key de servidor con scopes mínimos + variables en `.env` local (desde `.env.example`)
 - [ ] **1.7** Functions desplegadas: `huella-api` y `huella-webhooks` (entrypoint, env, execute permissions)
 
 **Criterio de cierre §1:** un `POST` de prueba a `huella-api` con `action: "solicitudes.getByCode"` responde JSON estructurado (aunque sea NOT_FOUND).
