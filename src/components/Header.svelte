@@ -5,10 +5,10 @@
 </script>
 
 <header class="header">
-  <div class="brand" onclick={() => irAPublica('home')} role="button" tabindex="0">
+  <button type="button" class="brand" onclick={() => irAPublica('home')}>
     <img src="/icon_huellas.svg" alt="Huella" class="logo" />
     <span>Huella</span>
-  </div>
+  </button>
 
   <nav>
     {#if zona === 'public'}
@@ -52,6 +52,7 @@
     border: none;
     background: none;
     font-size: 1.1rem;
+    padding: 0;
   }
 
   .logo {

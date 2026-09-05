@@ -47,7 +47,21 @@ export class Solicitud {
   readonly fechaActualizacion: string;
 
   private constructor(props: SolicitudProps) {
-    Object.assign(this, props);
+    this.id = props.id;
+    this.codigoSeguimiento = props.codigoSeguimiento;
+    this.nombreFamiliar = props.nombreFamiliar;
+    this.email = props.email;
+    this.telefono = props.telefono;
+    this.nombrePersona = props.nombrePersona;
+    this.relacion = props.relacion;
+    this.descripcion = props.descripcion;
+    this.estado = props.estado;
+    this.diditSessionId = props.diditSessionId;
+    this.kycResultado = props.kycResultado;
+    this.notasInternas = props.notasInternas;
+    this.mensajePublico = props.mensajePublico;
+    this.fechaCreacion = props.fechaCreacion;
+    this.fechaActualizacion = props.fechaActualizacion;
   }
 
   static crear(props: SolicitudProps): Solicitud {
