@@ -1,40 +1,43 @@
-# Core 1 — Objetivos (visión)
+# Core 1 — Objetivos por esquemas funcionales
 
-## Propósito del ciclo
+## Propósito
 
-Dejar de depender de mocks en el frontend y conectar el producto al stack acordado:
+Trabajar en la rama **`core1`** hasta cerrar esquemas demostrables. `master` solo recibe merges cuando un esquema (o el cierre del ciclo) está completo.
 
-- **Appwrite** como BaaS (Auth, DB, Functions)
-- **huella-api** / **huella-webhooks** como únicas functions (plan Free)
-- **Didit** solo server-side + webhook como fuente de verdad KYC
-- Dominio de **solicitudes** ya definido en `src/core` y políticas en `.policies`
+Stack acordado:
 
-## Objetivo de producto (medible)
+- Svelte 5 + Vite + TypeScript
+- Appwrite (Auth, DB, Functions, Sites)
+- 2 functions: `huella-api`, `huella-webhooks`
+- Didit KYC solo server-side + webhook como fuente de verdad
+- Dominio y políticas en `src/core` y `.policies`
 
-Al cerrar Core 1, un operador puede gestionar un caso real de extremo a extremo y un familiar puede crear y seguir su solicitud **sin cuenta**, con estados canónicos:
+## Esquemas
 
-`pendiente` → `sin_verificar` → `verificado` (→ `cerrado` cuando se implemente cierre en API).
+| ID | Nombre | Dependencias | Estado |
+|----|--------|--------------|--------|
+| **F0** | Fundación | — | Cerrado |
+| **A** | Solicitud pública + tracking | F0 | **Siguiente** |
+| **B** | Auth operadores | F0 | Pendiente |
+| **C** | Backoffice solicitudes | A, B | Pendiente |
+| **D** | KYC Didit | C | Pendiente |
+| **U** | UI/UX | A–D (flex) | Pendiente |
+| **Z** | Cierre Core 1 | A–D | Pendiente |
 
-## Fuera de alcance de Core 1 (posponer a core2+)
+Detalle de ítems: [CHECKLIST.md](./CHECKLIST.md).
+
+## Definición de “esquema cerrado”
+
+1. Todos los checkboxes del esquema en `[x]`
+2. Flujo demostrable manualmente (o con tests)
+3. Sin secretos en el frontend
+4. Respeta estados: `pendiente` → `sin_verificar` → `verificado` → `cerrado`
+5. CI del área en verde en `core1`
+
+## Fuera de alcance Core 1 → core2+
 
 - Pagos / Stripe
 - App móvil
 - Multi-idioma
-- Panel analytics avanzado
+- Analytics avanzado
 - Más de 2 Appwrite Functions
-- Sustituir Svelte+Vite por otro framework
-
-## Definición de “hecho” por ítem
-
-Un checkbox del [CHECKLIST.md](./CHECKLIST.md) solo se marca si:
-
-1. El comportamiento es demostrable (manual o test),
-2. No hay secretos en el frontend,
-3. Respeta estados y políticas de dominio,
-4. El PR asociado a master tiene CI en verde.
-
-## Siguiente paso inmediato
-
-1. Mergear este roadmap a `master` (objetivo **0.3**).
-2. Completar **§1 Fundación Appwrite** en la Console.
-3. Implementar **§2–§4** en la rama `core1` y abrir PR de “alta + tracking reales”.

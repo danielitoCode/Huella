@@ -1,0 +1,33 @@
+name: CI huella-api
+
+on:
+  push:
+    paths:
+      - 'functions/huella-api/**'
+      - '.github/workflows/ci-huella-api.yml'
+  pull_request:
+    paths:
+      - 'functions/huella-api/**'
+      - '.github/workflows/ci-huella-api.yml'
+
+concurrency:
+  group: ci-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: huella-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: functions/huella-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/huella-api/package.json
+      - run: npm install
+      - run: npm test

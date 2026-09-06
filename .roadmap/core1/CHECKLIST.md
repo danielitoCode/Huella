@@ -33,10 +33,10 @@
 
 ## 2. Cliente Appwrite en el frontend
 
-- [ ] **2.1** Dependencia `appwrite` (Web SDK) en el proyecto Vite
-- [ ] **2.2** Cliente singleton (`src/lib/appwrite/client.ts`) con `VITE_APPWRITE_*`
-- [ ] **2.3** Helper `executeApi(action, payload)` → `functions.createExecution(huella-api)`
-- [ ] **2.4** IDs de functions en env (`VITE_APPWRITE_FUNCTION_API_ID`, opcional webhooks solo server)
+- [x] **2.1** Dependencia `appwrite` (Web SDK) en el proyecto Vite
+- [x] **2.2** Cliente singleton (`src/lib/appwrite/client.ts`) con `VITE_APPWRITE_*`
+- [x] **2.3** Helper `executeApi(action, payload)` → `functions.createExecution(huella-api)`
+- [x] **2.4** IDs de functions en env (`VITE_APPWRITE_FUNCTION_API_ID`, opcional webhooks solo server)
 
 **Criterio de cierre §2:** desde el navegador se puede invocar la function y ver respuesta success/error sin secretos en el client bundle.
 
@@ -44,10 +44,10 @@
 
 ## 3. Flujo público — crear solicitud
 
-- [ ] **3.1** Formulario de alta cableado a `solicitudes.create` (no mock)
-- [ ] **3.2** Validación de campos alineada al dominio (nombreFamiliar, email, nombrePersona, relacion, descripcion)
-- [ ] **3.3** Pantalla de confirmación con **código de seguimiento** y enlace al tracking
-- [ ] **3.4** Email de tracking enviado (Resend o stub documentado en logs de la function)
+- [x] **3.1** Formulario de alta cableado a `solicitudes.create` (no mock)
+- [x] **3.2** Validación de campos alineada al dominio (nombreFamiliar, email, nombrePersona, relacion, descripcion)
+- [x] **3.3** Pantalla de confirmación con **código de seguimiento** y enlace al tracking
+- [x] **3.4** Email de tracking enviado (Resend o stub documentado en logs de la function)
 
 **Criterio de cierre §3:** un familiar completa el formulario y recibe código; el documento existe en Appwrite en estado `pendiente`.
 
@@ -55,9 +55,9 @@
 
 ## 4. Flujo público — tracking
 
-- [ ] **4.1** Ruta/vista de seguimiento por código llama `solicitudes.getByCode`
-- [ ] **4.2** UI muestra solo datos públicos (estado, mensajePublico, fechas `$createdAt`/`$updatedAt`)
-- [ ] **4.3** Manejo de código inválido / no encontrado
+- [x] **4.1** Ruta/vista de seguimiento por código llama `solicitudes.getByCode`
+- [x] **4.2** UI muestra solo datos públicos (estado, mensajePublico, fechas `$createdAt`/`$updatedAt`)
+- [x] **4.3** Manejo de código inválido / no encontrado
 
 **Criterio de cierre §4:** con el código de §3 se consulta el estado real desde Appwrite.
 
@@ -65,10 +65,10 @@
 
 ## 5. Auth operadores (backoffice)
 
-- [ ] **5.1** Login operador con Appwrite Account (email/password o método elegido en políticas)
-- [ ] **5.2** Sesión en el client SDK; guards de rutas admin
-- [ ] **5.3** `ADMIN_USER_IDS` (o labels) configurado para acciones `auth: admin` en `huella-api`
-- [ ] **5.4** Logout y estado de sesión en la UI
+- [x] **5.1** Login operador con Appwrite Account (email/password o método elegido en políticas)
+- [x] **5.2** Sesión en el client SDK; guards de rutas admin
+- [x] **5.3** `ADMIN_USER_IDS` (o labels) configurado para acciones `auth: admin` en `huella-api`
+- [x] **5.4** Logout y estado de sesión en la UI
 
 **Criterio de cierre §5:** un operador entra al área admin; un anónimo no puede ejecutar `solicitudes.marcarSinVerificar`.
 
@@ -76,10 +76,10 @@
 
 ## 6. Backoffice — listado y detalle
 
-- [ ] **6.1** Acción API o queries Appwrite: listar solicitudes (filtros por `estado`)
-- [ ] **6.2** Vista listado admin (reemplazar datos mock)
-- [ ] **6.3** Vista detalle: datos de la solicitud + notas internas (solo operador)
-- [ ] **6.4** Acción cerrar solicitud (motivo interno obligatorio) vía dominio/API
+- [x] **6.1** Acción API o queries Appwrite: listar solicitudes (filtros por `estado`)
+- [x] **6.2** Vista listado admin (reemplazar datos mock)
+- [x] **6.3** Vista detalle: datos de la solicitud + notas internas (solo operador)
+- [x] **6.4** Acción cerrar solicitud (motivo interno obligatorio) vía dominio/API
 
 **Criterio de cierre §6:** el operador ve y abre solicitudes reales creadas en §3.
 
@@ -87,11 +87,11 @@
 
 ## 7. KYC Didit (inicio desde backoffice)
 
-- [ ] **7.1** Botón/flujo “Marcar sin verificar / iniciar KYC” → `solicitudes.marcarSinVerificar`
-- [ ] **7.2** Transición `pendiente` → `sin_verificar` + `diditSessionId` persistido
-- [ ] **7.3** Fila en `kyc_verifications` creada
-- [ ] **7.4** Email con enlace de verificación al familiar
-- [ ] **7.5** (Opcional UI) mostrar URL de sesión al operador para reenvío
+- [x] **7.1** Botón/flujo “Marcar sin verificar / iniciar KYC” → `solicitudes.marcarSinVerificar`
+- [x] **7.2** Transición `pendiente` → `sin_verificar` + `diditSessionId` persistido
+- [x] **7.3** Fila en `kyc_verifications` creada
+- [x] **7.4** Email con enlace de verificación al familiar
+- [x] **7.5** (Opcional UI) mostrar URL de sesión al operador para reenvío
 
 **Criterio de cierre §7:** tras la acción, tracking muestra estado `sin_verificar` y existe sesión Didit real (o error Didit controlado si faltan keys en staging).
 
@@ -99,11 +99,11 @@
 
 ## 8. Webhook Didit (fuente de verdad)
 
-- [ ] **8.1** URL pública de `huella-webhooks` configurada en consola Didit
-- [ ] **8.2** `DIDIT_WEBHOOK_SECRET` en la function
-- [ ] **8.3** Evento `Approved` → solicitud `verificado` + `kycResultado`
-- [ ] **8.4** Idempotencia: reenvío del mismo `event_id` no duplica efectos
-- [ ] **8.5** Estados intermedios / Declined / Expired actualizan `kyc_verifications` sin marcar verificado por el front
+- [x] **8.1** URL pública de `huella-webhooks` configurada en consola Didit
+- [x] **8.2** `DIDIT_WEBHOOK_SECRET` en la function
+- [x] **8.3** Evento `Approved` → solicitud `verificado` + `kycResultado`
+- [x] **8.4** Idempotencia: reenvío del mismo `event_id` no duplica efectos
+- [x] **8.5** Estados intermedios / Declined / Expired actualizan `kyc_verifications` sin marcar verificado por el front
 
 **Criterio de cierre §8:** un webhook de prueba (o sesión real) deja la solicitud en `verificado` solo por el webhook.
 
@@ -111,10 +111,10 @@
 
 ## 9. Calidad y cierre del ciclo Core 1
 
-- [ ] **9.1** Tests de dominio siguen verdes; añadir tests de adaptadores críticos si aplica
+- [x] **9.1** Tests de dominio siguen verdes; añadir tests de adaptadores críticos si aplica
 - [ ] **9.2** CI en PR a master en verde
-- [ ] **9.3** README actualizado (cómo correr local + variables + IDs de functions)
-- [ ] **9.4** Checklist Core 1 revisado; objetivos abiertos movidos a `core2` si quedan fuera de alcance
+- [x] **9.3** README actualizado (cómo correr local + variables + IDs de functions)
+- [x] **9.4** Checklist Core 1 revisado; objetivos abiertos movidos a `core2` si quedan fuera de alcance
 
 **Criterio de cierre Core 1:** recorrido E2E manual documentado: alta → email/código → tracking → login admin → KYC → webhook → tracking `verificado`.
 

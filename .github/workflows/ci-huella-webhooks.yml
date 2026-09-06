@@ -1,0 +1,33 @@
+name: CI huella-webhooks
+
+on:
+  push:
+    paths:
+      - 'functions/huella-webhooks/**'
+      - '.github/workflows/ci-huella-webhooks.yml'
+  pull_request:
+    paths:
+      - 'functions/huella-webhooks/**'
+      - '.github/workflows/ci-huella-webhooks.yml'
+
+concurrency:
+  group: ci-webhooks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: huella-webhooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: functions/huella-webhooks
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/huella-webhooks/package.json
+      - run: npm install
+      - run: npm test

@@ -4,6 +4,9 @@ import {
   validateCreate,
   validateGetByCode,
   validateMarcarSinVerificar,
+  validateList,
+  validateGetById,
+  validateCerrar,
 } from './solicitudes.validator.js';
 
 export const solicitudesRoutes = {
@@ -32,6 +35,30 @@ export const solicitudesRoutes = {
         ...payload,
         operatorId: ctx.identity.userId,
       });
+    },
+  },
+  'solicitudes.list': {
+    auth: AUTH.ADMIN,
+    validate: validateList,
+    handler: async (ctx, payload) => {
+      const service = createSolicitudesService(ctx.req);
+      return service.list(payload);
+    },
+  },
+  'solicitudes.getById': {
+    auth: AUTH.ADMIN,
+    validate: validateGetById,
+    handler: async (ctx, payload) => {
+      const service = createSolicitudesService(ctx.req);
+      return service.getById(payload);
+    },
+  },
+  'solicitudes.cerrar': {
+    auth: AUTH.ADMIN,
+    validate: validateCerrar,
+    handler: async (ctx, payload) => {
+      const service = createSolicitudesService(ctx.req);
+      return service.cerrar(payload);
     },
   },
 };

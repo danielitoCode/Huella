@@ -34,6 +34,15 @@ export function createSolicitudesRepo(req) {
       ]);
       return res.documents[0] || null;
     },
+    async list({ estado, limit = 25, offset = 0 } = {}) {
+      const filters = [];
+      if (estado) filters.push(Query.equal('estado', estado));
+      filters.push(Query.orderDesc('$createdAt'));
+      filters.push(Query.limit(limit));
+      filters.push(Query.offset(offset));
+      const res = await databases.listDocuments(databaseId, solicitudesId, filters);
+      return { documents: res.documents, total: res.total };
+    },
   };
 }
 

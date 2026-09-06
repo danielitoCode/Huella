@@ -1,16 +1,21 @@
 # Roadmap Huella
 
-Trabajo por **ciclos** en ramas `coreN`. `master` solo recibe merges vía PR cuando el objetivo está cerrado y el CI pasa.
+Trabajo por **ciclos** en ramas `coreN`. `master` solo recibe merges vía PR cuando un **esquema funcional** está cerrado.
 
 | Ciclo | Rama | Estado |
 |-------|------|--------|
-| Core 1 | `core1` | En curso |
+| Core 1 | `core1` | En curso — siguiente: **esquema A** (solicitud pública + tracking) |
 
-## Flujo
+## Esquemas Core 1 (resumen)
 
-1. Trabajar en la rama del ciclo (`core1`).
-2. Completar un objetivo del checklist (marcar `[x]`).
-3. Abrir **PR → master** cuando el objetivo (o un grupo coherente) esté listo.
-4. Tras merge, seguir en la misma rama o abrir `core2` si el ciclo cierra.
+| ID | Esquema | Estado |
+|----|---------|--------|
+| F0 | Fundación | Cerrado |
+| A | Solicitud pública + tracking | Siguiente |
+| B | Auth operadores | Pendiente |
+| C | Backoffice solicitudes | Pendiente |
+| D | KYC Didit | Pendiente |
+| U | UI/UX | Pendiente |
+| Z | Cierre ciclo | Pendiente |
 
-Detalle del ciclo actual: [core1/CHECKLIST.md](./core1/CHECKLIST.md)
+Detalle: [core1/CHECKLIST.md](./core1/CHECKLIST.md) · [core1/OBJECTIVES.md](./core1/OBJECTIVES.md)
