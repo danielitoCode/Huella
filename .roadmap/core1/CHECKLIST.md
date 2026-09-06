@@ -16,146 +16,96 @@
 | ID | Esquema | Estado |
 |----|---------|--------|
 | **F0** | Fundación (Appwrite + functions + CI + cliente web) | **Cerrado** |
-| **A** | Solicitud pública + tracking | **Siguiente** |
+| **U0** | Base visual DESIGN.md + tema sistema | **En curso / parcial** |
+| **A** | Solicitud pública + tracking | **Siguiente funcional** |
 | **B** | Auth operadores | Pendiente |
 | **C** | Backoffice de solicitudes | Pendiente (después de B) |
 | **D** | KYC Didit (inicio + webhook) | Pendiente (después de C) |
-| **U** | UI/UX (temas, animaciones, ortografía) | Pendiente (puede ir en paralelo al final) |
+| **U** | UI/UX polish restante | Pendiente |
 | **Z** | Calidad y cierre Core 1 | Pendiente |
 
 ---
 
 ## F0 — Fundación *(cerrado)*
 
-Infra y cable base. Sin esto no hay esquemas de negocio reales.
+- [x] **F0.1–F0.12** Infra Appwrite, functions, Site, CI, cliente `executeApi`, fix NavHost
 
-### Infra Appwrite (Console)
+---
 
-- [x] **F0.1** Proyecto + plataforma Web
-- [x] **F0.2** Database `huella` + colección `solicitudes` (+ índices)
-- [x] **F0.3** Colección `kyc_verifications` (+ índices)
-- [x] **F0.4** Colección `webhook_events` (`event_id` unique)
-- [x] **F0.5** Colecciones `operadores` y `auditoria`
-- [x] **F0.6** API Key + `.env` / variables de Site y Functions
-- [x] **F0.7** Functions desplegadas: `huella-api`, `huella-webhooks` (Git → `master` o deploy activo)
-- [x] **F0.8** Site estático Vite (`dist`, fallback `index.html`)
+## U0 — Base visual (DESIGN.md) *(parcial)*
 
-### Calidad de base + cliente
+Antes de esquemas funcionales de negocio, la identidad visual mínima del MVP.
 
-- [x] **F0.9** Tests unitarios + CI independientes (`web` / `huella-api` / `huella-webhooks`)
-- [x] **F0.10** Dependencia `appwrite` + singleton `src/lib/appwrite/`
-- [x] **F0.11** `executeApi` / `executeApiSafe` + `VITE_APPWRITE_FUNCTION_API_ID`
-- [x] **F0.12** Fix typecheck `AnimatedVisibility` / `NavHost`
+- [x] **U0.1** Tokens de color marca (azul profundo, acero, verde esperanza, dorado, gris, blanco)
+- [x] **U0.2** Tema **claro/oscuro** vía `prefers-color-scheme` (sin toggle manual aún)
+- [x] **U0.3** Tipografía: Inter (UI) + Cormorant Garamond (titulares / marca)
+- [x] **U0.4** Header institucional, footer, landing alineada a voz DESIGN.md
+- [x] **U0.5** Utilidades globales: `.btn-*`, `.card`, formularios, badges, `prefers-reduced-motion`
+- [ ] **U0.6** Revisión visual de todas las vistas admin/solicitud con los mismos tokens (al cablear A–C)
+- [ ] **U** resto (animaciones entre vistas, ortografía exhaustiva) — ver esquema U
 
-**Criterio de cierre F0:** cliente puede invocar la function sin secretos en el bundle; CI web typecheck/tests en verde en `core1`.
+**Criterio parcial U0:** la app ya no usa la paleta genérica Vite/púrpura; respeta marca y el modo del SO.
 
 ---
 
 ## A — Solicitud pública + tracking *(siguiente)*
 
-Familiar **sin cuenta**: crea solicitud y consulta estado por código.
-
 ### A.1 Alta
 
-- [ ] **A.1.1** Formulario público cableado a `solicitudes.create` (no mock)
-- [ ] **A.1.2** Validación de campos alineada al dominio / validator de la API
-- [ ] **A.1.3** Pantalla de confirmación con `codigoSeguimiento` + enlace a tracking
-- [ ] **A.1.4** Email de tracking (Resend real o stub documentado en logs de `huella-api`)
+- [ ] **A.1.1** Formulario público → `solicitudes.create`
+- [ ] **A.1.2** Validación dominio / API
+- [ ] **A.1.3** Confirmación con `codigoSeguimiento` + enlace tracking
+- [ ] **A.1.4** Email tracking (Resend o stub en logs)
 
 ### A.2 Seguimiento
 
-- [ ] **A.2.1** Vista/ruta de tracking llama `solicitudes.getByCode`
-- [ ] **A.2.2** UI solo datos públicos (estado, mensajePublico, `$createdAt` / `$updatedAt`)
-- [ ] **A.2.3** Manejo de código inválido y no encontrado (`ApiError` / `executeApiSafe`)
+- [ ] **A.2.1** Tracking → `solicitudes.getByCode`
+- [ ] **A.2.2** Solo datos públicos
+- [ ] **A.2.3** Código inválido / no encontrado
 
-**Criterio de cierre A:** un familiar completa el formulario, recibe código, el documento existe en Appwrite en `pendiente`, y con ese código ve el estado real en tracking. CI web en verde.
+**Criterio de cierre A:** alta real + tracking real; UI con tokens U0.
 
 ---
 
 ## B — Auth operadores
 
-Acceso al backoffice con Appwrite Account.
-
-- [ ] **B.1** Login operador (email/password u método acordado en `.policies`)
-- [ ] **B.2** Sesión en Web SDK; persistencia y recuperación al recargar
-- [ ] **B.3** Guards de rutas admin (anónimo no entra al área privada)
-- [ ] **B.4** `ADMIN_USER_IDS` (o labels) configurado en `huella-api` para acciones `auth: admin`
-- [ ] **B.5** Logout y estado de sesión visible en UI
-
-**Criterio de cierre B:** operador entra y sale; anónimo no ejecuta `solicitudes.marcarSinVerificar`. CI web en verde.
+- [ ] **B.1** Login Appwrite Account
+- [ ] **B.2** Sesión persistente
+- [ ] **B.3** Guards admin
+- [ ] **B.4** `ADMIN_USER_IDS` en `huella-api`
+- [ ] **B.5** Logout
 
 ---
 
 ## C — Backoffice de solicitudes
 
-Operador gestiona casos reales creados en **A**. Requiere **B**.
-
-- [ ] **C.1** Listado de solicitudes (API o queries Appwrite con sesión)
-- [ ] **C.2** Filtros por `estado`
-- [ ] **C.3** Vista detalle: datos + notas internas (solo operador)
-- [ ] **C.4** Acción cerrar solicitud (motivo interno obligatorio) vía dominio/API
-- [ ] **C.5** Sustituir datos mock del admin por datos reales
-
-**Criterio de cierre C:** operador ve, abre y cierra solicitudes creadas en el flujo A. CI web en verde.
+- [ ] **C.1** Listado real
+- [ ] **C.2** Filtros por estado
+- [ ] **C.3** Detalle + notas
+- [ ] **C.4** Cerrar solicitud
+- [ ] **C.5** Sin mocks
 
 ---
 
-## D — KYC Didit (inicio + webhook)
+## D — KYC Didit
 
-Verificación solo cuando hay familiar/contacto y se inicia negociación. Requiere **C**.
-
-### D.1 Inicio desde backoffice
-
-- [ ] **D.1.1** Acción “Marcar sin verificar / iniciar KYC” → `solicitudes.marcarSinVerificar`
-- [ ] **D.1.2** Transición `pendiente` → `sin_verificar` + `diditSessionId`
-- [ ] **D.1.3** Fila en `kyc_verifications`
-- [ ] **D.1.4** Email con enlace de verificación al familiar
-- [ ] **D.1.5** (Opcional) mostrar URL de sesión al operador para reenvío
-
-### D.2 Webhook (fuente de verdad)
-
-- [ ] **D.2.1** URL pública de `huella-webhooks` en consola Didit
-- [ ] **D.2.2** `DIDIT_WEBHOOK_SECRET` en la function
-- [ ] **D.2.3** Evento `Approved` → solicitud `verificado` + `kycResultado`
-- [ ] **D.2.4** Idempotencia por `event_id`
-- [ ] **D.2.5** Declined / Expired / intermedios actualizan KYC sin marcar `verificado` desde el front
-
-**Criterio de cierre D:** tracking muestra `sin_verificar` tras la acción admin y `verificado` solo tras webhook Didit. CI api + webhooks + web en verde.
+- [ ] **D.1.*** Inicio desde backoffice (`marcarSinVerificar`, email, kyc row)
+- [ ] **D.2.*** Webhook fuente de verdad + idempotencia
 
 ---
 
-## U — UI / UX *(puede paralelizarse al final de A–D)*
+## U — UI / UX restante
 
-- [ ] **U.1** Esquema de colores por temas acorde al propósito de Huella
-- [ ] **U.2** Colores alineados + cambio de tema (claro/oscuro o sistema)
-- [ ] **U.3** Análisis y aplicación de animaciones / transiciones entre vistas
-- [ ] **U.4** Revisión ortográfica, caracteres y concordancia en copy de UI
-
-**Criterio de cierre U:** UI coherente en público y admin sin romper flujos A–D.
+- [ ] **U.1** Toggle manual tema (opcional; sistema ya cubierto en U0.2)
+- [ ] **U.2** Animaciones / transiciones 150–300ms entre vistas
+- [ ] **U.3** Revisión ortográfica y tono en todo el copy
+- [ ] **U.4** Componentes reutilizables listados en DESIGN.md según necesidad de A–D
 
 ---
 
-## Z — Calidad y cierre del ciclo Core 1
+## Z — Cierre Core 1
 
-- [ ] **Z.1** Tests dominio + functions verdes
-- [ ] **Z.2** CI gate (`web` + `huella-api` + `huella-webhooks`) en verde en el PR de cierre a `master`
-- [ ] **Z.3** README actualizado (local, env, IDs de functions/site)
-- [ ] **Z.4** Recorrido E2E documentado: alta → tracking → login → backoffice → KYC → webhook → `verificado`
-- [ ] **Z.5** Ítems abiertos movidos a `core2` si quedan fuera de alcance
-
-**Criterio de cierre Core 1:** esquemas **A + B + C + D** cerrados; PR a `master` con CI en verde.
-
----
-
-## Orden de trabajo y PRs a `master`
-
-| Orden | Esquema | PR orientativo |
-|-------|---------|----------------|
-| 1 | **A** | `feat(core1): solicitud pública + tracking reales` |
-| 2 | **B** | `feat(core1): auth operadores` |
-| 3 | **C** | `feat(core1): backoffice solicitudes` |
-| 4 | **D** | `feat(core1): KYC Didit + webhook` |
-| 5 | **U** (si aplica) | `feat(core1): UI/UX temas y polish` |
-| 6 | **Z** | `chore(core1): cierre ciclo` |
-
-Fixes de soporte (typecheck, tests) permanecen en `core1` sin PR hasta el esquema correspondiente.
+- [ ] **Z.1** Tests + CI gate en PR a `master`
+- [ ] **Z.2** README actualizado
+- [ ] **Z.3** E2E documentado
+- [ ] **Z.4** Sobrantes → core2

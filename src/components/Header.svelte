@@ -6,24 +6,27 @@
 
 <header class="header">
   <button type="button" class="brand" onclick={() => irAPublica('home')}>
-    <img src="/icon_huellas.svg" alt="Huella" class="logo" />
-    <span>Huella</span>
+    <img src="/icon_huellas.svg" alt="" class="logo" width="32" height="32" />
+    <span class="brand-text">
+      <span class="name">Huella</span>
+      <span class="tag">Verdad · Dignidad · Regreso</span>
+    </span>
   </button>
 
-  <nav>
+  <nav aria-label="Principal">
     {#if zona === 'public'}
-      <button class="nav-link" onclick={() => irAPublica('home')}>Inicio</button>
-      <button class="nav-link primary" onclick={() => irAPublica('solicitud')}>
-        Enviar solicitud
+      <button type="button" class="nav-link" onclick={() => irAPublica('home')}>Inicio</button>
+      <button type="button" class="nav-link primary" onclick={() => irAPublica('solicitud')}>
+        Iniciar una solicitud
       </button>
-      <button class="nav-link subtle" onclick={() => irAAdmin('login')}>
-        Acceso admin
+      <button type="button" class="nav-link subtle" onclick={() => irAAdmin('login')}>
+        Acceso operadores
       </button>
     {:else}
-      <button class="nav-link" onclick={() => irAAdmin('dashboard')}>Dashboard</button>
-      <button class="nav-link" onclick={() => irAAdmin('solicitudes')}>Solicitudes</button>
-      <button class="nav-link subtle" onclick={() => irAPublica('home')}>
-        Ver sitio público
+      <button type="button" class="nav-link" onclick={() => irAAdmin('dashboard')}>Dashboard</button>
+      <button type="button" class="nav-link" onclick={() => irAAdmin('solicitudes')}>Solicitudes</button>
+      <button type="button" class="nav-link subtle" onclick={() => irAPublica('home')}>
+        Sitio público
       </button>
     {/if}
   </nav>
@@ -34,64 +37,115 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
+    gap: 1rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--header-border);
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 20;
   }
 
   .brand {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    color: var(--text-h);
-    cursor: pointer;
+    gap: 0.65rem;
     border: none;
     background: none;
-    font-size: 1.1rem;
-    padding: 0;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+    color: var(--header-text);
+    text-align: left;
+  }
+
+  .brand:focus-visible {
+    outline: 2px solid var(--brand-gold);
+    outline-offset: 2px;
   }
 
   .logo {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  .brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+  }
+
+  .name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.35rem;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .tag {
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--brand-gold);
+    opacity: 0.9;
   }
 
   nav {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 0.35rem;
     align-items: center;
+    justify-content: flex-end;
   }
 
   .nav-link {
-    border: none;
+    border: 1.5px solid transparent;
     background: transparent;
-    color: var(--text);
-    padding: 8px 14px;
-    border-radius: 6px;
+    color: var(--header-text);
+    padding: 0.5rem 0.85rem;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 0.95rem;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 500;
+    min-height: 40px;
   }
 
   .nav-link:hover {
-    background: var(--accent-bg);
-    color: var(--text-h);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .nav-link:focus-visible {
+    outline: 2px solid var(--brand-gold);
+    outline-offset: 2px;
   }
 
   .nav-link.primary {
     background: var(--accent);
-    color: white;
+    color: var(--text-on-accent);
+    font-weight: 600;
   }
 
   .nav-link.primary:hover {
-    filter: brightness(1.05);
+    background: var(--accent-hover);
   }
 
   .nav-link.subtle {
-    opacity: 0.7;
-    font-size: 0.85rem;
+    opacity: 0.75;
+    font-size: 0.8rem;
+    font-weight: 400;
+  }
+
+  @media (max-width: 640px) {
+    .tag {
+      display: none;
+    }
+
+    .nav-link.subtle {
+      display: none;
+    }
   }
 </style>
