@@ -60,3 +60,24 @@ jobs:
           cache-dependency-path: functions/huella-webhooks/package.json
       - run: npm install
       - run: npm test
+
+  CI:
+    name: CI
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs:
+      - web
+      - huella-api
+      - huella-webhooks
+
+    steps:
+      - name: Verify all checks passed
+        run: |
+          if [[ "${{ needs.web.result }}" != "success" ||
+                "${{ needs.huella-api.result }}" != "success" ||
+                "${{ needs.huella-webhooks.result }}" != "success" ]]; then
+            echo "One or more CI checks failed."
+            exit 1
+          fi
+          
+          echo "All CI checks passed."
