@@ -6,21 +6,19 @@
 
 <header class="header">
   <button type="button" class="brand" onclick={() => irAPublica('home')}>
-    <img src="/icon_huellas.svg" alt="" class="logo" width="32" height="32" />
-    <span class="brand-text">
-      <span class="name">Huella</span>
-      <span class="tag">Verdad · Dignidad · Regreso</span>
-    </span>
+    <img src="/icon_huellas.svg" alt="" class="logo" width="28" height="28" />
+    <span class="name">Huella</span>
   </button>
 
   <nav aria-label="Principal">
     {#if zona === 'public'}
       <button type="button" class="nav-link" onclick={() => irAPublica('home')}>Inicio</button>
+      <button type="button" class="nav-link" onclick={() => irAPublica('solicitud')}>Buscar</button>
       <button type="button" class="nav-link primary" onclick={() => irAPublica('solicitud')}>
-        Iniciar una solicitud
+        Comenzar una búsqueda
       </button>
       <button type="button" class="nav-link subtle" onclick={() => irAAdmin('login')}>
-        Acceso operadores
+        Operadores
       </button>
     {:else}
       <button type="button" class="nav-link" onclick={() => irAAdmin('dashboard')}>Dashboard</button>
@@ -38,7 +36,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    padding: 0.75rem 1.25rem;
+    padding: 0.85rem 1.35rem;
     background: var(--header-bg);
     border-bottom: 1px solid var(--header-border);
     position: sticky;
@@ -49,102 +47,82 @@
   .brand {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.55rem;
     border: none;
     background: none;
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 0.2rem;
     border-radius: var(--radius-sm);
     color: var(--header-text);
-    text-align: left;
   }
 
   .brand:focus-visible {
-    outline: 2px solid var(--brand-gold);
+    outline: 2px solid var(--gold);
     outline-offset: 2px;
   }
 
   .logo {
-    width: 32px;
-    height: 32px;
-    flex-shrink: 0;
-  }
-
-  .brand-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.05rem;
+    width: 28px;
+    height: 28px;
   }
 
   .name {
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 1.35rem;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-  }
-
-  .tag {
-    font-size: 0.65rem;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--brand-gold);
-    opacity: 0.9;
+    font-size: 1.4rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
   }
 
   nav {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.25rem;
     align-items: center;
     justify-content: flex-end;
   }
 
   .nav-link {
-    border: 1.5px solid transparent;
+    border: 1px solid transparent;
     background: transparent;
     color: var(--header-text);
-    padding: 0.5rem 0.85rem;
-    border-radius: var(--radius-sm);
+    padding: 0.45rem 0.75rem;
+    border-radius: var(--radius);
     cursor: pointer;
     font-family: var(--font-sans);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 500;
     min-height: 40px;
   }
 
   .nav-link:hover {
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--gold);
   }
 
   .nav-link:focus-visible {
-    outline: 2px solid var(--brand-gold);
+    outline: 2px solid var(--gold);
     outline-offset: 2px;
   }
 
   .nav-link.primary {
-    background: var(--accent);
-    color: var(--text-on-accent);
+    background: var(--color-stone);
+    color: var(--color-obsidian-navy);
     font-weight: 600;
+    border-color: var(--color-stone);
   }
 
   .nav-link.primary:hover {
-    background: var(--accent-hover);
+    background: var(--color-ivory);
+    color: var(--color-obsidian-navy);
   }
 
   .nav-link.subtle {
-    opacity: 0.75;
-    font-size: 0.8rem;
+    opacity: 0.65;
+    font-size: 0.78rem;
     font-weight: 400;
   }
 
   @media (max-width: 640px) {
-    .tag {
-      display: none;
-    }
-
-    .nav-link.subtle {
+    .nav-link:not(.primary):not(.subtle) {
       display: none;
     }
   }

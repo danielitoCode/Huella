@@ -1,71 +1,68 @@
 /* ==========================================================================
-   HUELLA — Design tokens (DESIGN.md)
-   Tema claro / oscuro enlazado a prefers-color-scheme del navegador
+   HUELLA — Contemporary Memorial Technology (DESIGN.md)
+   Tema claro/oscuro: prefers-color-scheme
    ========================================================================== */
 
 :root {
   /* Marca */
-  --brand-deep: #0b1d2a;
-  --brand-steel: #334b5e;
-  --brand-hope: #2e7d6b;
-  --brand-gold: #c9a66b;
-  --brand-mist: #f2f4f5;
-  --brand-white: #ffffff;
+  --color-obsidian-navy: #071923;
+  --color-midnight-blue: #102a38;
+  --color-memorial-gold: #c6a46a;
+  --color-stone: #e8e5df;
+  --color-ivory: #f8f7f3;
+  --color-hope-teal: #3c8b7a;
 
-  /* Semánticos */
-  --semantic-positive: #2e7d6b;
-  --semantic-info: #3b82a0;
-  --semantic-warning: #c9953e;
-  --semantic-error: #b84c4c;
-  --semantic-neutral: #64748b;
+  /* Funcionales */
+  --color-text-primary: #071923;
+  --color-text-secondary: #52606a;
+  --color-text-muted: #7a858c;
+  --color-border-subtle: rgba(7, 25, 35, 0.12);
+  --color-border-gold: rgba(198, 164, 106, 0.35);
+  --color-alert: #b84c4c;
+  --color-info: #3b82a0;
 
-  /* Superficies — light */
-  --bg: var(--brand-mist);
-  --bg-elevated: var(--brand-white);
-  --bg-institutional: var(--brand-deep);
-  --surface: var(--brand-white);
-  --surface-muted: #e8ecf0;
-  --border: #d5dbe1;
-  --border-strong: var(--brand-steel);
+  /* Superficies — light (Ivory / Stone, no blanco puro) */
+  --bg: var(--color-ivory);
+  --bg-elevated: var(--color-ivory);
+  --bg-secondary: var(--color-stone);
+  --bg-institutional: var(--color-obsidian-navy);
+  --surface: var(--color-ivory);
+  --surface-muted: var(--color-stone);
+  --border: var(--color-border-subtle);
+  --border-strong: rgba(7, 25, 35, 0.22);
 
-  /* Texto — light */
-  --text: #4a5563;
-  --text-h: var(--brand-deep);
-  --text-muted: var(--semantic-neutral);
-  --text-on-deep: #e8eef2;
-  --text-on-accent: #ffffff;
+  --text: var(--color-text-secondary);
+  --text-h: var(--color-text-primary);
+  --text-muted: var(--color-text-muted);
+  --text-on-dark: var(--color-stone);
+  --text-on-accent: var(--color-ivory);
 
-  /* Acciones */
-  --accent: var(--brand-hope);
-  --accent-hover: #266b5c;
-  --accent-bg: rgba(46, 125, 107, 0.1);
-  --accent-border: rgba(46, 125, 107, 0.35);
-  --focus-ring: var(--brand-hope);
+  /* CTA: Obsidian sobre claro; Hope Teal solo para positivo funcional */
+  --accent: var(--color-obsidian-navy);
+  --accent-hover: var(--color-midnight-blue);
+  --accent-bg: rgba(7, 25, 35, 0.06);
+  --accent-border: rgba(7, 25, 35, 0.2);
+  --positive: var(--color-hope-teal);
+  --gold: var(--color-memorial-gold);
+  --focus-ring: var(--color-memorial-gold);
 
-  /* Header / chrome */
-  --header-bg: var(--brand-deep);
-  --header-text: var(--text-on-deep);
-  --header-border: rgba(201, 166, 107, 0.25);
+  --header-bg: var(--color-obsidian-navy);
+  --header-text: var(--color-stone);
+  --header-border: var(--color-border-gold);
 
-  /* Elevación suave (DESIGN: sombras muy suaves) */
-  --shadow: 0 1px 2px rgba(11, 29, 42, 0.04), 0 4px 12px rgba(11, 29, 42, 0.06);
-  --radius: 14px;
-  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(7, 25, 35, 0.04), 0 6px 20px rgba(7, 25, 35, 0.05);
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
 
-  /* Tipografía */
   --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-display: 'DM Serif Display', Georgia, 'Times New Roman', serif;
   --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
-
-  /* Escala */
-  --text-body: 16px;
-  --text-small: 14px;
-  --leading: 1.5;
 
   color-scheme: light dark;
   font-family: var(--font-sans);
-  font-size: var(--text-body);
-  line-height: var(--leading);
+  font-size: 16px;
+  line-height: 1.55;
   font-weight: 400;
   color: var(--text);
   background-color: var(--bg);
@@ -77,29 +74,31 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b1d2a;
-    --bg-elevated: #132a3a;
-    --bg-institutional: #07141c;
-    --surface: #132a3a;
-    --surface-muted: #1a3346;
-    --border: #2a4254;
-    --border-strong: #4a6578;
+    --bg: var(--color-obsidian-navy);
+    --bg-elevated: var(--color-midnight-blue);
+    --bg-secondary: #0c222e;
+    --bg-institutional: #040e14;
+    --surface: var(--color-midnight-blue);
+    --surface-muted: #0c222e;
+    --border: rgba(232, 229, 223, 0.12);
+    --border-strong: rgba(232, 229, 223, 0.22);
 
-    --text: #b8c5d0;
-    --text-h: #f0f4f7;
-    --text-muted: #8a9baa;
-    --text-on-deep: #e8eef2;
+    --text: #b8c4cc;
+    --text-h: var(--color-stone);
+    --text-muted: #8a969e;
+    --text-on-dark: var(--color-stone);
 
-    --accent: #3a9a85;
-    --accent-hover: #4aab95;
-    --accent-bg: rgba(58, 154, 133, 0.15);
-    --accent-border: rgba(58, 154, 133, 0.4);
+    --accent: var(--color-stone);
+    --accent-hover: var(--color-ivory);
+    --accent-bg: rgba(232, 229, 223, 0.08);
+    --accent-border: rgba(232, 229, 223, 0.28);
+    --positive: #4a9e8c;
 
-    --header-bg: #07141c;
-    --header-text: #e8eef2;
-    --header-border: rgba(201, 166, 107, 0.2);
+    --header-bg: #040e14;
+    --header-text: var(--color-stone);
+    --header-border: var(--color-border-gold);
 
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 28px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -113,7 +112,6 @@
   }
 }
 
-/* —— Reset base —— */
 *,
 *::before,
 *::after {
@@ -131,57 +129,55 @@ body {
   min-height: 100svh;
 }
 
-/* —— Tipografía —— */
+/* Tipografía editorial */
 h1,
 h2,
-h3,
-.display {
+.display,
+.editorial {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 400;
   color: var(--text-h);
-  line-height: 1.2;
+  line-height: 1.12;
   letter-spacing: -0.02em;
   margin: 0 0 0.5em;
 }
 
-h1,
-.display {
-  font-size: clamp(2rem, 4vw, 3rem);
+h1 {
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
 }
 
 h2 {
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: clamp(1.75rem, 3.5vw, 2.625rem);
 }
 
 h3 {
-  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
   font-family: var(--font-sans);
   font-weight: 600;
+  font-size: 1.125rem;
+  color: var(--text-h);
+  margin: 0 0 0.5em;
+  letter-spacing: 0;
 }
 
 h4 {
   font-family: var(--font-sans);
   font-weight: 600;
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: var(--text-h);
   margin: 0 0 0.5em;
 }
 
 p {
   margin: 0 0 1em;
-  max-width: 65ch;
+  max-width: 40rem;
 }
 
 a {
-  color: var(--accent);
+  color: var(--positive);
   text-underline-offset: 2px;
 }
 
-a:hover {
-  color: var(--accent-hover);
-}
-
-/* —— Utilidades de botón (DESIGN §15) —— */
+/* Botones — Gold no es CTA primario */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -189,17 +185,17 @@ a:hover {
   gap: 0.5rem;
   font-family: var(--font-sans);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   line-height: 1.2;
-  padding: 0.75rem 1.35rem;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid transparent;
+  padding: 0.8rem 1.4rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
   cursor: pointer;
   transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease,
-    filter 180ms ease;
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    transform 220ms ease;
   text-decoration: none;
   min-height: 44px;
 }
@@ -210,7 +206,7 @@ a:hover {
 }
 
 .btn:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -218,6 +214,18 @@ a:hover {
   background: var(--accent);
   color: var(--text-on-accent);
   border-color: var(--accent);
+}
+
+@media (prefers-color-scheme: light) {
+  .btn-primary {
+    color: var(--color-ivory);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-primary {
+    color: var(--color-obsidian-navy);
+  }
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -232,15 +240,14 @@ a:hover {
 }
 
 .btn-secondary:hover:not(:disabled) {
+  border-color: var(--gold);
   background: var(--accent-bg);
-  border-color: var(--accent);
 }
 
 .btn-tertiary {
   background: transparent;
   color: var(--text);
   border-color: transparent;
-  padding-inline: 0.75rem;
 }
 
 .btn-tertiary:hover:not(:disabled) {
@@ -249,24 +256,37 @@ a:hover {
 }
 
 .btn-danger {
-  background: var(--semantic-error);
+  background: var(--color-alert);
   color: #fff;
-  border-color: var(--semantic-error);
+  border-color: var(--color-alert);
 }
 
-/* —— Cards —— */
+/* Cards editoriales */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.25rem 1.35rem;
+  padding: 1.5rem 1.4rem;
   box-shadow: var(--shadow);
+  transition:
+    border-color 250ms ease,
+    transform 250ms ease;
 }
 
-/* —— Formularios base —— */
+.card:hover {
+  border-color: var(--color-border-gold);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover {
+    transform: none;
+  }
+}
+
 label {
   display: block;
-  font-size: var(--text-small);
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-h);
   margin-bottom: 0.35rem;
@@ -277,12 +297,11 @@ textarea,
 select {
   font: inherit;
   width: 100%;
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   color: var(--text-h);
-  transition: border-color 150ms ease;
 }
 
 input:focus-visible,
@@ -290,19 +309,18 @@ textarea:focus-visible,
 select:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
-  border-color: var(--accent);
+  border-color: var(--gold);
 }
 
-/* —— Status badge (color + texto; icono en componente) —— */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 0.25rem 0.6rem;
+  padding: 0.3rem 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface-muted);
@@ -310,69 +328,116 @@ select:focus-visible {
 }
 
 .badge-positive {
-  background: var(--accent-bg);
-  border-color: var(--accent-border);
-  color: var(--semantic-positive);
+  background: rgba(60, 139, 122, 0.12);
+  border-color: rgba(60, 139, 122, 0.35);
+  color: var(--positive);
 }
 
-.badge-info {
-  background: rgba(59, 130, 160, 0.12);
-  border-color: rgba(59, 130, 160, 0.35);
-  color: var(--semantic-info);
-}
-
-.badge-warning {
-  background: rgba(201, 149, 62, 0.15);
-  border-color: rgba(201, 149, 62, 0.4);
-  color: var(--semantic-warning);
+.badge-progress {
+  background: rgba(198, 164, 106, 0.15);
+  border-color: var(--color-border-gold);
+  color: var(--gold);
 }
 
 .badge-error {
   background: rgba(184, 76, 76, 0.12);
   border-color: rgba(184, 76, 76, 0.35);
-  color: var(--semantic-error);
+  color: var(--color-alert);
 }
 
-/* —— Hero institucional (público) —— */
-.hero-institutional {
-  background: var(--bg-institutional);
-  color: var(--text-on-deep);
-  border-radius: var(--radius);
-  padding: clamp(2rem, 5vw, 3.5rem);
-  margin-bottom: 2rem;
-  border: 1px solid var(--header-border);
-}
-
-.hero-institutional h1 {
-  color: var(--text-on-deep);
-  font-family: var(--font-display);
-}
-
-.hero-institutional .tagline {
-  color: var(--brand-gold);
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 500;
-  margin-bottom: 0.75rem;
-}
-
-.hero-institutional .lead {
-  color: rgba(232, 238, 242, 0.88);
-  font-size: 1.05rem;
-  max-width: 42rem;
-}
-
-/* —— Divider dorado suave —— */
-.divider-gold {
+/* Línea de búsqueda / rastro */
+.trail-line {
+  display: block;
   height: 1px;
+  width: 100%;
+  max-width: 12rem;
   background: linear-gradient(
     90deg,
     transparent,
-    var(--brand-gold) 20%,
-    var(--brand-gold) 80%,
+    var(--color-memorial-gold) 15%,
+    var(--color-memorial-gold) 85%,
     transparent
   );
-  opacity: 0.45;
-  margin: 1.5rem 0;
+  opacity: 0.55;
   border: none;
+  margin: 1.25rem 0;
+}
+
+.section-num {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  color: var(--gold);
+  line-height: 1;
+  opacity: 0.9;
+  margin: 0 0 0.75rem;
+}
+
+.hero-full {
+  background: var(--bg-institutional);
+  color: var(--text-on-dark);
+  min-height: min(78vh, 640px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(2.5rem, 6vw, 5rem) clamp(1.25rem, 4vw, 3rem);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-full::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 70% 40%, rgba(198, 164, 106, 0.07), transparent 60%),
+    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(16, 42, 56, 0.8), transparent 50%);
+  pointer-events: none;
+}
+
+.hero-full > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-full h1 {
+  color: var(--color-stone);
+  max-width: 14ch;
+}
+
+.band-dark {
+  background: var(--color-obsidian-navy);
+  color: var(--color-stone);
+  padding: clamp(3rem, 7vw, 5rem) clamp(1.25rem, 4vw, 2rem);
+}
+
+.band-dark h2 {
+  color: var(--color-stone);
+}
+
+.band-midnight {
+  background: var(--color-midnight-blue);
+  color: var(--color-stone);
+  padding: clamp(3rem, 7vw, 4.5rem) clamp(1.25rem, 4vw, 2rem);
+}
+
+.band-midnight h2 {
+  color: var(--color-stone);
+}
+
+.band-ivory {
+  background: var(--color-ivory);
+  color: var(--color-text-primary);
+  padding: clamp(3rem, 7vw, 5rem) clamp(1.25rem, 4vw, 2rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  .band-ivory {
+    background: var(--color-midnight-blue);
+    color: var(--color-stone);
+  }
+
+  .band-ivory h2,
+  .band-ivory h1 {
+    color: var(--color-stone);
+  }
 }
