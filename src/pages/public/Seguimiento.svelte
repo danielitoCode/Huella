@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import { router, irAPublica } from '../../lib/stores/router';
   import { executeApi, ApiError } from '../../lib/appwrite';
   import type { EstadoSolicitud, SeguimientoPublico } from '../../lib/types';
@@ -8,6 +9,7 @@
   let cargando = $state(false);
   let errorMsg = $state('');
   let data = $state<SeguimientoPublico | null>(null);
+  let ultimoConsultado = $state('');
 
   const etiquetasEstado: Record<EstadoSolicitud, string> = {
     pendiente: 'Solicitud recibida',
@@ -23,22 +25,27 @@
     return 'badge badge-progress';
   }
 
-  async function consultar(codigo: string) {
+  async function consultar(codigo: string, syncUrl = false) {
     const c = codigo.trim().toUpperCase();
     if (!c) {
       errorMsg = 'Introduce un código de seguimiento.';
       return;
     }
+    if (c === ultimoConsultado && data) return;
+
     errorMsg = '';
     data = null;
     cargando = true;
     try {
-      data = await executeApi<SeguimientoPublico>('solicitudes.getByCode', { codigo: c });
-      // Sincroniza URL si se consultó desde el formulario vacío
-      if ($router.codigoSeguimiento !== data.codigoSeguimiento) {
-        irAPublica('seguimiento', data.codigoSeguimiento);
+      const res = await executeApi<SeguimientoPublico>('solicitudes.getByCode', { codigo: c });
+      data = res;
+      ultimoConsultado = res.codigoSeguimiento;
+      codigoInput = res.codigoSeguimiento;
+      if (syncUrl && get(router).codigoSeguimiento !== res.codigoSeguimiento) {
+        irAPublica('seguimiento', res.codigoSeguimiento);
       }
     } catch (err) {
+      ultimoConsultado = '';
       if (err instanceof ApiError) {
         errorMsg =
           err.code === 'NOT_FOUND'
@@ -54,17 +61,15 @@
 
   function onSubmit(e: Event) {
     e.preventDefault();
-    void consultar(codigoInput);
+    void consultar(codigoInput, true);
   }
 
   onMount(() => {
-    const unsub = router.subscribe((s) => {
-      if (s.rutaPublica === 'seguimiento' && s.codigoSeguimiento) {
-        codigoInput = s.codigoSeguimiento;
-        void consultar(s.codigoSeguimiento);
-      }
-    });
-    return unsub;
+    const codigo = get(router).codigoSeguimiento;
+    if (codigo) {
+      codigoInput = codigo;
+      void consultar(codigo, false);
+    }
   });
 </script>
 
@@ -108,7 +113,12 @@
       <dl class="dates">
         <div>
           <dt>Registrado</dt>
-          <dd>{new Date(data.fechaCreacion).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' })}</dd>
+          <dd>
+            {new Date(data.fechaCreacion).toLocaleString('es', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })}
+          </dd>
         </div>
         <div>
           <dt>Última actualización</dt>
