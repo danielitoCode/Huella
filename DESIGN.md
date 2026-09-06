@@ -1,1380 +1,1486 @@
 # HUELLA — DESIGN.md
-## Sistema de diseño y esquema de vistas para el MVP
+
+> **Dirección de diseño:** Contemporary Memorial Technology
+> **Concepto central:** Memorial digital contemporáneo · Archivo · Homenaje · Investigación · Legado
 
 ---
 
-# 1. PROPÓSITO DEL PRODUCTO
+# 1. VISIÓN GENERAL
 
-**HUELLA** es una plataforma documental y de verificación destinada inicialmente a familias cubanas y latinoamericanas que buscan información sobre familiares vinculados al conflicto de Ucrania.
+## ¿Qué es HUella visualmente?
 
-La plataforma permite:
+HUella no debe sentirse como:
 
-1. Crear una solicitud de búsqueda.
-2. Verificar la identidad del solicitante mediante KYC.
-3. Registrar información sobre la persona buscada.
-4. Recopilar documentos y evidencias.
-5. Permitir que operadores investiguen y contrasten información.
-6. Comunicar resultados con distintos niveles de certeza.
-7. Mantener una trazabilidad documental del expediente.
+* una web de guerra;
+* una plataforma gubernamental;
+* una ONG tradicional;
+* un portal de noticias;
+* un CRM;
+* un dashboard administrativo tradicional;
+* una aplicación SaaS con temática humanitaria.
 
-## Principio fundamental
+HUella debe sentirse como un espacio digital creado con respeto hacia personas reales.
 
-HUELLA:
+La experiencia visual debe situarse en la intersección entre:
 
-- NO custodia dinero.
-- NO procesa pagos.
-- NO garantiza localizar a una persona.
-- NO declara automáticamente que una persona está fallecida.
-- NO sustituye una autoridad, tribunal o proceso forense.
+> **MEMORIAL · ARCHIVO · HOMENAJE · INVESTIGACIÓN · LEGADO**
 
-HUELLA debe distinguir siempre entre:
+La primera impresión debe transmitir que el visitante está entrando en una institución digital contemporánea.
 
-- Información declarada por la familia.
-- Evidencia aportada.
-- Evidencia revisada.
-- Información verificada.
-- Conclusión confirmada.
+Una experiencia que combina:
+
+* la solemnidad de un memorial;
+* la composición de una galería contemporánea;
+* la sofisticación de una revista editorial;
+* la rigurosidad de un archivo documental;
+* la claridad y eficiencia de un producto tecnológico moderno.
 
 ---
 
-# 2. PERSONALIDAD DE LA MARCA
+# 2. PRINCIPIO FUNDAMENTAL
 
-La aplicación debe transmitir:
+## Las personas no son registros
 
-- Confianza.
-- Dignidad.
-- Humanidad.
-- Transparencia.
-- Protección.
-- Esperanza responsable.
-- Profesionalismo.
+La plataforma puede trabajar con:
 
-La sensación general debe ser:
+* solicitudes;
+* identidades;
+* documentos;
+* evidencias;
+* cronologías;
+* investigaciones;
+* resultados.
 
-> **Una plataforma moderna de investigación documental creada para acompañar a una familia en una búsqueda difícil.**
+Pero visualmente nunca debe reducir una historia humana a un simple registro administrativo.
 
-NO debe parecer:
+La arquitectura visual debe recordar constantemente:
 
-- Una plataforma militar.
-- Una plataforma política.
-- Un sitio propagandístico.
-- Una fintech.
-- Una aplicación crypto.
-- Un portal sensacionalista.
-- Un dashboard corporativo frío.
+> **DETRÁS DE CADA BÚSQUEDA HAY UNA PERSONA.
+> DETRÁS DE CADA PERSONA HAY UNA HISTORIA.
+> DETRÁS DE CADA HISTORIA HAY ALGUIEN QUE ESPERA RESPUESTAS.**
 
 ---
 
-# 3. IDENTIDAD VISUAL
+# 3. PERSONALIDAD DE MARCA
 
-## Concepto del logo
+HUella debe sentirse:
 
-El símbolo de HUELLA combina conceptualmente:
+* solemne;
+* elegante;
+* humana;
+* contemporánea;
+* rigurosa;
+* silenciosamente tecnológica;
+* memorable;
+* respetuosa.
 
-- **Huella dactilar:** identidad, rastro, evidencia y búsqueda.
-- **Paloma:** paz, esperanza y regreso.
-- **Arco protector:** acompañamiento, protección y continuidad.
+HUella no debe sentirse:
 
-El símbolo debe funcionar como:
-
-- Logo principal.
-- Icono de aplicación.
-- Favicon.
-- Avatar.
-- Marca de agua documental.
-
-## Tagline sugerido
-
-**Verdad · Dignidad · Regreso**
-
-Alternativa:
-
-**Buscamos respuestas. Acompañamos familias.**
+* dramática;
+* sensacionalista;
+* militar;
+* propagandística;
+* excesivamente institucional;
+* burocrática;
+* funeraria;
+* fría;
+* clínica;
+* tecnológica de forma agresiva.
 
 ---
 
-# 4. PALETA DE COLORES
+# 4. CONCEPTO DE DISEÑO
 
-## Azul profundo — Color principal
+## Contemporary Memorial Technology
 
-`#0B1D2A`
+La identidad visual se compone aproximadamente de:
 
-Uso:
+### 35% — Memorial contemporáneo
 
-- Header.
-- Sidebar.
-- Footer.
-- Hero.
-- Fondos institucionales.
-- Logo oscuro.
+Representado mediante:
+
+* espacio;
+* silencio visual;
+* composición;
+* ausencia;
+* memoria;
+* homenaje;
+* elementos abstractos;
+* profundidad emocional.
+
+---
+
+### 25% — Editorial premium
+
+Representado mediante:
+
+* tipografía expresiva;
+* titulares grandes;
+* composiciones asimétricas;
+* mucho espacio negativo;
+* jerarquías visuales fuertes;
+* ritmo de lectura;
+* números y textos como elementos gráficos.
+
+---
+
+### 25% — Producto tecnológico moderno
+
+Representado mediante:
+
+* UX clara;
+* componentes reutilizables;
+* formularios simples;
+* navegación intuitiva;
+* estados visibles;
+* responsive design;
+* accesibilidad;
+* progresión clara.
+
+---
+
+### 15% — Archivo documental
+
+Representado mediante:
+
+* códigos de expediente;
+* fechas;
+* líneas;
+* referencias;
+* documentos;
+* evidencias;
+* trazabilidad;
+* numeración;
+* sellos abstractos;
+* metadatos.
+
+---
+
+# 5. IDEA CENTRAL DE IDENTIDAD
+
+## Una huella que se convierte en camino
+
+La identidad conceptual de HUella debe representar:
+
+```text
+IDENTIDAD
+    ↓
+RASTRO
+    ↓
+BÚSQUEDA
+    ↓
+RECORRIDO
+    ↓
+RESPUESTA
+```
+
+La plataforma no debe representar únicamente una búsqueda.
+
+Debe representar un recorrido.
+
+Este concepto puede aparecer en múltiples niveles:
+
+* logotipo;
+* líneas decorativas;
+* timelines;
+* animaciones;
+* navegación;
+* progreso de expedientes;
+* transiciones entre secciones.
+
+---
+
+# 6. PALETA DE COLOR
+
+## Obsidian Navy
+
+```css
+--color-obsidian-navy: #071923;
+```
+
+Color principal emocional de HUella.
 
 Representa:
 
-- Confianza.
-- Estabilidad.
-- Seguridad.
-- Profesionalismo.
+* profundidad;
+* memoria;
+* solemnidad;
+* confianza;
+* silencio;
+* investigación.
+
+Usar principalmente en:
+
+* hero;
+* navegación;
+* footer;
+* secciones de homenaje;
+* fondos editoriales oscuros.
 
 ---
 
-## Azul acero — Superficies secundarias
+## Midnight Blue
 
-`#334B5E`
+```css
+--color-midnight-blue: #102A38;
+```
 
-Uso:
-
-- Navegación secundaria.
-- Bordes oscuros.
-- Estados neutros.
-- Cards oscuras.
-- Elementos de soporte.
-
----
-
-## Verde esperanza — Acción positiva
-
-`#2E7D6B`
-
-Uso:
-
-- CTA principal.
-- Progreso.
-- Confirmaciones.
-- Estados positivos.
-- Acciones completadas.
-
-No usar como color dominante de toda la interfaz.
-
----
-
-## Dorado suave — Identidad y dignidad
-
-`#C9A66B`
-
-Uso:
-
-- Detalles del logo.
-- Acentos.
-- Divisores institucionales.
-- Elementos destacados.
-- Pequeños indicadores.
-
-No utilizar como CTA principal de uso frecuente.
-
----
-
-## Gris claro — Fondo
-
-`#F2F4F5`
-
-Uso:
-
-- Fondo de contenido.
-- Secciones claras.
-- Formularios.
-- Áreas documentales.
-
----
-
-## Blanco
-
-`#FFFFFF`
-
-Uso:
-
-- Cards.
-- Documentos.
-- Formularios.
-- Superficies principales.
-
----
-
-# 5. COLORES SEMÁNTICOS
-
-Los colores semánticos no sustituyen la identidad visual.
-
-## Positivo
-
-`#2E7D6B`
-
-## Información
-
-`#3B82A0`
-
-## Advertencia
-
-`#C9953E`
-
-## Error
-
-`#B84C4C`
-
-## Neutral
-
-`#64748B`
-
-Importante:
-
-Nunca depender solamente del color para comunicar un estado.
-
-Cada estado debe incluir:
-
-- Icono.
-- Texto.
-- Color.
-
----
-
-# 6. TIPOGRAFÍA
-
-## Marca y titulares editoriales
-
-### Cormorant Garamond
+Color secundario oscuro.
 
 Usar para:
 
-- Logotipo.
-- Hero titles.
-- Frases institucionales.
-- Mensajes humanos relevantes.
+* superficies;
+* capas;
+* cards oscuras;
+* paneles;
+* fondos secundarios dentro de zonas oscuras.
 
-Sensación:
-
-- Elegante.
-- Humana.
-- Sobria.
-- Digna.
-
-No usar para:
-
-- Formularios.
-- Tablas.
-- Texto largo.
-- Datos.
-- Navegación.
+Debe crear profundidad sin utilizar negro puro.
 
 ---
 
-## Interfaz
+## Memorial Gold
 
-### Inter
+```css
+--color-memorial-gold: #C6A46A;
+```
+
+Color de acento institucional y editorial.
+
+Representa:
+
+* memoria;
+* valor;
+* legado;
+* archivo;
+* continuidad.
+
+No debe utilizarse como un color comercial agresivo.
+
+Evitar convertirlo en el color principal de todos los botones.
+
+Usarlo para:
+
+* líneas;
+* detalles;
+* numeración;
+* símbolos;
+* indicadores;
+* partes del logotipo;
+* elementos editoriales;
+* progreso de investigación;
+* animaciones;
+* bordes sutiles.
+
+El dorado debe sentirse como un detalle valioso.
+
+---
+
+## Stone
+
+```css
+--color-stone: #E8E5DF;
+```
+
+Representa:
+
+* papel;
+* piedra;
+* archivo;
+* museo;
+* memoria material.
 
 Usar para:
 
-- Body.
-- Formularios.
-- Botones.
-- Navegación.
-- Tablas.
-- Estados.
-- Datos.
-- Timeline.
-
-Pesos:
-
-- 400: cuerpo.
-- 500: labels.
-- 600: botones y subtítulos.
-- 700: títulos UI.
+* fondos secundarios;
+* superficies cálidas;
+* cards;
+* secciones documentales.
 
 ---
 
-# 7. ESCALA TIPOGRÁFICA
+## Ivory
 
-## Desktop
-
-- Display: 56–64px
-- H1: 48px
-- H2: 36px
-- H3: 28px
-- H4: 22px
-- Body: 16px
-- Small: 14px
-
-## Tablet
-
-- H1: 40–44px
-- H2: 32px
-- H3: 24px
-- Body: 16px
-
-## Mobile
-
-- H1: 32–36px
-- H2: 26–30px
-- H3: 20–24px
-- Body: 15–16px
-- Small: 13–14px
-
----
-
-# 8. PRINCIPIOS UX
-
-## 8.1 Primero la familia
-
-El usuario puede:
-
-- Estar emocionalmente afectado.
-- Tener poca experiencia digital.
-- Usar un teléfono.
-- Tener conectividad limitada.
-
-Por ello:
-
-- Formularios cortos.
-- Una tarea por pantalla.
-- Progreso visible.
-- Lenguaje simple.
-- Posibilidad de guardar y continuar.
-- Confirmaciones claras.
-
----
-
-## 8.2 Transparencia
-
-Cada expediente debe responder:
-
-1. ¿Qué sabemos?
-2. ¿Qué no sabemos?
-3. ¿Qué está verificado?
-4. ¿Qué falta?
-5. ¿Cuál es el siguiente paso?
-
----
-
-## 8.3 No convertir una declaración en un hecho
-
-Ejemplo:
-
-### Declarado
-
-> La familia informa que perdió contacto.
-
-### En investigación
-
-> Estamos contrastando la información disponible.
-
-### Confirmado
-
-> Existe información documental verificada que permite confirmar el fallecimiento.
-
-Nunca saltar directamente de una declaración a una conclusión.
-
----
-
-# 9. ARQUITECTURA DE VISTAS
-
-La aplicación tiene tres áreas:
-
-```text
-HUELLA
-│
-├── Sitio público
-│
-├── Portal familiar
-│
-└── Backoffice operador
+```css
+--color-ivory: #F8F7F3;
 ```
 
+Color principal de superficies claras.
+
+Usar para:
+
+* fondo principal;
+* contenido editorial;
+* formularios;
+* expedientes;
+* páginas informativas.
+
+Debe evitarse el blanco puro como color dominante.
+
+HUella debe sentirse cálida y material.
+
 ---
 
-# 10. SITIO PÚBLICO
+## Hope Teal
 
-## VIEW-P01 — Landing
-
-### Objetivo
-
-Explicar el propósito y generar confianza.
-
-### Estructura
-
-```text
-Header
-│
-Hero
-│
-Cómo funciona
-│
-Qué podemos hacer
-│
-Qué no hacemos
-│
-Seguridad
-│
-FAQ
-│
-CTA
-│
-Footer
+```css
+--color-hope-teal: #3C8B7A;
 ```
 
-### Hero
+Color funcional positivo.
 
-Título:
+Usar exclusivamente para:
 
-> **Buscamos respuestas. Protegemos la verdad.**
+* progreso positivo;
+* acciones confirmadas;
+* estados satisfactorios;
+* información completada;
+* señales de avance.
 
-Subtítulo:
-
-> Una plataforma documental para ayudar a familias a localizar, verificar y documentar información sobre sus seres queridos.
-
-CTA principal:
-
-**Iniciar una solicitud**
-
-CTA secundaria:
-
-**Cómo funciona**
-
-### Diseño
-
-Desktop:
-
-- Fondo azul profundo.
-- Logo destacado.
-- Composición editorial.
-- Mucho espacio negativo.
-
-Mobile:
-
-- Hero compacto.
-- CTA visible.
-- Navegación mínima.
+No debe competir visualmente con Memorial Gold.
 
 ---
 
-## VIEW-P02 — Cómo funciona
+# 7. COLORES FUNCIONALES
 
-Mostrar un proceso simple:
+```css
+--color-text-primary: #071923;
+--color-text-secondary: #52606A;
+--color-text-muted: #7A858C;
 
-```text
-01 — Cuéntanos a quién buscas
-02 — Verificamos tu identidad
-03 — Recopilamos evidencias
-04 — Investigamos
-05 — Comunicamos lo que podemos confirmar
+--color-border-subtle: rgba(7, 25, 35, 0.12);
+--color-border-gold: rgba(198, 164, 106, 0.35);
+
+--color-surface-primary: #F8F7F3;
+--color-surface-secondary: #E8E5DF;
+
+--color-surface-dark: #071923;
+--color-surface-dark-secondary: #102A38;
 ```
-
-Cada paso debe incluir:
-
-- Qué hace la familia.
-- Qué hace HUELLA.
-- Qué información se necesita.
-
----
-
-## VIEW-P03 — Qué verificamos
-
-Cards con:
-
-- Identidad.
-- Información documental.
-- Evidencias.
-- Estado de localización.
-- Información sobre fallecimiento cuando sea verificable.
-
-No prometer:
-
-- Resultados.
-- Compensaciones.
-- Repatriaciones.
-
----
-
-## VIEW-P04 — Seguridad y privacidad
-
-Explicar:
-
-- Por qué se solicita KYC.
-- Qué datos se almacenan.
-- Qué documentos se solicitan.
-- Quién puede acceder.
-- Cómo se protege la información.
-
-Diseño:
-
-- Fondo claro.
-- Layout editorial.
-- Iconografía de seguridad.
-
----
-
-## VIEW-P05 — FAQ
-
-Preguntas:
-
-- ¿Qué hace HUELLA?
-- ¿HUELLA garantiza encontrar a mi familiar?
-- ¿Por qué debo verificar mi identidad?
-- ¿Puedo iniciar una solicitud desde Cuba?
-- ¿Qué documentos necesito?
-- ¿Cómo sabré si hay novedades?
-- ¿Qué significa cada estado?
-
----
-
-# 11. PORTAL FAMILIAR
-
-## VIEW-F01 — Inicio / Mis solicitudes
-
-Esta es la home después de entrar al portal.
-
-### Layout
-
-```text
-Header compacto
-│
-Bienvenida
-│
-Resumen
-│
-Solicitudes
-│
-CTA Nueva solicitud
-```
-
-Cada solicitud:
-
-```text
-HU-2026-000123
-
-Persona buscada
-Juan Pérez
-
-Estado
-En investigación
-
-Última actualización
-05 Sep 2026
-```
-
-Estados:
-
-- Recibida.
-- En revisión.
-- Requiere información.
-- En investigación.
-- Resultado disponible.
-- Cerrada.
-
----
-
-## VIEW-F02 — Nueva solicitud / Wizard
-
-La solicitud NO debe ser un formulario único.
-
-### Paso 1 — Datos del solicitante
-
-- Nombre.
-- Apellidos.
-- País.
-- Email.
-- Teléfono.
-
----
-
-### Paso 2 — Verificación de identidad
-
-Explicación:
-
-> Para proteger a las familias y reducir solicitudes fraudulentas, verificamos la identidad de la persona que presenta el expediente.
-
-Botón:
-
-**Verificar mi identidad**
-
-Importante:
-
-KYC NO es autenticación.
-
----
-
-### Paso 3 — Persona buscada
-
-- Nombre.
-- Apellidos.
-- Fecha de nacimiento.
-- Nacionalidad.
-- Alias.
-- Identificadores conocidos.
-- Información relevante conocida.
-
----
-
-### Paso 4 — Relación
-
-Opciones:
-
-- Madre.
-- Padre.
-- Cónyuge.
-- Hijo/a.
-- Hermano/a.
-- Otro familiar.
-
----
-
-### Paso 5 — Evidencias
-
-Permitir:
-
-- Documento.
-- Fotografía.
-- Información relevante.
-
-Cada archivo:
-
-```text
-Nombre
-Tipo
-Fecha
-Estado: Recibido
-```
-
-Nunca marcar automáticamente como verificado.
-
----
-
-### Paso 6 — Revisión y envío
-
-Mostrar resumen.
-
-Checkbox:
-
-> Confirmo que la información proporcionada es verdadera según mi conocimiento.
-
-CTA:
-
-**Enviar solicitud**
-
----
-
-## VIEW-F03 — Solicitud enviada
-
-Mensaje:
-
-> **Hemos recibido tu solicitud.**
-
-Mostrar:
-
-```text
-Número de expediente
-HU-2026-000123
-
-Estado
-Solicitud recibida
-
-Próximo paso
-Revisión inicial
-```
-
----
-
-## VIEW-F04 — Expediente
-
-Vista principal para la familia.
-
-### Header
-
-```text
-HU-2026-000123
-Juan Pérez
-
-[ En investigación ]
-```
-
-### Secciones
-
-1. Estado actual.
-2. Qué sabemos.
-3. Qué no está confirmado.
-4. Evidencias.
-5. Timeline.
-6. Próximo paso.
-
----
-
-## VIEW-F05 — Evidencias
-
-Biblioteca de documentos.
-
-Cada card:
-
-```text
-Tipo de documento
-Fuente
-Fecha
-Estado
-```
-
-Estados:
-
-- Recibido.
-- En revisión.
-- Verificado.
-- Rechazado.
-- Disputado.
-
----
-
-## VIEW-F06 — Resultado
-
-Vista sensible.
-
-### Si no existe información suficiente
-
-> **Todavía no podemos confirmar el estado de esta persona.**
-
-### Si existe información de localización
-
-> **La información disponible permite confirmar que la persona ha sido localizada.**
-
-### Si existe fallecimiento confirmado
-
-> **La información documental verificada permite confirmar el fallecimiento.**
-
-Siempre mostrar:
-
-- Qué está confirmado.
-- Evidencia disponible.
-- Qué no se conoce.
-- Próximo paso.
-
-No utilizar:
-
-- Animaciones celebratorias.
-- Colores dramáticos.
-- Iconografía agresiva.
-
----
-
-## VIEW-F07 — Perfil
-
-- Datos.
-- Contacto.
-- Solicitudes.
-- Configuración.
-- Privacidad.
-
-KYC:
-
-Mostrar solamente:
-
-> Identidad verificada
-
-No mostrar datos biométricos.
-
----
-
-# 12. BACKOFFICE OPERADOR
-
-El operador necesita eficiencia, pero sin romper la identidad visual.
-
----
-
-## VIEW-O01 — Dashboard
-
-Métricas:
-
-- Nuevas.
-- En revisión.
-- En investigación.
-- Requieren información.
-- Resultados pendientes.
-
-Debajo:
-
-- Casos recientes.
-- Casos prioritarios.
-- Actividad reciente.
-
-No llenar el dashboard de gráficos decorativos.
-
----
-
-## VIEW-O02 — Bandeja de casos
-
-Desktop:
-
-Tabla.
-
-Mobile:
-
-Cards.
-
-Columnas:
-
-- Expediente.
-- Persona.
-- Solicitante.
-- Estado.
-- Prioridad.
-- Última actualización.
-- Operador.
-
-Filtros:
-
-- Estado.
-- Prioridad.
-- Fecha.
-- Operador.
-
----
-
-## VIEW-O03 — Workspace de caso
-
-La vista más importante para el operador.
-
-### Desktop
-
-```text
-┌──────────────────────────────────────────────────┐
-│ Header del caso                                 │
-├─────────────────────┬────────────────────────────┤
-│ Información         │ Investigación              │
-│                     │                            │
-│ Persona buscada     │ Timeline                   │
-│ Solicitante         │ Notas                     │
-│ Evidencias          │ Acciones                   │
-└─────────────────────┴────────────────────────────┘
-```
-
-### Mobile
-
-Orden:
-
-1. Header.
-2. Estado.
-3. Persona.
-4. Solicitante.
-5. Evidencias.
-6. Investigación.
-7. Timeline.
-8. Acciones.
-
----
-
-## VIEW-O04 — Revisión de evidencia
-
-Layout:
-
-```text
-Preview
-│
-Metadatos
-│
-Fuente
-│
-Notas
-│
-Acciones
-```
-
-Acciones:
-
-- Verificar.
-- Rechazar.
-- Marcar disputada.
-
-Toda acción sensible:
-
-- Requiere confirmación.
-- Solicita motivo.
-- Genera auditoría.
-
----
-
-## VIEW-O05 — Verificaciones
-
-Cada verificación debe mostrar:
-
-```text
-Tipo
-Resultado
-
-Nivel de confianza
-
-Evidencias relacionadas
-
-Operador
-
-Fecha
-```
-
----
-
-## VIEW-O06 — Auditoría
-
-Solo para personal autorizado.
-
-Mostrar:
-
-```text
-Fecha
-Actor
-Acción
-Entidad
-Cambio
-Motivo
-```
-
----
-
-# 13. RESPONSIVE DESIGN
-
-## Mobile
-
-Prioridad máxima.
-
-Características:
-
-- Una columna.
-- Formularios por pasos.
-- Targets táctiles grandes.
-- Cards.
-- Timeline vertical.
-- Navegación simple.
-
----
-
-## Tablet
-
-- Dos columnas cuando sea útil.
-- Sidebar compacta.
-- Formularios centrados.
-- Tablas simplificadas.
-
----
-
-## Desktop
-
-- Sidebar.
-- Workspace.
-- Paneles.
-- Tablas.
-- Preview documental.
-- Contexto simultáneo.
-
----
-
-# 14. COMPONENTES
-
-Crear componentes reutilizables:
-
-```text
-Button
-IconButton
-Input
-Textarea
-Select
-PhoneInput
-DateInput
-FileUpload
-DocumentPreview
-StatusBadge
-CaseCard
-EvidenceCard
-Timeline
-Stepper
-Alert
-Modal
-Drawer
-ConfirmationDialog
-EmptyState
-LoadingState
-ErrorState
-Skeleton
-DataTable
-SearchInput
-FilterBar
-```
-
----
-
-# 15. BOTONES
-
-## Primary
-
-Fondo:
-
-`#2E7D6B`
-
-Texto blanco.
-
-## Secondary
-
-Fondo transparente.
-
-Borde:
-
-`#334B5E`
-
-## Tertiary
-
-Solo texto.
-
-## Danger
-
-`#B84C4C`
-
-Solo para acciones destructivas.
-
----
-
-# 16. CARDS Y SUPERFICIES
-
-Radio:
-
-`12px–16px`
-
-Sombras:
-
-Muy suaves.
-
-Preferir:
-
-- Bordes.
-- Separación.
-- Contraste de superficie.
 
 Evitar:
 
-- Sombras pesadas.
-- Cards flotantes excesivas.
-- Glassmorphism.
+* negros absolutos;
+* grises fríos dominantes;
+* azules saturados;
+* dorados brillantes;
+* gradientes tecnológicos agresivos.
 
 ---
 
-# 17. ICONOGRAFÍA
+# 8. TIPOGRAFÍA
 
-Estilo:
+## Principio
 
-- Lineal.
-- Simple.
-- Consistente.
-
-Preferencia:
-
-Lucide Icons.
-
-Iconos relevantes:
-
-- Search.
-- ShieldCheck.
-- FileText.
-- Fingerprint.
-- UserCheck.
-- Clock.
-- AlertTriangle.
-- CheckCircle.
-- MapPin.
-- MessageCircle.
-- Upload.
-- History.
-
-Evitar iconografía militar.
-
----
-
-# 18. ESTADOS DEL SISTEMA
-
-Todos los estados deben tener:
-
-- Color.
-- Icono.
-- Texto.
-
-Estados recomendados:
+HUella utiliza deliberadamente dos mundos tipográficos:
 
 ```text
-RECIBIDO
-EN_REVISIÓN
-REQUIERE_INFORMACIÓN
-EN_INVESTIGACIÓN
-RESULTADO_DISPONIBLE
-CERRADO
-```
-
-Para evidencia:
-
-```text
-RECIBIDA
-EN_REVISIÓN
-VERIFICADA
-RECHAZADA
-DISPUTADA
+EDITORIAL / MEMORIAL
+          +
+TECNOLOGÍA / INTERFAZ
 ```
 
 ---
 
-# 19. ANIMACIONES
+# 9. TIPOGRAFÍA EDITORIAL
 
-Permitido:
+## Opción principal
 
-- Fade.
-- Slide pequeño.
-- Progress.
-- Skeleton.
-- Feedback.
+### DM Serif Display
 
-Duración:
+Usar para:
 
-`150ms–300ms`
-
-No usar:
-
-- Confeti.
-- Animaciones dramáticas.
-- Efectos cinematográficos.
-- Parallax excesivo.
-
-Respetar:
-
-`prefers-reduced-motion`.
+* Hero;
+* grandes titulares;
+* citas;
+* nombres;
+* secciones de homenaje;
+* statements editoriales;
+* CTA emocionales.
 
 ---
 
-# 20. ACCESIBILIDAD
+## Alternativa
 
-Objetivo:
+### Cormorant Garamond
 
-**WCAG 2.2 AA**
+Puede utilizarse cuando se busque una expresión más histórica, humana o contemplativa.
 
-Requisitos:
+No combinar ambas de manera indiscriminada dentro de la misma pantalla.
 
-- Contraste adecuado.
-- Foco visible.
-- Navegación por teclado.
-- Labels.
-- Mensajes de error claros.
-- No depender solo del color.
-- Targets táctiles grandes.
+Seleccionar una como tipografía editorial principal del producto.
 
 ---
 
-# 21. VOZ Y TONO
-
-Debe ser:
-
-- Humana.
-- Clara.
-- Respetuosa.
-- Responsable.
-- Transparente.
-
-Ejemplo correcto:
-
-> Todavía no podemos confirmar el estado de esta persona.
-
-Ejemplo incorrecto:
-
-> No encontramos al desaparecido.
-
-Ejemplo correcto:
-
-> La información disponible todavía no permite confirmar su situación.
-
----
-
-# 22. PROMPT MAESTRO PARA UNA IA DE DISEÑO
-
-Utiliza el siguiente prompt como instrucción global:
-
----
-
-Diseña una aplicación web llamada **HUELLA**.
-
-HUELLA es una plataforma documental y de verificación destinada inicialmente a familias cubanas y latinoamericanas que buscan información sobre familiares vinculados al conflicto de Ucrania.
-
-La plataforma permite crear solicitudes, verificar la identidad del solicitante mediante KYC, recopilar información y evidencias, gestionar investigaciones y comunicar resultados documentados.
-
-HUELLA NO es una plataforma financiera. No custodia dinero, no procesa pagos y no debe tener estética fintech o crypto.
-
-La marca debe transmitir:
-
-- confianza;
-- humanidad;
-- dignidad;
-- transparencia;
-- protección;
-- esperanza responsable.
-
-La identidad visual se basa conceptualmente en:
-
-- una huella dactilar;
-- una paloma;
-- un arco protector.
-
-## Paleta
-
-- Azul profundo: `#0B1D2A`
-- Azul acero: `#334B5E`
-- Verde esperanza: `#2E7D6B`
-- Dorado suave: `#C9A66B`
-- Gris claro: `#F2F4F5`
-- Blanco: `#FFFFFF`
-
-## Tipografía
-
-- Cormorant Garamond para logotipo y titulares editoriales.
-- Inter para toda la interfaz.
-
-## Dirección visual
-
-La interfaz debe sentirse como:
-
-**una plataforma moderna de investigación documental que acompaña a una familia durante una búsqueda difícil.**
-
-Debe ser:
-
-- sobria;
-- moderna;
-- accesible;
-- espaciosa;
-- documental;
-- humana;
-- profesional.
-
-Evita:
-
-- estética militar;
-- armas;
-- tanques;
-- propaganda;
-- banderas dominantes;
-- rojo como color principal;
-- crypto;
-- fintech;
-- glassmorphism excesivo;
-- gradientes llamativos;
-- dashboards saturados.
-
-## Principio de información
-
-La UI debe diferenciar visualmente:
-
-1. Información declarada por la familia.
-2. Evidencia recibida.
-3. Evidencia verificada.
-4. Información en investigación.
-5. Conclusión confirmada.
-
-Nunca mostrar una conclusión sensible como un hecho si todavía no ha sido verificada.
-
-## Vistas necesarias
-
-### Sitio público
-
-- Landing.
-- Cómo funciona.
-- Qué verificamos.
-- Seguridad y privacidad.
-- FAQ.
-
-### Portal familiar
-
-- Mis solicitudes.
-- Nueva solicitud wizard.
-- KYC.
-- Datos de la persona buscada.
-- Relación.
-- Evidencias.
-- Solicitud enviada.
-- Expediente.
-- Resultado.
-- Perfil.
-
-### Backoffice
-
-- Dashboard.
-- Bandeja de casos.
-- Workspace de investigación.
-- Revisión de evidencias.
-- Verificaciones.
-- Auditoría.
-
-## Responsive
-
-Diseñar mobile-first.
-
-Mobile:
-
-- una columna;
-- formularios por pasos;
-- navegación simple;
-- cards;
-- timeline vertical.
-
-Tablet:
-
-- dos columnas cuando sea útil.
+## Escala recomendada
 
 Desktop:
 
-- sidebar;
-- workspace;
-- tablas;
-- paneles;
-- preview documental.
+```text
+Display XL    110px
+Display L      88px
+Display M      72px
+H1             56px
+H2             42px
+H3             32px
+```
 
-## UX
+Tablet:
+
+```text
+Display XL     76px
+Display L      64px
+Display M      56px
+H1             46px
+H2             36px
+```
+
+Mobile:
+
+```text
+Display XL     52px
+Display L      46px
+Display M      40px
+H1             36px
+H2             30px
+```
+
+Los grandes titulares deben tener suficiente espacio para respirar.
+
+No reducir automáticamente la identidad editorial por miedo al espacio.
+
+En mobile se conserva el carácter, ajustando composición y longitud.
+
+---
+
+# 10. TIPOGRAFÍA DE INTERFAZ
+
+## Inter
+
+Usar para:
+
+* navegación;
+* botones;
+* formularios;
+* tablas;
+* expedientes;
+* metadatos;
+* estados;
+* evidencias;
+* información funcional.
+
+La interfaz debe sentirse:
+
+* clara;
+* precisa;
+* contemporánea;
+* accesible.
+
+---
+
+# 11. EL HERO
+
+## Objetivo
+
+El hero no debe parecer una landing SaaS.
+
+Debe sentirse como entrar en un espacio digital significativo.
+
+La experiencia debe ser más cercana a una institución cultural contemporánea que a una aplicación comercial.
+
+---
+
+## Composición
+
+Pantalla completa.
+
+Fondo:
+
+```text
+OBSIDIAN NAVY
+```
+
+Elemento visual central abstracto compuesto potencialmente por:
+
+* fragmentos;
+* siluetas abstractas;
+* texturas documentales;
+* líneas topográficas;
+* partículas sutiles;
+* trazos inspirados en huellas;
+* conexiones;
+* luz dorada extremadamente tenue.
+
+---
+
+## Contenido
+
+```text
+                    HUELLA
+
+             VERDAD · MEMORIA · DIGNIDAD
+
+
+              Para quienes esperan
+                  respuestas.
+
+              Para quienes merecen
+                 ser encontrados.
+
+
+              [ Comenzar una búsqueda ]
+```
+
+El contenido debe permanecer claro incluso si la composición artística evoluciona.
+
+---
+
+## Regla
+
+Nunca utilizar imágenes explícitas de:
+
+* violencia;
+* cadáveres;
+* sufrimiento gráfico;
+* escenas bélicas.
+
+El impacto emocional debe provenir de:
+
+* composición;
+* escala;
+* espacio;
+* ausencia;
+* luz;
+* tipografía;
+* abstracción.
+
+---
+
+# 12. LA AUSENCIA VISUAL
+
+Uno de los principales recursos conceptuales de HUella.
+
+Representar historias mediante elementos abstractos:
+
+```text
+      ·
+
+            ·          ·
+
+
+   ·
+
+
+                   ·
+
+
+         ·
+```
+
+Cada elemento puede representar conceptualmente:
+
+* una persona;
+* una historia;
+* una búsqueda;
+* una conexión;
+* una ausencia.
+
+Algunos elementos pueden conectarse.
+
+Otros permanecen aislados.
+
+No debe explicarse siempre literalmente.
+
+La metáfora visual debe poder sentirse antes de comprenderse.
+
+---
+
+# 13. LA LÍNEA DE BÚSQUEDA
+
+## Elemento de identidad transversal
+
+HUella debe tener un recurso visual recurrente:
+
+```text
+────────●────────────●────────────◉────────────○
+```
+
+Representando:
+
+```text
+Solicitud
+     ↓
+Identificación
+     ↓
+Evidencias
+     ↓
+Investigación
+     ↓
+Resultado
+```
+
+Esta línea no debe comportarse como una barra de progreso SaaS.
+
+Debe sentirse como un recorrido.
+
+Una marca.
+
+Un rastro.
+
+---
+
+## Uso
+
+Puede aparecer:
+
+* parcialmente;
+* verticalmente;
+* horizontalmente;
+* fragmentada;
+* animada;
+* conectando elementos;
+* como borde editorial.
+
+Nunca debe saturar la interfaz.
+
+---
+
+# 14. HOME PAGE
+
+La Home debe sentirse como:
+
+> **Una exposición digital contemporánea que gradualmente revela una herramienta de investigación.**
+
+---
+
+## SECCIÓN 01 — HERO
+
+Fondo oscuro.
+
+Identidad.
+
+Elemento abstracto.
+
+Mensaje humano.
+
+CTA claro.
+
+---
+
+## SECCIÓN 02 — DECLARACIÓN
+
+Fondo Ivory.
+
+Titular editorial grande:
+
+```text
+UNA BÚSQUEDA
+COMIENZA CON
+UNA HISTORIA.
+```
+
+Mucho espacio negativo.
+
+Sin cards SaaS alrededor.
+
+---
+
+## SECCIÓN 03 — IDENTIFICACIÓN
+
+Número editorial:
+
+```text
+01
+```
+
+Titular:
+
+```text
+IDENTIFICAMOS
+LA INFORMACIÓN
+DISPONIBLE.
+```
+
+Descripción breve y funcional.
+
+Línea Memorial Gold como elemento de continuidad.
+
+---
+
+## SECCIÓN 04 — EVIDENCIAS
+
+Fondo oscuro.
+
+Número:
+
+```text
+02
+```
+
+Titular:
+
+```text
+RECOPILAMOS
+LAS HUELLAS
+QUE PERMANECEN.
+```
+
+Puede incorporar elementos abstractos inspirados en:
+
+* documentos;
+* fragmentos;
+* conexiones;
+* referencias.
+
+---
+
+## SECCIÓN 05 — INVESTIGACIÓN
+
+Fondo claro.
+
+Número:
+
+```text
+03
+```
+
+Titular:
+
+```text
+BUSCAMOS
+RESPUESTAS
+CON RIGOR.
+```
+
+Aquí puede comenzar a aparecer más claramente la dimensión tecnológica.
+
+---
+
+## SECCIÓN 06 — CTA
+
+Fondo oscuro o Midnight Blue.
+
+```text
+SI ESTÁS BUSCANDO
+A ALGUIEN,
+
+EMPIEZA AQUÍ.
+```
+
+CTA:
+
+```text
+[ Iniciar solicitud ]
+```
+
+Debe sentirse como una invitación clara y humana.
+
+No como un CTA comercial.
+
+---
+
+# 15. SECCIÓN "CADA BÚSQUEDA TIENE UN NOMBRE"
+
+Esta debe ser una de las piezas emocionales centrales de HUella.
+
+Fondo claro.
+
+Titular:
+
+```text
+NO SON SOLO DATOS.
+
+SON PERSONAS.
+
+SON HISTORIAS.
+
+SON FAMILIAS QUE ESPERAN RESPUESTAS.
+```
+
+---
+
+## Grid visual
+
+Utilizar tarjetas abstractas.
+
+No depender inicialmente de fotografías reales.
+
+Cada tarjeta puede utilizar:
+
+* un símbolo;
+* una forma;
+* un fragmento documental;
+* una composición;
+* un patrón;
+* un identificador abstracto.
+
+Ejemplo conceptual:
+
+```text
+┌──────────────┐    ┌──────────────┐
+│              │    │              │
+│      ○       │    │      ╱╲      │
+│              │    │              │
+│   HISTORIA   │    │   HISTORIA   │
+└──────────────┘    └──────────────┘
+
+
+        ┌──────────────┐
+        │              │
+        │      ◌       │
+        │              │
+        │   HISTORIA   │
+        └──────────────┘
+```
+
+La abstracción también ayuda a proteger:
+
+* privacidad;
+* dignidad;
+* información sensible.
+
+---
+
+# 16. EXPEDIENTE
+
+## El expediente no debe sentirse como un dashboard
+
+Para la persona que realiza una búsqueda, el expediente debe presentarse como:
+
+> **Una historia documental en curso.**
+
+---
+
+## Cabecera
+
+```text
+HUELLA / EXPEDIENTE
+
+
+NOMBRE DE LA PERSONA
+
+HU-2026-00127
+```
+
+El identificador debe utilizar tipografía UI.
+
+El nombre debe utilizar tipografía editorial.
+
+---
+
+## Estado
+
+```text
+ESTADO ACTUAL
+
+EN INVESTIGACIÓN
+```
+
+Descripción:
+
+```text
+Estamos contrastando la información disponible.
+```
+
+El lenguaje debe ser:
+
+* claro;
+* humano;
+* preciso;
+* no burocrático.
+
+---
+
+# 17. EL RECORRIDO DEL EXPEDIENTE
+
+Ejemplo:
+
+```text
+● Solicitud recibida
+│
+● Identidad verificada
+│
+● Evidencias recopiladas
+│
+◉ Investigación en curso
+│
+○ Resultado documental
+```
+
+El estado actual debe tener presencia visual.
+
+Los estados futuros deben ser visibles sin generar falsas expectativas.
+
+---
+
+# 18. NAVEGACIÓN
+
+La navegación pública debe ser discreta.
+
+No debe competir con la experiencia editorial.
+
+Elementos posibles:
+
+```text
+HUELLA
+
+Buscar
+Cómo funciona
+Memoria
+Ayuda
+
+[ Comenzar búsqueda ]
+```
+
+En fondos oscuros:
+
+* logo claro;
+* texto Stone;
+* detalles Gold.
+
+En fondos claros:
+
+* texto Obsidian Navy;
+* detalles Gold.
+
+---
+
+# 19. BOTONES
+
+## Primario
+
+Debe comunicar acción.
+
+```text
+[ Comenzar una búsqueda ]
+```
+
+Color recomendado:
+
+* Obsidian Navy sobre fondos claros;
+* Stone/Ivory sobre fondos oscuros.
+
+---
+
+## Secundario
+
+Más silencioso.
+
+Puede utilizar:
+
+* borde sutil;
+* fondo transparente;
+* texto Obsidian Navy.
+
+---
+
+## Regla
+
+Memorial Gold no debe convertirse en un botón primario universal.
+
+El dorado representa valor visual.
+
+No urgencia comercial.
+
+---
+
+# 20. CARDS
+
+Las cards no deben sentirse como componentes SaaS genéricos.
+
+Preferir:
+
+* bordes finos;
+* fondos cálidos;
+* sombras extremadamente suaves;
+* proporciones editoriales;
+* espacio interno generoso.
+
+Hover:
+
+* elevación mínima;
+* borde Gold tenue;
+* aparición progresiva de detalles.
+
+Evitar:
+
+* sombras grandes;
+* gradientes brillantes;
+* bordes redondeados excesivos;
+* glassmorphism agresivo.
+
+---
+
+# 21. BORDES Y FORMAS
+
+Preferir radios discretos.
+
+```text
+Small     4px
+Medium    8px
+Large     12px
+```
+
+Evitar que todo tenga grandes esquinas redondeadas.
+
+HUella debe sentirse:
+
+* editorial;
+* institucional;
+* contemporánea.
+
+No como una aplicación fintech genérica.
+
+---
+
+# 22. ANIMACIONES
+
+## Principio
+
+Las animaciones deben sentirse como:
+
+> **Movimiento de memoria y recorrido.**
+
+No como decoración tecnológica.
+
+---
+
+## Hero
+
+Posibles movimientos:
+
+* partículas extremadamente lentas;
+* líneas que aparecen;
+* conexiones suaves;
+* textura inspirada en huellas;
+* luz dorada muy tenue.
+
+Movimiento lento.
+
+Nunca agresivo.
+
+---
+
+## Scroll
+
+Las líneas pueden:
+
+* extenderse;
+* conectar;
+* revelarse;
+* transformarse.
+
+La interacción debe reforzar el concepto de:
+
+```text
+RASTRO → RECORRIDO
+```
+
+---
+
+## Cards
+
+Hover:
+
+* translate mínimo;
+* borde Gold;
+* aparición de metadata;
+* movimiento máximo: 4px.
+
+---
+
+## Timeline
+
+El progreso debe avanzar como una línea que deja una marca.
+
+No como una barra de carga.
+
+---
+
+# 23. VELOCIDAD DE MOVIMIENTO
+
+Recomendación:
+
+```text
+Microinteracciones:
+150ms – 250ms
+
+Transiciones de componentes:
+250ms – 450ms
+
+Elementos editoriales:
+500ms – 900ms
+
+Movimientos ambientales:
+8s – 30s
+```
+
+Utilizar curvas suaves.
+
+Respetar siempre:
+
+```css
+prefers-reduced-motion
+```
+
+---
+
+# 24. RESPONSIVE DESIGN
+
+La identidad debe mantenerse en:
+
+* Desktop;
+* Tablet;
+* Mobile.
+
+No simplemente reducir tamaños.
+
+---
+
+## Desktop
+
+Aprovechar:
+
+* composición;
+* asimetría;
+* espacio negativo;
+* tipografía grande;
+* elementos visuales ambientales.
+
+---
+
+## Tablet
+
+Reorganizar composición.
+
+Mantener:
+
+* jerarquía editorial;
+* ritmo;
+* contraste.
+
+Reducir complejidad visual antes que reducir legibilidad.
+
+---
+
+## Mobile
+
+La experiencia debe sentirse como un:
+
+> **Recorrido vertical íntimo.**
 
 Priorizar:
 
-1. Claridad.
-2. Confianza.
-3. Dignidad.
-4. Accesibilidad.
-5. Estética.
+* lectura;
+* respiración;
+* una acción principal;
+* navegación clara.
 
-Cuando exista conflicto entre estética y claridad, siempre gana claridad.
+Los elementos abstractos deben acompañar.
 
-Todos los componentes deben contemplar:
-
-- loading;
-- empty;
-- error;
-- success;
-- disabled.
-
-Implementar un sistema de componentes reutilizables y consistente.
+Nunca dificultar la lectura.
 
 ---
 
-# 23. PROMPT POR VISTA
+# 25. ACCESIBILIDAD
 
-Para implementar cada vista:
+La solemnidad visual nunca debe reducir la accesibilidad.
 
-> Implementa la vista **[NOMBRE DE LA VISTA]** de HUELLA siguiendo estrictamente este DESIGN.md.
->
-> Utiliza la paleta oficial, Inter para UI y Cormorant Garamond únicamente para titulares editoriales.
->
-> Mantén una estética humana, institucional, moderna y documental.
->
-> Diseña mobile-first y adapta cuidadosamente a tablet y desktop.
->
-> No introduzcas estética militar, propagandística, fintech o crypto.
->
-> Deja claro qué información está declarada, qué evidencia está recibida, qué está en investigación y qué está confirmado.
->
-> La pantalla debe permitir al usuario entender inmediatamente:
->
-> 1. dónde está;
-> 2. qué está viendo;
-> 3. qué está confirmado;
-> 4. qué falta;
-> 5. cuál es el siguiente paso.
->
-> Implementa estados loading, empty, error, success y disabled cuando correspondan.
->
-> Prioriza accesibilidad y claridad emocional.
+Garantizar:
+
+* contraste adecuado;
+* navegación por teclado;
+* estados de foco visibles;
+* labels claros;
+* tamaños táctiles adecuados;
+* reduced motion;
+* jerarquía semántica;
+* mensajes de estado comprensibles.
+
+Los colores nunca deben ser el único indicador de estado.
 
 ---
 
-# 24. REGLA FINAL
+# 26. LENGUAJE VISUAL DE ESTADOS
 
-> **HUELLA debe parecer una organización seria que ayuda a una familia a encontrar respuestas, no una aplicación que explota emocionalmente el conflicto.**
+## En progreso
 
-En cualquier decisión visual o UX, priorizar:
+Utilizar:
 
-**Claridad + Confianza + Dignidad**
+* Memorial Gold;
+* línea activa;
+* símbolo ◉.
+
+---
+
+## Completado
+
+Utilizar:
+
+* Hope Teal;
+* confirmación textual.
+
+---
+
+## Pendiente
+
+Utilizar:
+
+* Stone;
+* bordes suaves;
+* símbolo ○.
+
+---
+
+## Requiere atención
+
+Utilizar un color funcional de alerta definido específicamente.
+
+Nunca reutilizar Memorial Gold para errores.
+
+---
+
+# 27. ICONOGRAFÍA
+
+La iconografía debe ser:
+
+* minimalista;
+* geométrica;
+* discreta;
+* consistente.
+
+Preferir:
+
+* líneas;
+* formas simples;
+* símbolos abstractos.
+
+Evitar iconografía:
+
+* militar;
+* bélica;
+* religiosa dominante;
+* excesivamente humanitaria;
+* decorativa sin función.
+
+---
+
+# 28. IMÁGENES
+
+Las imágenes deben priorizar:
+
+* humanidad;
+* detalles;
+* espacios;
+* documentos;
+* texturas;
+* manos cuando sea apropiado;
+* lugares;
+* objetos;
+* archivo.
+
+Evitar:
+
+* violencia explícita;
+* imágenes sensacionalistas;
+* propaganda;
+* heroísmo militar;
+* representaciones estereotipadas.
+
+Cuando la privacidad sea importante, preferir:
+
+* abstracción;
+* fragmentos;
+* desenfoque contextual;
+* representación documental no identificable.
+
+---
+
+# 29. DIRECCIÓN DEL LOGOTIPO
+
+El símbolo debe evolucionar hacia una abstracción.
+
+No depender de:
+
+```text
+Paloma + Huella + Arco
+```
+
+La nueva dirección conceptual debe sugerir simultáneamente:
+
+* huella;
+* camino;
+* espiral;
+* recorrido;
+* retorno;
+* conexión;
+* una H abstracta.
+
+Concepto:
+
+> **Una huella que se convierte en camino.**
+
+El símbolo debe funcionar:
+
+* pequeño;
+* monocromático;
+* sin contexto;
+* en favicon;
+* en interfaz;
+* en grandes composiciones editoriales.
+
+---
+
+# 30. DO / DON'T
+
+## DO
+
+* utilizar espacio;
+* permitir silencio visual;
+* utilizar tipografía como elemento gráfico;
+* crear composiciones memorables;
+* utilizar abstracción;
+* mantener claridad funcional;
+* mostrar progreso con dignidad;
+* combinar editorial + tecnología.
+
+---
+
+## DON'T
+
+No convertir HUella en:
+
+* una landing SaaS;
+* una plataforma gubernamental;
+* una ONG tradicional;
+* un portal de noticias;
+* un dashboard administrativo frío;
+* un memorial funerario;
+* una estética bélica;
+* una experiencia excesivamente oscura.
+
+---
+
+# 31. TEST DE DECISIONES DE DISEÑO
+
+Antes de aprobar cualquier pantalla, componente o interacción, preguntar:
+
+### 1.
+
+¿Esto se siente como un producto SaaS genérico?
+
+Si la respuesta es sí:
+
+> Reconsiderar.
+
+---
+
+### 2.
+
+¿Esto trata la historia humana con dignidad?
+
+Si la respuesta es no:
+
+> Reconsiderar.
+
+---
+
+### 3.
+
+¿Esto podría pertenecer a cualquier plataforma?
+
+Si la respuesta es sí:
+
+> Añadir identidad.
+
+---
+
+### 4.
+
+¿La funcionalidad sigue siendo clara?
+
+Si la respuesta es no:
+
+> Simplificar.
+
+---
+
+### 5.
+
+¿El diseño parece intentar provocar tristeza?
+
+Si la respuesta es sí:
+
+> Reducir dramatización.
+
+La emoción debe surgir de:
+
+* respeto;
+* ausencia;
+* memoria;
+* composición.
+
+Nunca de explotación emocional.
+
+---
+
+# 32. DIRECCIÓN DEFINITIVA
+
+HUella debe evolucionar hacia:
+
+# CONTEMPORARY MEMORIAL TECHNOLOGY
+
+Una experiencia donde:
+
+```text
+MEMORIA
+   +
+DISEÑO EDITORIAL
+   +
+ARCHIVO
+   +
+INVESTIGACIÓN
+   +
+TECNOLOGÍA
+```
+
+conviven dentro de una misma identidad.
+
+La Home debe sentirse como:
+
+> **Una exposición digital contemporánea que gradualmente se convierte en una herramienta de investigación.**
+
+El expediente debe sentirse como:
+
+> **Una historia documental en curso.**
+
+La timeline debe sentirse como:
+
+> **Un recorrido que deja una huella.**
+
+Y la plataforma completa debe comunicar:
+
+# HUELLA
+
+### VERDAD · MEMORIA · DIGNIDAD
+
+> **Para quienes esperan respuestas.
+> Para quienes merecen ser encontrados.**
+
+---
+
+# PRINCIPIO FINAL
+
+HUella no debe intentar impresionar mediante:
+
+* exceso;
+* dramatismo;
+* tecnología visible;
+* efectos llamativos.
+
+Debe resultar memorable porque cada elemento parece haber sido colocado con intención.
+
+La experiencia debe transmitir:
+
+> **Aquí hay tecnología.
+> Pero está al servicio de algo profundamente humano.**
