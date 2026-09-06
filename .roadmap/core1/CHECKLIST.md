@@ -25,7 +25,7 @@
 - [x] **1.5b** Colección `auditoria`
 - [x] **1.6** API Key + `.env` local
 - [x] **1.6b** Marco de pruebas unitarias + CI independientes (web / api / webhooks) — **en curso en core1**
-- [ ] **1.7** Functions desplegadas: `huella-api` y `huella-webhooks` (solo tras 1.6b verde)
+- [x] **1.7** Functions desplegadas: `huella-api` y `huella-webhooks` (solo tras 1.6b verde)
 
 **Criterio de cierre §1:** tests de functions en verde + `POST` de prueba a `huella-api` responde JSON estructurado.
 
