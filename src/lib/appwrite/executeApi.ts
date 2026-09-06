@@ -1,6 +1,7 @@
 import { ExecutionMethod } from 'appwrite';
 import { getFunctions, getPublicConfig } from './client';
 import { ApiError, type ApiResponse } from './types';
+import { addDevLog } from '../stores/devLogger';
 
 export type ExecuteApiOptions = {
   /** ID de function; por defecto VITE_APPWRITE_FUNCTION_API_ID */
@@ -25,6 +26,14 @@ export async function executeApi<T = unknown>(
   const functions = getFunctions();
 
   const body = JSON.stringify({ action, payload });
+  const startTime = performance.now();
+
+  addDevLog({
+    type: 'api_req',
+    title: `POST ${action}`,
+    action,
+    payload,
+  });
 
   let execution: {
     status: string;
@@ -34,7 +43,6 @@ export async function executeApi<T = unknown>(
   };
 
   try {
-    // Appwrite Web SDK 18: firma posicional
     execution = (await functions.createExecution(
       functionId,
       body,
@@ -44,14 +52,39 @@ export async function executeApi<T = unknown>(
       { 'Content-Type': 'application/json' },
     )) as typeof execution;
   } catch (err) {
+    const latencyMs = Math.round(performance.now() - startTime);
     const message = err instanceof Error ? err.message : 'Error al ejecutar la function';
+
+    addDevLog({
+      type: 'api_err',
+      title: `FAIL ${action} (${message})`,
+      action,
+      latencyMs,
+      payload,
+      error: message,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+
     throw new ApiError('EXECUTION_FAILED', message);
   }
 
+  const latencyMs = Math.round(performance.now() - startTime);
+
   if (execution.status === 'failed') {
+    const errText = execution.errors || 'La function falló sin detalle';
+
+    addDevLog({
+      type: 'api_err',
+      title: `FAIL ${action} (Status ${execution.responseStatusCode || 500})`,
+      action,
+      latencyMs,
+      payload,
+      error: errText,
+    });
+
     throw new ApiError(
       'EXECUTION_FAILED',
-      execution.errors || 'La function falló sin detalle',
+      errText,
       execution.responseStatusCode,
     );
   }
@@ -61,6 +94,15 @@ export async function executeApi<T = unknown>(
   try {
     parsed = JSON.parse(raw || '{}') as ApiResponse<T>;
   } catch {
+    addDevLog({
+      type: 'api_err',
+      title: `FAIL ${action} (JSON Inválido)`,
+      action,
+      latencyMs,
+      payload,
+      response: raw,
+    });
+
     throw new ApiError(
       'INVALID_RESPONSE',
       'La function no devolvió JSON válido',
@@ -69,16 +111,42 @@ export async function executeApi<T = unknown>(
   }
 
   if (!parsed || typeof parsed !== 'object' || typeof (parsed as ApiResponse<T>).success !== 'boolean') {
+    addDevLog({
+      type: 'api_err',
+      title: `FAIL ${action} (Formato Inesperado)`,
+      action,
+      latencyMs,
+      payload,
+      response: parsed,
+    });
+
     throw new ApiError('INVALID_RESPONSE', 'Formato de respuesta inesperado');
   }
 
   if (!parsed.success) {
-    throw new ApiError(
-      parsed.error?.code ?? 'API_ERROR',
-      parsed.error?.message ?? 'Error en la API',
-      execution.responseStatusCode,
-    );
+    const code = parsed.error?.code ?? 'API_ERROR';
+    const message = parsed.error?.message ?? 'Error en la API';
+
+    addDevLog({
+      type: 'api_err',
+      title: `ERR ${action} [${code}]: ${message}`,
+      action,
+      latencyMs,
+      payload,
+      error: parsed.error,
+    });
+
+    throw new ApiError(code, message, execution.responseStatusCode);
   }
+
+  addDevLog({
+    type: 'api_res',
+    title: `SUCCESS ${action}`,
+    action,
+    latencyMs,
+    payload,
+    response: parsed.data,
+  });
 
   return parsed.data;
 }

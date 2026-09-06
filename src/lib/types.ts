@@ -13,22 +13,27 @@ export type RutaPublica = 'home' | 'solicitud' | 'seguimiento';
 export type RutaAdmin = 'login' | 'dashboard' | 'solicitudes' | 'detalle';
 
 /**
- * Representación de lectura de una solicitud para superficies internas.
- *
- * No sustituye la entidad de dominio `core/features/solicitudes/domain/entities/Solicitud`;
- * es un contrato de UI/DTO para desacoplar las páginas de Svelte del modelo de dominio.
+ * DTO de lectura pública de una solicitud (surface lista/detalle admin).
+ * Refleja el contrato de `solicitudes.list` y `solicitudes.getById`.
  */
 export type Solicitud = {
   id: string;
+  codigoSeguimiento: string;
   nombreFamiliar: string;
   email: string;
-  telefono?: string;
-  nombreFallecido: string;
+  telefono?: string | null;
+  /** Nombre de la persona buscada */
+  nombrePersona: string;
   relacion: string;
   descripcion: string;
   estado: EstadoSolicitud;
-  notasAdmin?: string;
+  mensajePublico?: string | null;
+  /** Solo disponible en detalle (solicitudes.getById) */
+  notasInternas?: string | null;
+  diditSessionId?: string | null;
+  kycResultado?: string | null;
   fechaCreacion: string;
+  fechaActualizacion: string;
 };
 
 /** Respuesta pública de solicitudes.getByCode */
