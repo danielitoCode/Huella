@@ -33,3 +33,28 @@ export function validateMarcarSinVerificar(payload = {}) {
     mensajePublico: payload.mensajePublico ? String(payload.mensajePublico) : undefined,
   };
 }
+
+export function validateList(payload = {}) {
+  const ESTADOS_VALIDOS = ['pendiente', 'sin_verificar', 'verificado', 'cerrado'];
+  const estado = payload.estado ? String(payload.estado).trim() : undefined;
+  if (estado && !ESTADOS_VALIDOS.includes(estado)) {
+    throw new AppError('VALIDATION', `estado inválido: ${estado}`);
+  }
+  const limit = Math.min(Number(payload.limit) || 25, 100);
+  const offset = Math.max(Number(payload.offset) || 0, 0);
+  return { estado, limit, offset };
+}
+
+export function validateGetById(payload = {}) {
+  const solicitudId = String(payload.solicitudId || payload.id || '').trim();
+  if (!solicitudId) throw new AppError('VALIDATION', 'solicitudId requerido');
+  return { solicitudId };
+}
+
+export function validateCerrar(payload = {}) {
+  const solicitudId = String(payload.solicitudId || '').trim();
+  if (!solicitudId) throw new AppError('VALIDATION', 'solicitudId requerido');
+  const motivoInterno = String(payload.motivoInterno || '').trim();
+  if (!motivoInterno) throw new AppError('VALIDATION', 'motivoInterno requerido');
+  return { solicitudId, motivoInterno };
+}

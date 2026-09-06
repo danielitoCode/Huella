@@ -107,5 +107,70 @@ export function createSolicitudesService(req) {
         verificationUrl: session.url,
       };
     },
+
+    async list({ estado, limit = 25, offset = 0 } = {}) {
+      const { documents, total } = await repo.list({ estado, limit, offset });
+      return {
+        solicitudes: documents.map((doc) => ({
+          id: doc.$id,
+          codigoSeguimiento: doc.codigoSeguimiento,
+          nombreFamiliar: doc.nombreFamiliar,
+          email: doc.email,
+          nombrePersona: doc.nombrePersona,
+          relacion: doc.relacion,
+          estado: doc.estado,
+          mensajePublico: doc.mensajePublico || null,
+          diditSessionId: doc.diditSessionId || null,
+          fechaCreacion: doc.$createdAt,
+          fechaActualizacion: doc.$updatedAt,
+        })),
+        total,
+        limit,
+        offset,
+      };
+    },
+
+    async getById({ solicitudId }) {
+      const doc = await repo.getById(solicitudId);
+      if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
+      return {
+        id: doc.$id,
+        codigoSeguimiento: doc.codigoSeguimiento,
+        nombreFamiliar: doc.nombreFamiliar,
+        email: doc.email,
+        telefono: doc.telefono || null,
+        nombrePersona: doc.nombrePersona,
+        relacion: doc.relacion,
+        descripcion: doc.descripcion,
+        estado: doc.estado,
+        mensajePublico: doc.mensajePublico || null,
+        notasInternas: doc.notasInternas || null,
+        diditSessionId: doc.diditSessionId || null,
+        kycResultado: doc.kycResultado || null,
+        fechaCreacion: doc.$createdAt,
+        fechaActualizacion: doc.$updatedAt,
+      };
+    },
+
+    async cerrar({ solicitudId, motivoInterno }) {
+      const doc = await repo.getById(solicitudId);
+      if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
+      if (doc.estado === ESTADOS.CERRADO) {
+        throw new AppError('INVALID_TRANSITION', 'La solicitud ya está cerrada');
+      }
+
+      const updated = await repo.update(solicitudId, {
+        estado: ESTADOS.CERRADO,
+        notasInternas: [doc.notasInternas, `[CIERRE] ${motivoInterno}`]
+          .filter(Boolean)
+          .join('\n---\n'),
+        mensajePublico: 'Tu expediente ha sido cerrado. Gracias por contactarnos.',
+      });
+
+      return {
+        solicitudId,
+        estado: updated.estado,
+      };
+    },
   };
 }
