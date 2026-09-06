@@ -13,7 +13,9 @@
   <nav aria-label="Principal">
     {#if zona === 'public'}
       <button type="button" class="nav-link" onclick={() => irAPublica('home')}>Inicio</button>
-      <button type="button" class="nav-link" onclick={() => irAPublica('solicitud')}>Buscar</button>
+      <button type="button" class="nav-link" onclick={() => irAPublica('seguimiento')}>
+        Seguimiento
+      </button>
       <button type="button" class="nav-link primary" onclick={() => irAPublica('solicitud')}>
         Comenzar una búsqueda
       </button>

@@ -1,76 +1,136 @@
 <script lang="ts">
   import { irAPublica } from '../../lib/stores/router';
+  import { executeApi, ApiError } from '../../lib/appwrite';
+  import type { CreateSolicitudResult } from '../../lib/types';
 
   let nombreFamiliar = $state('');
   let email = $state('');
   let telefono = $state('');
-  let nombreFallecido = $state('');
+  let nombrePersona = $state('');
   let relacion = $state('');
   let descripcion = $state('');
-  let enviado = $state(false);
 
-  function enviar(e: Event) {
+  let enviando = $state(false);
+  let errorMsg = $state('');
+  let resultado = $state<CreateSolicitudResult | null>(null);
+
+  async function enviar(e: Event) {
     e.preventDefault();
-    // TODO: conectar con API / backend
-    console.log('Nueva solicitud:', {
-      nombreFamiliar,
-      email,
-      telefono,
-      nombreFallecido,
-      relacion,
-      descripcion,
-    });
-    enviado = true;
+    errorMsg = '';
+    enviando = true;
+    try {
+      const data = await executeApi<CreateSolicitudResult>('solicitudes.create', {
+        nombreFamiliar: nombreFamiliar.trim(),
+        email: email.trim(),
+        telefono: telefono.trim() || undefined,
+        nombrePersona: nombrePersona.trim(),
+        relacion: relacion.trim(),
+        descripcion: descripcion.trim(),
+      });
+      resultado = data;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        errorMsg = err.message;
+      } else {
+        errorMsg = 'No pudimos registrar la solicitud. Inténtalo de nuevo.';
+      }
+    } finally {
+      enviando = false;
+    }
   }
 </script>
 
 <section class="form-section">
-  <h1>Enviar solicitud</h1>
+  <p class="eyebrow">Nueva búsqueda</p>
+  <h1>Iniciar una solicitud</h1>
   <p class="intro">
-    Completa el formulario. Un operador lo recibirá en el backoffice y se pondrá en contacto contigo.
+    Cuéntanos a quién buscas. Registraremos el expediente y te daremos un código para seguir el
+    avance. No hace falta crear una cuenta.
   </p>
 
-  {#if enviado}
-    <div class="success">
-      <h2>Solicitud recibida</h2>
-      <p>Gracias. Hemos registrado tu caso. Pronto nos pondremos en contacto.</p>
-      <button onclick={() => irAPublica('home')}>Volver al inicio</button>
+  {#if resultado}
+    <div class="success card" role="status">
+      <p class="eyebrow">Solicitud recibida</p>
+      <h2>Hemos registrado tu búsqueda</h2>
+      <p>
+        Guarda este código de seguimiento. También te lo enviamos por correo si el servicio de email
+        está activo.
+      </p>
+      <p class="codigo" aria-label="Código de seguimiento">{resultado.codigoSeguimiento}</p>
+      <div class="actions">
+        <button
+          type="button"
+          class="btn btn-primary"
+          onclick={() => irAPublica('seguimiento', resultado!.codigoSeguimiento)}
+        >
+          Ver seguimiento
+        </button>
+        <button type="button" class="btn btn-secondary" onclick={() => irAPublica('home')}>
+          Volver al inicio
+        </button>
+      </div>
     </div>
   {:else}
-    <form onsubmit={enviar} class="form">
+    <form onsubmit={enviar} class="form card">
+      {#if errorMsg}
+        <p class="error" role="alert">{errorMsg}</p>
+      {/if}
+
       <label>
         Tu nombre completo
-        <input type="text" bind:value={nombreFamiliar} required />
+        <input type="text" bind:value={nombreFamiliar} required autocomplete="name" disabled={enviando} />
       </label>
 
       <label>
         Correo electrónico
-        <input type="email" bind:value={email} required />
+        <input type="email" bind:value={email} required autocomplete="email" disabled={enviando} />
       </label>
 
       <label>
-        Teléfono (opcional)
-        <input type="tel" bind:value={telefono} />
+        Teléfono <span class="opt">(opcional)</span>
+        <input type="tel" bind:value={telefono} autocomplete="tel" disabled={enviando} />
       </label>
 
       <label>
-        Nombre del ser querido fallecido
-        <input type="text" bind:value={nombreFallecido} required />
+        Nombre de la persona que buscas
+        <input type="text" bind:value={nombrePersona} required disabled={enviando} />
       </label>
 
       <label>
-        Relación con él/ella
-        <input type="text" bind:value={relacion} placeholder="Ej: hijo, hermano, esposo..." required />
+        Relación con esa persona
+        <input
+          type="text"
+          bind:value={relacion}
+          placeholder="Ej.: madre, hermano, cónyuge…"
+          required
+          disabled={enviando}
+        />
       </label>
 
       <label>
-        Descripción / información adicional
-        <textarea bind:value={descripcion} rows="5" required></textarea>
+        Información que conoces
+        <textarea
+          bind:value={descripcion}
+          rows="5"
+          required
+          disabled={enviando}
+          placeholder="Lugar, fechas, circunstancias u otros datos relevantes…"
+        ></textarea>
       </label>
+
+      <p class="disclaimer">
+        Confirmas que la información es verdadera según tu conocimiento. La averiguación no garantiza
+        un resultado; si se confirma un fallecimiento, el equipo podrá orientarte sobre pasos
+        posteriores fuera de esta plataforma.
+      </p>
 
       <div class="actions">
-        <button type="button" class="secondary" onclick={() => irAPublica('home')}>Cancelar</button>
-        <button type="submit">Enviar solicitud</button>
+        <button type="button" class="btn btn-secondary" onclick={() => irAPublica('home')} disabled={enviando}>
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary" disabled={enviando}>
+          {enviando ? 'Enviando…' : 'Enviar solicitud'}
+        </button>
       </div>
     </form>
   {/if}
@@ -78,82 +138,72 @@
 
 <style>
   .form-section {
-    max-width: 560px;
+    max-width: 36rem;
     margin: 0 auto;
   }
 
+  .eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 0.5rem;
+  }
+
   .intro {
-    margin-bottom: 28px;
+    margin-bottom: 1.5rem;
     color: var(--text);
   }
 
   .form {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 1rem;
   }
 
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    text-align: left;
-    font-size: 0.95rem;
-    color: var(--text-h);
+  .opt {
+    font-weight: 400;
+    color: var(--text-muted);
   }
 
-  input,
-  textarea {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font: inherit;
-    background: var(--bg);
-    color: var(--text-h);
+  .disclaimer {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
   }
 
-  input:focus,
-  textarea:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
+  .error {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    background: rgba(184, 76, 76, 0.1);
+    border: 1px solid rgba(184, 76, 76, 0.35);
+    color: var(--color-alert, #b84c4c);
+    font-size: 0.9rem;
   }
 
   .actions {
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 0.75rem;
     justify-content: flex-end;
-    margin-top: 8px;
-  }
-
-  button {
-    padding: 10px 20px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    font-size: 0.95rem;
-  }
-
-  button[type='submit'] {
-    background: var(--accent);
-    color: white;
-  }
-
-  .secondary {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text);
+    margin-top: 0.5rem;
   }
 
   .success {
-    text-align: center;
-    padding: 40px 20px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    text-align: left;
   }
 
-  .success button {
-    margin-top: 20px;
-    background: var(--accent);
-    color: white;
+  .codigo {
+    font-family: var(--font-mono);
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text-h);
+    padding: 1rem;
+    background: var(--surface-muted);
+    border: 1px solid var(--color-border-gold, rgba(198, 164, 106, 0.35));
+    border-radius: var(--radius);
+    text-align: center;
   }
 </style>
