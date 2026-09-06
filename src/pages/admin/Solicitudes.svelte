@@ -6,39 +6,33 @@
   const solicitudes: Solicitud[] = [
     {
       id: '1',
-      codigoSeguimiento: 'HUE-2026-ABC123',
       nombreFamiliar: 'María González',
       email: 'maria@example.com',
-      nombrePersona: 'Carlos González',
+      nombreFallecido: 'Carlos González',
       relacion: 'Madre',
       descripcion: 'Necesito orientación sobre el caso de mi familiar.',
       estado: 'pendiente',
       fechaCreacion: '2026-09-01',
-      fechaActualizacion: '2026-09-01',
     },
     {
       id: '2',
-      codigoSeguimiento: 'HUE-2026-DEF456',
       nombreFamiliar: 'José Pérez',
       email: 'jose@example.com',
-      nombrePersona: 'Luis Pérez',
+      nombreFallecido: 'Luis Pérez',
       relacion: 'Hermano',
       descripcion: 'Solicitud en espera de verificación de identidad.',
       estado: 'sin_verificar',
       fechaCreacion: '2026-08-28',
-      fechaActualizacion: '2026-08-30',
     },
     {
       id: '3',
-      codigoSeguimiento: 'HUE-2026-GHI789',
       nombreFamiliar: 'Ana Rodríguez',
       email: 'ana@example.com',
-      nombrePersona: 'Pedro Rodríguez',
+      nombreFallecido: 'Pedro Rodríguez',
       relacion: 'Esposa',
       descripcion: 'Expediente con identidad verificada.',
       estado: 'verificado',
       fechaCreacion: '2026-08-20',
-      fechaActualizacion: '2026-08-25',
     },
   ];
 
@@ -71,7 +65,7 @@
         {#each solicitudes as s}
           <tr>
             <td>{s.nombreFamiliar}</td>
-            <td>{s.nombrePersona}</td>
+            <td>{s.nombreFallecido}</td>
             <td><span class="badge {s.estado}">{estadoLabel[s.estado]}</span></td>
             <td>{s.fechaCreacion}</td>
             <td>
