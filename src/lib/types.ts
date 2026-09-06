@@ -1,6 +1,6 @@
 /** Tipos compartidos de la plataforma Huella */
 
-/** Estados de dominio (alineados con Appwrite / huella-api) */
+/** Estados canónicos de una solicitud (alineados con el dominio y huella-api). */
 export type EstadoSolicitud =
   | 'pendiente'
   | 'sin_verificar'
@@ -11,6 +11,27 @@ export type Zona = 'public' | 'admin';
 
 export type RutaPublica = 'home' | 'solicitud' | 'seguimiento';
 export type RutaAdmin = 'login' | 'dashboard' | 'solicitudes' | 'detalle';
+
+/**
+ * Representación de lectura de una solicitud para superficies internas.
+ *
+ * No sustituye la entidad de dominio `core/features/solicitudes/domain/entities/Solicitud`;
+ * es un contrato de UI/DTO para desacoplar las páginas de Svelte del modelo de dominio.
+ */
+export type Solicitud = {
+  id: string;
+  codigoSeguimiento: string;
+  nombreFamiliar: string;
+  email: string;
+  telefono?: string;
+  nombrePersona: string;
+  relacion: string;
+  descripcion: string;
+  estado: EstadoSolicitud;
+  notasInternas?: string;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+};
 
 /** Respuesta pública de solicitudes.getByCode */
 export type SeguimientoPublico = {
