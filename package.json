@@ -19,6 +19,9 @@
     "ci": "npm run typecheck && npm run typecheck:node && npm test && npm run build",
     "ci:all": "npm run ci && npm run test:functions"
   },
+  "dependencies": {
+    "appwrite": "^18.1.1"
+  },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tsconfig/svelte": "^5.0.8",
