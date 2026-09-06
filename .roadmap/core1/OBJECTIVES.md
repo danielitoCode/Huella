@@ -41,7 +41,3 @@ Detalle de ítems: [CHECKLIST.md](./CHECKLIST.md).
 - Multi-idioma
 - Analytics avanzado
 - Más de 2 Appwrite Functions
-
-## Siguiente paso
-
-Implementar **esquema A** en `core1`: formulario → `solicitudes.create` → confirmación con código → tracking → `solicitudes.getByCode`.
