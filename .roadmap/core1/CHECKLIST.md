@@ -24,7 +24,7 @@
 - [x] **1.5** Colección `operadores`
 - [x] **1.5b** Colección `auditoria`
 - [x] **1.6** API Key + `.env` local
-- [ ] **1.6b** Marco de pruebas unitarias + CI independientes (web / api / webhooks) — **en curso en core1**
+- [x] **1.6b** Marco de pruebas unitarias + CI independientes (web / api / webhooks) — **en curso en core1**
 - [ ] **1.7** Functions desplegadas: `huella-api` y `huella-webhooks` (solo tras 1.6b verde)
 
 **Criterio de cierre §1:** tests de functions en verde + `POST` de prueba a `huella-api` responde JSON estructurado.
@@ -106,9 +106,17 @@
 
 ---
 
-## 9. Calidad y cierre Core 1
+## 9. Ajuste de UI/UX
+- [ ] **9.1** Proponer esquema de colores por temas , de acuerdo con el proposito de la aplicacion
+- [ ] **9.2** Alineacion de colores dentro de la aplicacion , engancharlo al cambio de tema automatico
+- [ ] **9.3** Analisis del uso de animaciones , transiciones entre vistas y su aplicacion
+- [ ] **9.4** Revision ortográfica, el mal uso de caracteres y errores de cooncordancia
 
-- [ ] **9.1** Tests dominio + functions verdes
-- [ ] **9.2** CI gate (web + api + webhooks) en verde en PR a master
-- [ ] **9.3** README actualizado
-- [ ] **9.4** Objetivos abiertos → core2 si aplica
+---
+
+## 10. Calidad y cierre Core 1
+
+- [ ] **10.1** Tests dominio + functions verdes
+- [ ] **10.2** CI gate (web + api + webhooks) en verde en PR a master
+- [ ] **10.3** README actualizado
+- [ ] **10.4** Objetivos abiertos → core2 si aplica
