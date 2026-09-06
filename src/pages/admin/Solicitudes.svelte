@@ -1,52 +1,47 @@
 <script lang="ts">
   import { irAAdmin } from '../../lib/stores/router';
-  import type { EstadoSolicitud, Solicitud } from '../../lib/types';
+  import type { Solicitud } from '../../lib/types';
 
-  // Mock temporal. El esquema C reemplazará esta fuente por el caso de uso/API de backoffice.
+  // Datos de ejemplo (mock)
   const solicitudes: Solicitud[] = [
     {
       id: '1',
-      codigoSeguimiento: 'HUE-2026-ABC123',
       nombreFamiliar: 'María González',
       email: 'maria@example.com',
-      nombrePersona: 'Carlos González',
+      nombreFallecido: 'Carlos González',
       relacion: 'Madre',
-      descripcion: 'Necesito orientación sobre el caso de mi familiar.',
+      descripcion: 'Hijo desaparecido en el frente...',
       estado: 'pendiente',
       fechaCreacion: '2026-09-01',
-      fechaActualizacion: '2026-09-01',
     },
     {
       id: '2',
-      codigoSeguimiento: 'HUE-2026-DEF456',
       nombreFamiliar: 'José Pérez',
       email: 'jose@example.com',
-      nombrePersona: 'Luis Pérez',
+      nombreFallecido: 'Luis Pérez',
       relacion: 'Hermano',
-      descripcion: 'Solicitud en espera de verificación de identidad.',
-      estado: 'sin_verificar',
+      descripcion: 'Necesito información sobre el paradero...',
+      estado: 'en_revision',
       fechaCreacion: '2026-08-28',
-      fechaActualizacion: '2026-08-30',
     },
     {
       id: '3',
-      codigoSeguimiento: 'HUE-2026-GHI789',
       nombreFamiliar: 'Ana Rodríguez',
       email: 'ana@example.com',
-      nombrePersona: 'Pedro Rodríguez',
+      nombreFallecido: 'Pedro Rodríguez',
       relacion: 'Esposa',
-      descripcion: 'Expediente con identidad verificada.',
-      estado: 'verificado',
+      descripcion: 'Confirmación de fallecimiento y repatriación...',
+      estado: 'en_proceso',
       fechaCreacion: '2026-08-20',
-      fechaActualizacion: '2026-08-25',
     },
   ];
 
-  const estadoLabel: Record<EstadoSolicitud, string> = {
+  const estadoLabel: Record<string, string> = {
     pendiente: 'Pendiente',
-    sin_verificar: 'Sin verificar',
-    verificado: 'Verificado',
-    cerrado: 'Cerrado',
+    en_revision: 'En revisión',
+    en_proceso: 'En proceso',
+    resuelta: 'Resuelta',
+    rechazada: 'Rechazada',
   };
 </script>
 
@@ -61,7 +56,7 @@
       <thead>
         <tr>
           <th>Familiar</th>
-          <th>Persona buscada</th>
+          <th>Fallecido</th>
           <th>Estado</th>
           <th>Fecha</th>
           <th></th>
@@ -71,7 +66,7 @@
         {#each solicitudes as s}
           <tr>
             <td>{s.nombreFamiliar}</td>
-            <td>{s.nombrePersona}</td>
+            <td>{s.nombreFallecido}</td>
             <td><span class="badge {s.estado}">{estadoLabel[s.estado]}</span></td>
             <td>{s.fechaCreacion}</td>
             <td>
@@ -87,16 +82,79 @@
 </section>
 
 <style>
-  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-  .back { background: transparent; border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px; cursor: pointer; color: var(--text); }
-  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
-  table { width: 100%; border-collapse: collapse; text-align: left; }
-  th, td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
-  th { background: var(--code-bg); font-weight: 500; color: var(--text-h); }
-  .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; }
-  .pendiente { background: #fef3c7; color: #92400e; }
-  .sin_verificar { background: #dbeafe; color: #1e40af; }
-  .verificado { background: #d1fae5; color: #065f46; }
-  .cerrado { background: #e5e7eb; color: #374151; }
-  .link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.95rem; }
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .back {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text);
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }
+
+  th,
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    background: var(--code-bg);
+    font-weight: 500;
+    color: var(--text-h);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+  }
+
+  .pendiente {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .en_revision {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  .en_proceso {
+    background: #e0e7ff;
+    color: #3730a3;
+  }
+  .resuelta {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  .rechazada {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
 </style>
