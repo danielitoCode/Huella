@@ -34,9 +34,9 @@ describe('executeApi', () => {
 
     expect(data.codigo).toBe('HUE-2026-AB23CD');
     expect(createExecution).toHaveBeenCalledOnce();
-    const arg = createExecution.mock.calls[0][0];
-    expect(arg.functionId).toBe('huella-api');
-    expect(JSON.parse(arg.body)).toEqual({
+    // firma posicional: (functionId, body, async, path, method, headers)
+    expect(createExecution.mock.calls[0][0]).toBe('huella-api');
+    expect(JSON.parse(createExecution.mock.calls[0][1])).toEqual({
       action: 'solicitudes.getByCode',
       payload: { codigo: 'HUE-2026-AB23CD' },
     });

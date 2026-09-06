@@ -1,3 +1,4 @@
+import { ExecutionMethod } from 'appwrite';
 import { getFunctions, getPublicConfig } from './client';
 import { ApiError, type ApiResponse } from './types';
 
@@ -33,15 +34,15 @@ export async function executeApi<T = unknown>(
   };
 
   try {
-    // SDK Appwrite 18+: createExecution con objeto
-    execution = (await functions.createExecution({
+    // Appwrite Web SDK 18: firma posicional
+    execution = (await functions.createExecution(
       functionId,
       body,
-      async: false,
-      path: '/',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    })) as typeof execution;
+      false,
+      '/',
+      ExecutionMethod.POST,
+      { 'Content-Type': 'application/json' },
+    )) as typeof execution;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error al ejecutar la function';
     throw new ApiError('EXECUTION_FAILED', message);
