@@ -20,17 +20,15 @@ export type RutaAdmin = 'login' | 'dashboard' | 'solicitudes' | 'detalle';
  */
 export type Solicitud = {
   id: string;
-  codigoSeguimiento: string;
   nombreFamiliar: string;
   email: string;
   telefono?: string;
-  nombrePersona: string;
+  nombreFallecido: string;
   relacion: string;
   descripcion: string;
   estado: EstadoSolicitud;
-  notasInternas?: string;
+  notasAdmin?: string;
   fechaCreacion: string;
-  fechaActualizacion: string;
 };
 
 /** Respuesta pública de solicitudes.getByCode */
