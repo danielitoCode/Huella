@@ -5,8 +5,9 @@ import {
   validateList,
   validateSetRole,
   validateSetActive,
-  validateSetPin,
-  validateSetPassword,
+  validateOperadorId,
+  validateSetOwnPin,
+  validateChangeOwnPassword,
 } from './operadores.validator.js';
 
 export const operadoresRoutes = {
@@ -49,20 +50,40 @@ export const operadoresRoutes = {
       return service.setActive(payload, ctx.identity);
     },
   },
-  'operadores.setCancelPin': {
+  /** Admin: reset PIN → 0000 */
+  'operadores.resetCancelPin': {
     auth: AUTH.ADMIN,
-    validate: validateSetPin,
+    validate: validateOperadorId,
     handler: async (ctx, payload) => {
       const service = createOperadoresService(ctx.req);
-      return service.setCancelPin(payload, ctx.identity);
+      return service.resetCancelPin(payload, ctx.identity);
     },
   },
-  'operadores.setPassword': {
+  /** Titular: establece su PIN (desde 0000 o cambiando el actual) */
+  'operadores.setOwnCancelPin': {
     auth: AUTH.ADMIN,
-    validate: validateSetPassword,
+    validate: validateSetOwnPin,
     handler: async (ctx, payload) => {
       const service = createOperadoresService(ctx.req);
-      return service.setPassword(payload, ctx.identity);
+      return service.setOwnCancelPin(payload, ctx.identity);
+    },
+  },
+  /** Admin: reset password → 12345678 */
+  'operadores.resetPassword': {
+    auth: AUTH.ADMIN,
+    validate: validateOperadorId,
+    handler: async (ctx, payload) => {
+      const service = createOperadoresService(ctx.req);
+      return service.resetPassword(payload, ctx.identity);
+    },
+  },
+  /** Titular: cambia su password */
+  'operadores.changeOwnPassword': {
+    auth: AUTH.ADMIN,
+    validate: validateChangeOwnPassword,
+    handler: async (ctx, payload) => {
+      const service = createOperadoresService(ctx.req);
+      return service.changeOwnPassword(payload, ctx.identity);
     },
   },
 };

@@ -5,19 +5,13 @@ const ROLES = ['admin', 'operador'];
 export function validateCreate(payload = {}) {
   const email = String(payload.email || '').trim().toLowerCase();
   const nombre = String(payload.nombre || payload.name || '').trim();
-  const password = String(payload.password || '').trim();
   const rol = String(payload.rol || 'operador').trim().toLowerCase();
-  const cancelPin = payload.cancelPin != null ? String(payload.cancelPin).trim() : '';
 
   if (!email || !email.includes('@')) throw new AppError('VALIDATION', 'email inválido');
   if (!nombre) throw new AppError('VALIDATION', 'nombre requerido');
-  if (password.length < 8) throw new AppError('VALIDATION', 'password mínimo 8 caracteres');
   if (!ROLES.includes(rol)) throw new AppError('VALIDATION', 'rol debe ser admin u operador');
-  if (cancelPin && !/^\d{4}$/.test(cancelPin)) {
-    throw new AppError('VALIDATION', 'cancelPin debe ser 4 dígitos');
-  }
 
-  return { email, nombre, password, rol, cancelPin: cancelPin || undefined };
+  return { email, nombre, rol };
 }
 
 export function validateSetRole(payload = {}) {
@@ -31,23 +25,31 @@ export function validateSetRole(payload = {}) {
 export function validateSetActive(payload = {}) {
   const operadorId = String(payload.operadorId || payload.id || '').trim();
   if (!operadorId) throw new AppError('VALIDATION', 'operadorId requerido');
-  const activo = Boolean(payload.activo);
-  return { operadorId, activo };
+  return { operadorId, activo: Boolean(payload.activo) };
 }
 
-export function validateSetPin(payload = {}) {
-  const operadorId = payload.operadorId ? String(payload.operadorId).trim() : undefined;
-  const pin = String(payload.pin || payload.cancelPin || '').trim();
-  if (!/^\d{4}$/.test(pin)) throw new AppError('VALIDATION', 'PIN debe ser 4 dígitos');
-  return { operadorId, pin };
-}
-
-export function validateSetPassword(payload = {}) {
+export function validateOperadorId(payload = {}) {
   const operadorId = String(payload.operadorId || payload.id || '').trim();
-  const password = String(payload.password || payload.newPassword || '').trim();
   if (!operadorId) throw new AppError('VALIDATION', 'operadorId requerido');
-  if (password.length < 8) throw new AppError('VALIDATION', 'password mínimo 8 caracteres');
-  return { operadorId, password };
+  return { operadorId };
+}
+
+export function validateSetOwnPin(payload = {}) {
+  const pin = String(payload.pin || payload.cancelPin || payload.pinNuevo || '').trim();
+  if (!/^\d{4}$/.test(pin)) throw new AppError('VALIDATION', 'PIN nuevo debe ser 4 dígitos');
+  const pinActual =
+    payload.pinActual != null ? String(payload.pinActual).trim() : undefined;
+  return { pin, pinActual };
+}
+
+export function validateChangeOwnPassword(payload = {}) {
+  const passwordNueva = String(payload.passwordNueva || payload.password || '').trim();
+  if (passwordNueva.length < 8) {
+    throw new AppError('VALIDATION', 'passwordNueva mínimo 8 caracteres');
+  }
+  const passwordActual =
+    payload.passwordActual != null ? String(payload.passwordActual).trim() : undefined;
+  return { passwordNueva, passwordActual };
 }
 
 export function validateList(payload = {}) {
