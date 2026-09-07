@@ -30,5 +30,6 @@ export function dbIds() {
     databaseId: process.env.APPWRITE_DATABASE_ID || 'huella',
     solicitudesId: process.env.APPWRITE_COLLECTION_SOLICITUDES_ID || 'solicitudes',
     kycId: process.env.APPWRITE_COLLECTION_KYC_ID || 'kyc_verifications',
+    operadoresId: process.env.APPWRITE_COLLECTION_OPERADORES_ID || 'operadores',
   };
 }

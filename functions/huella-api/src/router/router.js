@@ -1,6 +1,7 @@
 import { routes } from './routes.js';
 import { AppError } from '../shared/errors.js';
-import { assertAuth, resolveIdentity } from '../middleware/auth.js';
+import { assertAuth, resolveIdentity, enrichIdentity } from '../middleware/auth.js';
+import { AUTH } from '../shared/constants.js';
 import { ok } from '../shared/response.js';
 
 export async function dispatch(req, log) {
@@ -22,7 +23,10 @@ export async function dispatch(req, log) {
   const route = routes[action];
   if (!route) throw new AppError('INVALID_ACTION', `Acción desconocida: ${action}`);
 
-  const identity = resolveIdentity(req);
+  let identity = resolveIdentity(req);
+  if (route.auth !== AUTH.PUBLIC && identity.userId) {
+    identity = await enrichIdentity(req, identity);
+  }
   assertAuth(route.auth, identity);
 
   const payload = body.payload ?? body.data ?? {};

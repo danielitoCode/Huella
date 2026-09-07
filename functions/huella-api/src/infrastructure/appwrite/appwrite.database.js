@@ -7,8 +7,7 @@ export function createSolicitudesRepo(req) {
 
   return {
     async create(data) {
-      const doc = await databases.createDocument(databaseId, solicitudesId, ID.unique(), data);
-      return doc;
+      return databases.createDocument(databaseId, solicitudesId, ID.unique(), data);
     },
     async update(id, data) {
       return databases.updateDocument(databaseId, solicitudesId, id, data);
@@ -71,6 +70,49 @@ export function createKycRepo(req) {
         Query.limit(1),
       ]);
       return res.documents[0] || null;
+    },
+  };
+}
+
+export function createOperadoresRepo(req) {
+  const { databases, ID } = createAdminClient(req);
+  const { databaseId, operadoresId } = dbIds();
+
+  return {
+    async create(data) {
+      return databases.createDocument(databaseId, operadoresId, ID.unique(), data);
+    },
+    async update(id, data) {
+      return databases.updateDocument(databaseId, operadoresId, id, data);
+    },
+    async getById(id) {
+      try {
+        return await databases.getDocument(databaseId, operadoresId, id);
+      } catch {
+        return null;
+      }
+    },
+    async findByUserId(userId) {
+      const res = await databases.listDocuments(databaseId, operadoresId, [
+        Query.equal('userId', userId),
+        Query.limit(1),
+      ]);
+      return res.documents[0] || null;
+    },
+    async findByEmail(email) {
+      const res = await databases.listDocuments(databaseId, operadoresId, [
+        Query.equal('email', email),
+        Query.limit(1),
+      ]);
+      return res.documents[0] || null;
+    },
+    async list({ limit = 50, offset = 0 } = {}) {
+      const res = await databases.listDocuments(databaseId, operadoresId, [
+        Query.orderDesc('$createdAt'),
+        Query.limit(limit),
+        Query.offset(offset),
+      ]);
+      return { documents: res.documents, total: res.total };
     },
   };
 }
