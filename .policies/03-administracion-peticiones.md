@@ -2,44 +2,72 @@
 
 ## Objetivo
 
-Reglas para que el operador mueva una solicitud entre los estados canónicos y dispare KYC en el momento correcto.
+Reglas para que el operador mueva una solicitud entre los estados canónicos, con soporte a verificación manual (baja conectividad) y cancelación auditada.
 
-## Momento clave: `pendiente` → `sin_verificar`
+## Estados canónicos
 
-Se marca **Sin verificar** cuando el operador confirma que:
+| Estado | Significado |
+|--------|-------------|
+| `pendiente` | Solicitud recién creada; aún no atendida por un operador. |
+| `sin_verificar` | **Atendida y sin verificar.** El operador recogió/atendió el caso. La identidad del solicitante aún no está confirmada (Didit o vía extraoficial). |
+| `verificado` | Identidad del solicitante confirmada (Didit **o** verificación manual documentada). |
+| `cerrado` | Proceso negociado / investigación llevada a término (con o sin resultado). |
+| `cancelada` | Caso descartado; requiere confirmación fuerte (PIN o contraseña) + motivo. |
 
-- se ha localizado información relevante sobre la persona buscada (fallecida o no), **y/o**
-- se ha establecido contacto con el familiar / se inician negociaciones o gestiones formales.
+## Transiciones permitidas
 
-Al confirmar esa transición el sistema **debe**:
+```text
+pendiente ──► sin_verificar   (marcar atendido; KYC opcional después)
+sin_verificar ──► verificado  (Didit webhook O marcar verificado manual)
+sin_verificar ──► cerrado
+verificado ──► cerrado
+*
+  └──► cancelada              (PIN/contraseña + motivo; no es borrado)
+```
 
-1. Cambiar estado a `sin_verificar`.
-2. Crear sesión KYC en Didit.
-3. Enviar al familiar el enlace de verificación por email.
-4. Registrar auditoría (quién, cuándo, motivo/nota).
+No se permite reabrir `cerrado` ni `cancelada` sin proceso de excepción futura.
 
-No se envía KYC en `pendiente` ni de forma masiva automática sin esta confirmación humana (salvo reglas futuras explícitas).
+## `pendiente` → `sin_verificar` (atender)
+
+Cuando el operador **atiende** el caso (recoge datos, contacta, inicia gestión):
+
+1. Estado → `sin_verificar`.
+2. Mensaje público actualizable.
+3. Auditoría: quién, cuándo, nota.
+4. **Didit KYC no es obligatorio** en este paso (conectividad en Cuba, vías extraoficiales).
+
+Opcionalmente, desde `sin_verificar`, el operador puede **iniciar sesión Didit** (email al familiar).
 
 ## `sin_verificar` → `verificado`
 
-- Preferente: webhook de Didit con resultado Approved.
-- El operador no debería marcar “verificado” a mano salvo contingencia documentada (fallo de webhook + evidencia).
+Dos vías válidas:
+
+1. **Didit** (webhook Approved) — preferente cuando sea viable.
+2. **Manual** — el operador marca verificado con **motivo obligatorio** (p. ej. verificación por vía alternativa documentada). Uso legítimo en baja conectividad.
 
 ## → `cerrado`
 
-- Desde cualquier estado, con **motivo interno** obligatorio.
-- Mensaje público opcional para el tracking y el correo de cierre.
-- Cerrar desde `pendiente` implica que no se llegó a negociaciones (no procede, duplicado, etc.).
+- Desde `sin_verificar` o `verificado`.
+- **Motivo interno obligatorio.**
+- Mensaje público opcional para tracking.
+
+## → `cancelada`
+
+- Desde cualquier estado no terminal (`pendiente`, `sin_verificar`, `verificado`).
+- **Motivo interno obligatorio.**
+- **Confirmación fuerte obligatoria:** PIN de cancelación del backoffice (4 dígitos) o, si se configura, revalidación de contraseña de la cuenta.
+- No elimina el documento; queda auditado.
+- El PIN de operadores/equipos lo define el **rol administrador** (env `BACKOFFICE_CANCEL_PIN` o gestión futura en colección `operadores`).
 
 ## Visibilidad
 
 | Dato | Familiar | Operador |
 |------|----------|----------|
-| Estado | Sí | Sí |
+| Estado | Sí (etiquetas humanas) | Sí |
 | Mensaje público | Sí | Sí |
-| Notas internas | No | Sí |
-| Detalle KYC Didit | No (solo verificado / pendiente de verificar) | Sí |
+| Notas / motivos internos | No | Sí |
+| Detalle KYC / PIN | No | Sí |
 
 ## Auditoría
 
-Todo cambio de estado: `actor`, `timestamp`, `estadoAnterior`, `estadoNuevo`, `motivo` cuando aplique.
+Todo cambio de estado: `actor`, `timestamp`, `estadoAnterior`, `estadoNuevo`, `motivo` cuando aplique. Cancelaciones siempre con motivo + evidencia de confirmación (PIN verificado, sin almacenar el PIN en claro en auditoría).
