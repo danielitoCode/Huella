@@ -117,7 +117,7 @@ export const solicitudesRoutes = {
     validate: validateCancelar,
     handler: async (ctx, payload) => {
       const service = createSolicitudesService(ctx.req);
-      return service.cancelar(payload);
+      return service.cancelar({ ...payload, identity: ctx.identity });
     },
   },
 };

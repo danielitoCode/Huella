@@ -5,9 +5,7 @@ export interface RouterState {
   zona: Zona;
   rutaPublica: RutaPublica;
   rutaAdmin: RutaAdmin;
-  /** id de solicitud cuando estamos en detalle admin */
   solicitudId?: string;
-  /** código de seguimiento en ruta pública seguimiento */
   codigoSeguimiento?: string;
 }
 
@@ -23,6 +21,7 @@ function pathFromState(s: RouterState): string {
   if (s.zona === 'admin') {
     if (s.rutaAdmin === 'detalle' && s.solicitudId) return `/admin/solicitudes/${s.solicitudId}`;
     if (s.rutaAdmin === 'solicitudes') return '/admin/solicitudes';
+    if (s.rutaAdmin === 'equipo') return '/admin/equipo';
     if (s.rutaAdmin === 'dashboard') return '/admin';
     return '/admin/login';
   }
@@ -53,18 +52,12 @@ function applyPath(pathname: string) {
       router.set({ zona: 'admin', rutaPublica: 'home', rutaAdmin: 'solicitudes' });
       return;
     }
-    if (segs[1] === 'login' || !segs[1]) {
-      router.set({
-        zona: 'admin',
-        rutaPublica: 'home',
-        rutaAdmin: segs[1] === 'login' || !segs[1] ? (segs[1] === 'login' ? 'login' : 'dashboard') : 'dashboard',
-      });
-      // /admin → dashboard, /admin/login → login
-      if (!segs[1]) {
-        router.set({ zona: 'admin', rutaPublica: 'home', rutaAdmin: 'dashboard' });
-      } else if (segs[1] === 'login') {
-        router.set({ zona: 'admin', rutaPublica: 'home', rutaAdmin: 'login' });
-      }
+    if (segs[1] === 'equipo') {
+      router.set({ zona: 'admin', rutaPublica: 'home', rutaAdmin: 'equipo' });
+      return;
+    }
+    if (segs[1] === 'login') {
+      router.set({ zona: 'admin', rutaPublica: 'home', rutaAdmin: 'login' });
       return;
     }
     router.set({ zona: 'admin', rutaPublica: 'home', rutaAdmin: 'dashboard' });
@@ -92,7 +85,6 @@ function applyPath(pathname: string) {
 
 let listening = false;
 
-/** Sincroniza rutas con el historial del navegador (SPA + fallback index.html). */
 export function initRouter() {
   if (typeof window === 'undefined' || listening) return;
   listening = true;

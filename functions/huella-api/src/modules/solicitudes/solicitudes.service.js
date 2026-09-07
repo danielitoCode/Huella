@@ -9,6 +9,7 @@ import {
   buildKycCopyPasteHtml,
   getOperatorContactPublic,
 } from '../email/email.templates.js';
+import { createOperadoresService } from '../operadores/operadores.service.js';
 
 function assertTransition(from, to) {
   const allowed = TRANSICIONES[to] || [];
@@ -23,20 +24,6 @@ function assertTransition(from, to) {
 function appendNota(existing, label, text) {
   const block = `[${label}] ${text}`;
   return [existing, block].filter(Boolean).join('\n---\n');
-}
-
-function verifyCancelPin(pin) {
-  const expected = String(process.env.BACKOFFICE_CANCEL_PIN || '').trim();
-  if (!expected) {
-    throw new AppError(
-      'CONFIG',
-      'BACKOFFICE_CANCEL_PIN no configurado en huella-api. El administrador debe definir un PIN de 4 dígitos.',
-      500,
-    );
-  }
-  if (expected !== pin) {
-    throw new AppError('FORBIDDEN', 'PIN de cancelación incorrecto', 403);
-  }
 }
 
 function operatorEmailVars() {
@@ -74,7 +61,6 @@ export function createSolicitudesService(req) {
     try {
       updated = await repo.update(solicitudId, patch);
     } catch {
-      // Atributo diditVerificationUrl puede no existir aún en Appwrite
       const { diditVerificationUrl: _drop, ...fallback } = patch;
       updated = await repo.update(solicitudId, fallback);
     }
@@ -153,7 +139,6 @@ export function createSolicitudesService(req) {
         kycCompletado: doc.estado === ESTADOS.VERIFICADO || doc.estado === ESTADOS.CERRADO,
       };
 
-      // Solo en sin_verificar exponemos vías de verificación (Didit + contacto manual)
       if (doc.estado === ESTADOS.SIN_VERIFICAR) {
         return {
           ...base,
@@ -214,7 +199,6 @@ export function createSolicitudesService(req) {
       return { solicitudId, ...kyc };
     },
 
-    /** Reenvía email KYC y devuelve HTML para copiar/pegar. */
     async reenviarKycEmail({ solicitudId }) {
       const doc = await repo.getById(solicitudId);
       if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
@@ -222,10 +206,7 @@ export function createSolicitudesService(req) {
         throw new AppError('INVALID_TRANSITION', 'Solo disponible en estado sin_verificar');
       }
       if (!doc.diditVerificationUrl) {
-        throw new AppError(
-          'VALIDATION',
-          'No hay enlace Didit. Usa «Iniciar KYC» primero.',
-        );
+        throw new AppError('VALIDATION', 'No hay enlace Didit. Usa «Iniciar KYC» primero.');
       }
 
       const vars = {
@@ -245,7 +226,6 @@ export function createSolicitudesService(req) {
       };
     },
 
-    /** Plantilla HTML para que el operador copie al correo manual. */
     async getKycEmailTemplate({ solicitudId }) {
       const doc = await repo.getById(solicitudId);
       if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
@@ -253,10 +233,7 @@ export function createSolicitudesService(req) {
         throw new AppError('INVALID_TRANSITION', 'Solo disponible en estado sin_verificar');
       }
       if (!doc.diditVerificationUrl) {
-        throw new AppError(
-          'VALIDATION',
-          'No hay enlace Didit. Inicia KYC para generar el enlace.',
-        );
+        throw new AppError('VALIDATION', 'No hay enlace Didit. Inicia KYC para generar el enlace.');
       }
 
       const vars = {
@@ -355,8 +332,10 @@ export function createSolicitudesService(req) {
       return { solicitudId, estado: updated.estado };
     },
 
-    async cancelar({ solicitudId, motivoInterno, pin }) {
-      verifyCancelPin(pin);
+    async cancelar({ solicitudId, motivoInterno, pin, identity }) {
+      const ops = createOperadoresService(req);
+      await ops.assertCancelPin(identity || {}, pin);
+
       const doc = await repo.getById(solicitudId);
       if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
       assertTransition(doc.estado, ESTADOS.CANCELADA);
@@ -366,7 +345,7 @@ export function createSolicitudesService(req) {
         notasInternas: appendNota(
           doc.notasInternas,
           'CANCELADA',
-          `${motivoInterno} (confirmación PIN OK)`,
+          `${motivoInterno} (PIN OK · user ${identity?.userId || 'n/a'})`,
         ),
         mensajePublico: 'Esta solicitud ha sido cancelada.',
       });
