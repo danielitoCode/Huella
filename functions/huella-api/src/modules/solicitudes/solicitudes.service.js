@@ -9,7 +9,6 @@ import {
   buildKycCopyPasteHtml,
   getOperatorContactPublic,
 } from '../email/email.templates.js';
-import { createOperadoresService } from '../operadores/operadores.service.js';
 
 function assertTransition(from, to) {
   const allowed = TRANSICIONES[to] || [];
@@ -52,7 +51,9 @@ export function createSolicitudesService(req) {
       diditVerificationUrl: session.url,
       notasInternas: notasInternas
         ? appendNota(doc.notasInternas, 'KYC', notasInternas)
-        : doc.notasInternas ?? null,
+        : doc.notasInternas != null
+          ? doc.notasInternas
+          : null,
       mensajePublico:
         'Tu caso está en atención. Completa la verificación de identidad o contacta al operador si necesitas ayuda.',
     };
@@ -60,8 +61,9 @@ export function createSolicitudesService(req) {
     let updated;
     try {
       updated = await repo.update(solicitudId, patch);
-    } catch {
-      const { diditVerificationUrl: _drop, ...fallback } = patch;
+    } catch (_e) {
+      const fallback = { ...patch };
+      delete fallback.diditVerificationUrl;
       updated = await repo.update(solicitudId, fallback);
     }
 
@@ -110,17 +112,17 @@ export function createSolicitudesService(req) {
         mensajePublico: 'Hemos recibido tu solicitud. Pronto la revisaremos.',
       });
 
-      const trackingUrl = `${publicUrl}/seguimiento/${codigo}`;
+      const trackingUrl = publicUrl + '/seguimiento/' + codigo;
       const tpl = renderTemplate(EMAIL_TEMPLATES.TRACKING, {
         nombreFamiliar: input.nombreFamiliar,
-        codigo,
-        trackingUrl,
+        codigo: codigo,
+        trackingUrl: trackingUrl,
       });
       await sendEmail({ to: input.email, ...tpl });
 
       return {
         codigoSeguimiento: codigo,
-        trackingUrl,
+        trackingUrl: trackingUrl,
         estado: ESTADOS.PENDIENTE,
         id: doc.$id,
       };
@@ -136,7 +138,8 @@ export function createSolicitudesService(req) {
         mensajePublico: doc.mensajePublico || null,
         fechaCreacion: doc.$createdAt,
         fechaActualizacion: doc.$updatedAt,
-        kycCompletado: doc.estado === ESTADOS.VERIFICADO || doc.estado === ESTADOS.CERRADO,
+        kycCompletado:
+          doc.estado === ESTADOS.VERIFICADO || doc.estado === ESTADOS.CERRADO,
       };
 
       if (doc.estado === ESTADOS.SIN_VERIFICAR) {
@@ -157,21 +160,23 @@ export function createSolicitudesService(req) {
 
       if (iniciarKyc) {
         const kyc = await startDiditKyc(doc, solicitudId, operatorId, notasInternas);
-        return { solicitudId, ...kyc };
+        return { solicitudId: solicitudId, ...kyc };
       }
 
       const updated = await repo.update(solicitudId, {
         estado: ESTADOS.SIN_VERIFICAR,
         notasInternas: notasInternas
           ? appendNota(doc.notasInternas, 'ATENDIDO', notasInternas)
-          : doc.notasInternas ?? null,
+          : doc.notasInternas != null
+            ? doc.notasInternas
+            : null,
         mensajePublico:
           mensajePublico ||
           'Tu solicitud está siendo atendida. Pronto recibirás instrucciones de verificación.',
       });
 
       return {
-        solicitudId,
+        solicitudId: solicitudId,
         estado: updated.estado,
         sessionId: null,
         verificationUrl: null,
@@ -196,7 +201,7 @@ export function createSolicitudesService(req) {
         assertTransition(doc.estado, ESTADOS.SIN_VERIFICAR);
       }
       const kyc = await startDiditKyc(doc, solicitudId, operatorId, notasInternas);
-      return { solicitudId, ...kyc };
+      return { solicitudId: solicitudId, ...kyc };
     },
 
     async reenviarKycEmail({ solicitudId }) {
@@ -219,7 +224,7 @@ export function createSolicitudesService(req) {
       await sendEmail({ to: doc.email, ...tpl });
 
       return {
-        solicitudId,
+        solicitudId: solicitudId,
         sentTo: doc.email,
         verificationUrl: doc.diditVerificationUrl,
         emailHtml: tpl.html,
@@ -244,9 +249,9 @@ export function createSolicitudesService(req) {
       };
 
       return {
-        solicitudId,
+        solicitudId: solicitudId,
         to: doc.email,
-        subject: `Huella — Verificación de identidad (${doc.codigoSeguimiento})`,
+        subject: 'Huella — Verificación de identidad (' + doc.codigoSeguimiento + ')',
         verificationUrl: doc.diditVerificationUrl,
         emailHtml: buildKycCopyPasteHtml(vars),
         operatorContact: getOperatorContactPublic(),
@@ -267,28 +272,30 @@ export function createSolicitudesService(req) {
           'La identidad del solicitante ha sido confirmada. Continuamos con la investigación.',
       });
 
-      return { solicitudId, estado: updated.estado };
+      return { solicitudId: solicitudId, estado: updated.estado };
     },
 
     async list({ estado, limit = 25, offset = 0 } = {}) {
-      const { documents, total } = await repo.list({ estado, limit, offset });
+      const { documents, total } = await repo.list({ estado: estado, limit: limit, offset: offset });
       return {
-        solicitudes: documents.map((doc) => ({
-          id: doc.$id,
-          codigoSeguimiento: doc.codigoSeguimiento,
-          nombreFamiliar: doc.nombreFamiliar,
-          email: doc.email,
-          nombrePersona: doc.nombrePersona,
-          relacion: doc.relacion,
-          estado: doc.estado,
-          mensajePublico: doc.mensajePublico || null,
-          diditSessionId: doc.diditSessionId || null,
-          fechaCreacion: doc.$createdAt,
-          fechaActualizacion: doc.$updatedAt,
-        })),
-        total,
-        limit,
-        offset,
+        solicitudes: documents.map(function (doc) {
+          return {
+            id: doc.$id,
+            codigoSeguimiento: doc.codigoSeguimiento,
+            nombreFamiliar: doc.nombreFamiliar,
+            email: doc.email,
+            nombrePersona: doc.nombrePersona,
+            relacion: doc.relacion,
+            estado: doc.estado,
+            mensajePublico: doc.mensajePublico || null,
+            diditSessionId: doc.diditSessionId || null,
+            fechaCreacion: doc.$createdAt,
+            fechaActualizacion: doc.$updatedAt,
+          };
+        }),
+        total: total,
+        limit: limit,
+        offset: offset,
       };
     },
 
@@ -329,11 +336,13 @@ export function createSolicitudesService(req) {
           'Tu expediente ha sido cerrado. Gracias por contactarnos.',
       });
 
-      return { solicitudId, estado: updated.estado };
+      return { solicitudId: solicitudId, estado: updated.estado };
     },
 
     async cancelar({ solicitudId, motivoInterno, pin, identity }) {
-      const ops = createOperadoresService(req);
+      // import dinámico: no tumba el arranque de solicitudes.list si operadores falla
+      const mod = await import('../operadores/operadores.service.js');
+      const ops = mod.createOperadoresService(req);
       await ops.assertCancelPin(identity || {}, pin);
 
       const doc = await repo.getById(solicitudId);
@@ -345,12 +354,12 @@ export function createSolicitudesService(req) {
         notasInternas: appendNota(
           doc.notasInternas,
           'CANCELADA',
-          `${motivoInterno} (PIN OK · user ${identity?.userId || 'n/a'})`,
+          motivoInterno + ' (PIN OK · user ' + (identity && identity.userId ? identity.userId : 'n/a') + ')',
         ),
         mensajePublico: 'Esta solicitud ha sido cancelada.',
       });
 
-      return { solicitudId, estado: updated.estado };
+      return { solicitudId: solicitudId, estado: updated.estado };
     },
   };
 }
