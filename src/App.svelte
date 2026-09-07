@@ -13,6 +13,7 @@
   import Solicitudes from './pages/admin/Solicitudes.svelte';
   import SolicitudDetalle from './pages/admin/SolicitudDetalle.svelte';
   import Equipo from './pages/admin/Equipo.svelte';
+  import SecurityGate from './pages/admin/SecurityGate.svelte';
 
   $effect(() => {
     if ($sessionLoading || $router.zona !== 'admin') return;
@@ -33,6 +34,10 @@
       !$sessionLoading &&
       $sessionUser !== null,
   );
+
+  let needsSecurityGate = $derived(
+    Boolean($sessionUser?.mustChangePassword || $sessionUser?.pinNeedsReset),
+  );
 </script>
 
 <Layout>
@@ -50,6 +55,8 @@
     </div>
   {:else if $router.rutaAdmin === 'login' && !$sessionUser}
     <Login />
+  {:else if adminReady && needsSecurityGate}
+    <SecurityGate />
   {:else if adminReady}
     {#if $router.rutaAdmin === 'dashboard'}
       <Dashboard />

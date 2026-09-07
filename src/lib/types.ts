@@ -28,10 +28,16 @@ export type Operador = {
   nombre: string;
   rol: OperadorRol;
   activo: boolean;
-  tienePin: boolean;
+  pinNeedsReset: boolean;
+  pinEstado: 'reseteado_0000' | 'configurado' | string;
+  /** Solo admin + PIN reseteado: valor de auditoría 0000 */
+  pinVisibleAuditoria?: string;
+  mustChangePassword: boolean;
   ultimoLoginAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  passwordTemporal?: string;
+  mensaje?: string;
 };
 
 export type Solicitud = {

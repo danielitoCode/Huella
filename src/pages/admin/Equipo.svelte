@@ -14,20 +14,11 @@
   let okMsg = $state('');
   let busy = $state(false);
 
-  // crear
-  let nuevo = $state({
-    nombre: '',
-    email: '',
-    password: '',
-    rol: 'operador' as OperadorRol,
-    cancelPin: '',
-  });
+  let nuevo = $state({ nombre: '', email: '', rol: 'operador' as OperadorRol });
 
-  // modales simples
-  let editId = $state<string | null>(null);
-  let editPin = $state('');
-  let editPassword = $state('');
-  let ownPin = $state('');
+  // titular: cambiar PIN cuando no está en gate
+  let pinActual = $state('');
+  let pinNuevo = $state('');
 
   const isAdmin = $derived($sessionUser?.rol === 'admin');
 
@@ -55,7 +46,7 @@
 
   function flash(msg: string) {
     okMsg = msg;
-    setTimeout(() => (okMsg = ''), 2500);
+    setTimeout(() => (okMsg = ''), 3200);
   }
 
   async function crearUsuario(e: Event) {
@@ -64,15 +55,16 @@
     busy = true;
     errorMsg = '';
     try {
-      await executeApi('operadores.create', {
+      const res = await executeApi<Operador>('operadores.create', {
         nombre: nuevo.nombre.trim(),
         email: nuevo.email.trim(),
-        password: nuevo.password,
         rol: nuevo.rol,
-        cancelPin: nuevo.cancelPin || undefined,
       });
-      nuevo = { nombre: '', email: '', password: '', rol: 'operador', cancelPin: '' };
-      flash('Usuario creado');
+      nuevo = { nombre: '', email: '', rol: 'operador' };
+      flash(
+        res.mensaje ||
+          'Usuario creado. Password temporal 12345678 · PIN 0000 (debe cambiarlos al entrar).',
+      );
       await cargar();
     } catch (err) {
       errorMsg = err instanceof ApiError ? err.message : 'Error al crear usuario';
@@ -109,49 +101,56 @@
     }
   }
 
-  async function guardarPin(operadorId?: string) {
-    const pin = operadorId ? editPin : ownPin;
-    if (!/^\d{4}$/.test(pin)) {
-      errorMsg = 'El PIN debe ser exactamente 4 dígitos';
-      return;
-    }
+  async function resetPin(op: Operador) {
+    if (!confirm(`¿Resetear PIN de ${op.nombre} a 0000? Deberá establecer uno nuevo.`)) return;
     busy = true;
     errorMsg = '';
     try {
-      await executeApi('operadores.setCancelPin', {
-        operadorId,
-        pin,
-      });
-      editPin = '';
-      ownPin = '';
-      editId = null;
-      flash('PIN de cancelación actualizado');
-      await loadSession();
+      const res = await executeApi<Operador>('operadores.resetCancelPin', { operadorId: op.id });
+      flash(res.mensaje || 'PIN reseteado a 0000');
       await cargar();
     } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'Error al guardar PIN';
+      errorMsg = err instanceof ApiError ? err.message : 'Error al resetear PIN';
     } finally {
       busy = false;
     }
   }
 
-  async function guardarPassword(operadorId: string) {
-    if (editPassword.length < 8) {
-      errorMsg = 'La contraseña debe tener al menos 8 caracteres';
+  async function resetPassword(op: Operador) {
+    if (!confirm(`¿Resetear contraseña de ${op.nombre} a 12345678?`)) return;
+    busy = true;
+    errorMsg = '';
+    try {
+      const res = await executeApi<Operador>('operadores.resetPassword', { operadorId: op.id });
+      flash(res.mensaje || 'Contraseña reseteada a 12345678');
+      await cargar();
+    } catch (err) {
+      errorMsg = err instanceof ApiError ? err.message : 'Error al resetear contraseña';
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function setOwnPin(e: Event) {
+    e.preventDefault();
+    if (!/^\d{4}$/.test(pinNuevo) || pinNuevo === '0000') {
+      errorMsg = 'PIN nuevo: 4 dígitos, distinto de 0000';
       return;
     }
     busy = true;
     errorMsg = '';
     try {
-      await executeApi('operadores.setPassword', {
-        operadorId,
-        password: editPassword,
+      await executeApi('operadores.setOwnCancelPin', {
+        pinActual: pinActual || ($sessionUser?.pinNeedsReset ? '0000' : ''),
+        pin: pinNuevo,
       });
-      editPassword = '';
-      editId = null;
-      flash('Contraseña actualizada');
+      pinActual = '';
+      pinNuevo = '';
+      flash('PIN personal actualizado');
+      await loadSession();
+      await cargar();
     } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'Error al cambiar contraseña';
+      errorMsg = err instanceof ApiError ? err.message : 'Error al guardar PIN';
     } finally {
       busy = false;
     }
@@ -163,80 +162,53 @@
     <div>
       <span class="eyebrow">Administración</span>
       <h1 class="serif-title">Equipo y seguridad</h1>
-      <p class="sub">Cuentas, roles, contraseñas y PINs de cancelación de la plataforma.</p>
+      <p class="sub">
+        Los administradores resetean (PIN → 0000, password → 12345678). Cada usuario establece los suyos.
+      </p>
     </div>
     <button type="button" class="btn btn-secondary" onclick={() => irAAdmin('dashboard')}>
       ← Dashboard
     </button>
   </div>
 
-  {#if errorMsg}
-    <div class="error-banner" role="alert">{errorMsg}</div>
-  {/if}
-  {#if okMsg}
-    <div class="ok-banner" role="status">{okMsg}</div>
-  {/if}
+  {#if errorMsg}<div class="error-banner" role="alert">{errorMsg}</div>{/if}
+  {#if okMsg}<div class="ok-banner" role="status">{okMsg}</div>{/if}
 
-  <!-- PIN propio (todos) -->
   <div class="card block">
-    <h2>Tu PIN de cancelación</h2>
+    <h2>Mi PIN de cancelación</h2>
     <p class="hint">
-      Este PIN (4 dígitos) se exige al cancelar una solicitud. Es personal: el de cada operador o
-      administrador.
-      {#if $sessionUser?.tienePin}
-        <strong> Ya tienes PIN configurado.</strong>
+      {#if $sessionUser?.pinNeedsReset}
+        Tu PIN está en <strong>0000</strong> (reseteado). Debes poner uno personal.
       {:else}
-        <strong> Aún no tienes PIN — configúralo ahora.</strong>
+        Estado: <strong>configurado</strong>. Puedes cambiarlo indicando el actual.
       {/if}
     </p>
-    <div class="inline-form">
-      <input
-        type="password"
-        inputmode="numeric"
-        maxlength="4"
-        placeholder="••••"
-        bind:value={ownPin}
-        disabled={busy}
-      />
-      <button type="button" class="btn btn-primary" disabled={busy} onclick={() => guardarPin()}>
-        Guardar mi PIN
-      </button>
-    </div>
+    <form class="inline-form" onsubmit={setOwnPin}>
+      <label>
+        PIN actual
+        <input type="password" inputmode="numeric" maxlength="4" bind:value={pinActual} disabled={busy} placeholder={$sessionUser?.pinNeedsReset ? '0000' : '····'} />
+      </label>
+      <label>
+        PIN nuevo
+        <input type="password" inputmode="numeric" maxlength="4" bind:value={pinNuevo} disabled={busy} required />
+      </label>
+      <button type="submit" class="btn btn-primary" disabled={busy}>Guardar mi PIN</button>
+    </form>
   </div>
 
   {#if isAdmin}
     <div class="card block">
       <h2>Crear cuenta</h2>
+      <p class="hint">Se crea con password <code>12345678</code> y PIN <code>0000</code>; el usuario los cambia al entrar.</p>
       <form class="create-form" onsubmit={crearUsuario}>
-        <label>
-          Nombre
-          <input bind:value={nuevo.nombre} required disabled={busy} />
-        </label>
-        <label>
-          Email
-          <input type="email" bind:value={nuevo.email} required disabled={busy} />
-        </label>
-        <label>
-          Contraseña (mín. 8)
-          <input type="password" bind:value={nuevo.password} required minlength="8" disabled={busy} />
-        </label>
+        <label>Nombre<input bind:value={nuevo.nombre} required disabled={busy} /></label>
+        <label>Email<input type="email" bind:value={nuevo.email} required disabled={busy} /></label>
         <label>
           Rol
           <select bind:value={nuevo.rol} disabled={busy}>
             <option value="operador">Operador</option>
             <option value="admin">Administrador</option>
           </select>
-        </label>
-        <label>
-          PIN cancelación (opcional)
-          <input
-            type="password"
-            inputmode="numeric"
-            maxlength="4"
-            bind:value={nuevo.cancelPin}
-            placeholder="4 dígitos"
-            disabled={busy}
-          />
         </label>
         <button type="submit" class="btn btn-gold" disabled={busy}>Crear usuario</button>
       </form>
@@ -246,9 +218,7 @@
   <div class="card block">
     <h2>{isAdmin ? 'Miembros del equipo' : 'Tu perfil'}</h2>
     {#if cargando}
-      <LoadingHint message="Cargando operadores…" />
-    {:else if operadores.length === 0}
-      <p class="hint">No hay operadores registrados.</p>
+      <LoadingHint message="Cargando…" />
     {:else}
       <div class="table-wrap">
         <table>
@@ -257,8 +227,8 @@
               <th>Nombre</th>
               <th>Email</th>
               <th>Rol</th>
-              <th>Estado</th>
-              <th>PIN</th>
+              <th>Activo</th>
+              <th>PIN (auditoría)</th>
               {#if isAdmin}<th>Acciones</th>{/if}
             </tr>
           </thead>
@@ -282,79 +252,29 @@
                     {op.rol}
                   {/if}
                 </td>
+                <td>{op.activo ? 'Sí' : 'No'}</td>
                 <td>
-                  <span class="badge" class:badge-positive={op.activo}>
-                    {op.activo ? 'Activo' : 'Inactivo'}
-                  </span>
+                  {#if op.pinNeedsReset}
+                    <code title="Valor de fábrica tras reset">0000</code>
+                    <span class="muted"> (reseteado)</span>
+                  {:else}
+                    <span class="muted">configurado</span>
+                  {/if}
                 </td>
-                <td>{op.tienePin ? 'Sí' : 'No'}</td>
                 {#if isAdmin}
                   <td class="actions-cell">
-                    <button
-                      type="button"
-                      class="btn btn-secondary btn-sm"
-                      disabled={busy}
-                      onclick={() => toggleActivo(op)}
-                    >
+                    <button type="button" class="btn btn-secondary btn-sm" disabled={busy} onclick={() => toggleActivo(op)}>
                       {op.activo ? 'Desactivar' : 'Activar'}
                     </button>
-                    <button
-                      type="button"
-                      class="btn btn-secondary btn-sm"
-                      disabled={busy}
-                      onclick={() => {
-                        editId = editId === op.id ? null : op.id;
-                        editPin = '';
-                        editPassword = '';
-                      }}
-                    >
-                      PIN / Password
+                    <button type="button" class="btn btn-secondary btn-sm" disabled={busy} onclick={() => resetPin(op)}>
+                      Reset PIN → 0000
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" disabled={busy} onclick={() => resetPassword(op)}>
+                      Reset pass → 12345678
                     </button>
                   </td>
                 {/if}
               </tr>
-              {#if isAdmin && editId === op.id}
-                <tr class="edit-row">
-                  <td colspan="6">
-                    <div class="edit-panel">
-                      <div class="inline-form">
-                        <label>
-                          Nuevo PIN (4 dígitos)
-                          <input
-                            type="password"
-                            inputmode="numeric"
-                            maxlength="4"
-                            bind:value={editPin}
-                            disabled={busy}
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          class="btn btn-primary btn-sm"
-                          disabled={busy}
-                          onclick={() => guardarPin(op.id)}
-                        >
-                          Guardar PIN
-                        </button>
-                      </div>
-                      <div class="inline-form">
-                        <label>
-                          Nueva contraseña
-                          <input type="password" bind:value={editPassword} minlength="8" disabled={busy} />
-                        </label>
-                        <button
-                          type="button"
-                          class="btn btn-primary btn-sm"
-                          disabled={busy}
-                          onclick={() => guardarPassword(op.id)}
-                        >
-                          Guardar password
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              {/if}
             {/each}
           </tbody>
         </table>
@@ -372,7 +292,6 @@
   .page-head {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
     gap: 1rem;
     margin-bottom: 1.5rem;
   }
@@ -382,24 +301,17 @@
     text-transform: uppercase;
     color: var(--gold);
   }
-  .sub {
+  .sub,
+  .hint,
+  .muted {
     color: var(--text-muted);
-    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
   }
   .block {
     margin-bottom: 1.25rem;
     padding: 1.5rem;
   }
-  .hint {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-  }
-  .create-form {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1rem;
-    align-items: end;
-  }
+  .create-form,
   .inline-form {
     display: flex;
     flex-wrap: wrap;
@@ -418,7 +330,7 @@
     padding: 0.75rem 0.5rem;
     border-bottom: 1px solid var(--border);
     text-align: left;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
   }
   .actions-cell {
     display: flex;
@@ -427,14 +339,8 @@
   }
   .btn-sm {
     min-height: 32px;
-    padding: 0.3rem 0.65rem;
-    font-size: 0.8rem;
-  }
-  .edit-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.75rem 0;
+    padding: 0.3rem 0.55rem;
+    font-size: 0.78rem;
   }
   .error-banner {
     padding: 0.85rem 1rem;

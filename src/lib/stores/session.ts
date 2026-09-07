@@ -1,6 +1,3 @@
-/**
- * Store de sesión del operador (Appwrite Account + perfil Huella).
- */
 import { writable } from 'svelte/store';
 import { getAccount } from '../appwrite/client';
 import { executeApi } from '../appwrite/executeApi';
@@ -12,7 +9,9 @@ export type SessionUser = {
   name: string;
   rol?: OperadorRol | null;
   operadorId?: string | null;
-  tienePin?: boolean;
+  pinNeedsReset?: boolean;
+  pinEstado?: string | null;
+  mustChangePassword?: boolean;
 };
 
 export const sessionUser = writable<SessionUser | null>(null);
@@ -27,7 +26,7 @@ export async function loadSession(): Promise<void> {
     try {
       perfil = await executeApi<Operador>('operadores.me', {});
     } catch {
-      // sin perfil aún (bootstrap)
+      perfil = null;
     }
     sessionUser.set({
       $id: user.$id,
@@ -35,7 +34,9 @@ export async function loadSession(): Promise<void> {
       name: user.name,
       rol: perfil?.rol ?? null,
       operadorId: perfil?.id ?? null,
-      tienePin: perfil?.tienePin ?? false,
+      pinNeedsReset: perfil?.pinNeedsReset ?? false,
+      pinEstado: perfil?.pinEstado ?? null,
+      mustChangePassword: perfil?.mustChangePassword ?? false,
     });
   } catch {
     sessionUser.set(null);
