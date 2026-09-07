@@ -20,7 +20,8 @@
     "ci:all": "npm run ci && npm run test:functions"
   },
   "dependencies": {
-    "appwrite": "^18.1.1"
+    "appwrite": "^18.1.1",
+    "ogl": "^1.0.10"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
