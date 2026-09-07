@@ -12,6 +12,7 @@
   import Dashboard from './pages/admin/Dashboard.svelte';
   import Solicitudes from './pages/admin/Solicitudes.svelte';
   import SolicitudDetalle from './pages/admin/SolicitudDetalle.svelte';
+  import Equipo from './pages/admin/Equipo.svelte';
 
   $effect(() => {
     if ($sessionLoading || $router.zona !== 'admin') return;
@@ -56,6 +57,8 @@
       <Solicitudes />
     {:else if $router.rutaAdmin === 'detalle'}
       <SolicitudDetalle />
+    {:else if $router.rutaAdmin === 'equipo'}
+      <Equipo />
     {/if}
   {/if}
 </Layout>
