@@ -23,19 +23,22 @@
 <div class="layout" class:public-zone={isPublic}>
   {#if isPublic}
     <div class="public-bg" aria-hidden="true">
-      <LightRays
-        raysOrigin="top-center"
-        raysColor="#C6A46A"
-        raysSpeed={0.5}
-        lightSpread={1.2}
-        rayLength={2}
-        fadeDistance={1.2}
-        saturation={0.8}
-        followMouse={true}
-        mouseInfluence={0.07}
-        noiseAmount={0.03}
-        distortion={0.06}
-      />
+      <div class="rays-boost">
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#E8C97A"
+          raysSpeed={0.65}
+          lightSpread={0.75}
+          rayLength={2.4}
+          fadeDistance={1.35}
+          saturation={1.15}
+          followMouse={true}
+          mouseInfluence={0.12}
+          noiseAmount={0.05}
+          distortion={0.1}
+          pulsating={false}
+        />
+      </div>
       <div class="public-bg-veil"></div>
     </div>
   {/if}
@@ -79,13 +82,32 @@
     overflow: hidden;
   }
 
+  /* Amplifica el canvas sin tocar el shader */
+  .rays-boost {
+    position: absolute;
+    inset: 0;
+    filter: brightness(1.55) contrast(1.25) saturate(1.2);
+    opacity: 0.95;
+  }
+
+  /* Velo más abierto arriba (donde se ven los rayos); más denso abajo para texto */
   .public-bg-veil {
     position: absolute;
     inset: 0;
     z-index: 1;
     background:
-      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(198, 164, 106, 0.08), transparent 55%),
-      linear-gradient(180deg, rgba(7, 25, 35, 0.35) 0%, rgba(7, 25, 35, 0.75) 55%, rgba(7, 25, 35, 0.92) 100%);
+      radial-gradient(
+        ellipse 80% 55% at 50% -5%,
+        rgba(232, 201, 122, 0.14) 0%,
+        transparent 50%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(7, 25, 35, 0.15) 0%,
+        rgba(7, 25, 35, 0.4) 40%,
+        rgba(7, 25, 35, 0.72) 70%,
+        rgba(7, 25, 35, 0.88) 100%
+      );
   }
 
   .layout-chrome {
@@ -133,5 +155,11 @@
     font-size: 0.82rem;
     opacity: 0.7;
     line-height: 1.5;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rays-boost {
+      display: none;
+    }
   }
 </style>
