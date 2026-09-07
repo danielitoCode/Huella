@@ -1,12 +1,15 @@
 import { AppError } from '../shared/errors.js';
 import { AUTH } from '../shared/constants.js';
 import { createOperadoresRepo } from '../infrastructure/appwrite/appwrite.database.js';
+import { createAdminClient } from '../infrastructure/appwrite/appwrite.client.js';
 import { isDefaultPinHash } from '../shared/pin.js';
 
 function parseActivo(v) {
   if (v === true || v === 1) return true;
   if (v === false || v === 0) return false;
   const s = String(v ?? '').trim().toLowerCase();
+  // text vacío o null: tratar como activo si hay documento (compat schema)
+  if (s === '') return true;
   return s === 'true' || s === '1' || s === 'si' || s === 'sí' || s === 'activo';
 }
 
@@ -31,7 +34,8 @@ export function resolveIdentity(req) {
 }
 
 /**
- * Identidad solo desde colección operadores (sin ADMIN_USER_IDS).
+ * 1) Colección operadores
+ * 2) Fallback: labels Appwrite Auth (admin / operador)
  */
 export async function enrichIdentity(req, identity) {
   if (!identity.userId) return identity;
@@ -39,24 +43,46 @@ export async function enrichIdentity(req, identity) {
   try {
     const repo = createOperadoresRepo(req);
     const doc = await repo.findByUserId(identity.userId);
-    if (!doc) return identity;
+    if (doc) {
+      const rol = String(doc.rol || 'operador').toLowerCase();
+      const activo = parseActivo(doc.activo);
 
-    const rol = String(doc.rol || 'operador').toLowerCase();
-    const activo = parseActivo(doc.activo);
+      identity.operadorDocId = doc.$id;
+      identity.rol = rol;
+      identity.activo = activo;
+      identity.cancelPinHash = doc.cancelPinHash || null;
+      identity.pinNeedsReset = isDefaultPinHash(doc.cancelPinHash);
+      identity.mustChangePassword =
+        doc.mustChangePassword === true ||
+        String(doc.mustChangePassword || '').toLowerCase() === 'true' ||
+        doc.mustChangePassword === '1';
+      identity.isAdmin = activo && rol === 'admin';
+      identity.isOperador = activo && (rol === 'admin' || rol === 'operador');
+      return identity;
+    }
+  } catch (e) {
+    // colección ausente o sin permiso: seguir con labels
+  }
 
-    identity.operadorDocId = doc.$id;
-    identity.rol = rol;
-    identity.activo = activo;
-    identity.cancelPinHash = doc.cancelPinHash || null;
-    identity.pinNeedsReset = isDefaultPinHash(doc.cancelPinHash);
-    identity.mustChangePassword =
-      doc.mustChangePassword === true ||
-      doc.mustChangePassword === 'true' ||
-      doc.mustChangePassword === '1';
-    identity.isAdmin = activo && rol === 'admin';
-    identity.isOperador = activo && (rol === 'admin' || rol === 'operador');
+  // Fallback labels del usuario Auth
+  try {
+    const { users } = createAdminClient(req);
+    const user = await users.get(identity.userId);
+    const labels = (user.labels || []).map((l) => String(l).toLowerCase());
+    if (labels.includes('admin')) {
+      identity.rol = 'admin';
+      identity.isAdmin = true;
+      identity.isOperador = true;
+      identity.activo = true;
+      identity.pinNeedsReset = true;
+    } else if (labels.includes('operador')) {
+      identity.rol = 'operador';
+      identity.isOperador = true;
+      identity.activo = true;
+      identity.pinNeedsReset = true;
+    }
   } catch {
-    // colección no disponible
+    // sin Users API
   }
 
   return identity;
@@ -75,7 +101,7 @@ export function assertAuth(routeAuth, identity) {
     if (!identity.isOperador) {
       throw new AppError(
         'FORBIDDEN',
-        'Debes ser operador o administrador activo en la colección operadores',
+        'Debes ser operador o administrador (colección operadores o label Appwrite admin/operador)',
         403,
       );
     }
@@ -88,7 +114,6 @@ export function assertAuth(routeAuth, identity) {
 
 export function assertOnlyAdmin(identity) {
   if (!identity.isAdmin) {
-    throw new AppError('FORBIDDEN', 'Solo administradores',
-      403);
+    throw new AppError('FORBIDDEN', 'Solo administradores', 403);
   }
 }

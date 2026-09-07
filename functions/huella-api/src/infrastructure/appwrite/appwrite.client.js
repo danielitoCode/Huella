@@ -28,8 +28,17 @@ export function createAdminClient(req) {
 export function dbIds() {
   return {
     databaseId: process.env.APPWRITE_DATABASE_ID || 'huella',
-    solicitudesId: process.env.APPWRITE_COLLECTION_SOLICITUDES_ID || 'solicitudes',
-    kycId: process.env.APPWRITE_COLLECTION_KYC_ID || 'kyc_verifications',
-    operadoresId: process.env.APPWRITE_COLLECTION_OPERADORES_ID || 'operadores',
+    solicitudesId:
+      process.env.APPWRITE_COLLECTION_SOLICITUDES_ID ||
+      process.env.APPWRITE_COLLECTION_SOLICITUDES ||
+      'solicitudes',
+    kycId:
+      process.env.APPWRITE_COLLECTION_KYC_ID ||
+      process.env.APPWRITE_COLLECTION_KYC ||
+      'kyc_verifications',
+    operadoresId:
+      process.env.APPWRITE_COLLECTION_OPERADORES_ID ||
+      process.env.APPWRITE_COLLECTION_OPERADORES ||
+      'operadores',
   };
 }

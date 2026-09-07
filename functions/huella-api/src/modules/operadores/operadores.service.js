@@ -14,6 +14,7 @@ function parseActivo(v) {
   if (v === true || v === 1) return true;
   if (v === false || v === 0) return false;
   const s = String(v ?? '').trim().toLowerCase();
+  if (s === '') return true;
   return s === 'true' || s === '1' || s === 'si' || s === 'sí' || s === 'activo';
 }
 
@@ -26,20 +27,17 @@ function publicOperador(doc, { forAdmin = false } = {}) {
     nombre: doc.nombre,
     rol: doc.rol,
     activo: parseActivo(doc.activo),
-    /** true si el PIN es el de fábrica 0000 (reseteado o nunca personalizado) */
     pinNeedsReset: pinReset,
-    /** Para auditoría admin: estado legible del PIN (nunca el valor en claro si está personalizado) */
     pinEstado: pinReset ? 'reseteado_0000' : 'configurado',
     mustChangePassword:
       doc.mustChangePassword === true ||
-      doc.mustChangePassword === 'true' ||
+      String(doc.mustChangePassword || '').toLowerCase() === 'true' ||
       doc.mustChangePassword === '1',
     ultimoLoginAt: doc.ultimoLoginAt || null,
     createdAt: doc.$createdAt,
     updatedAt: doc.$updatedAt,
   };
 
-  // Auditoría: el admin ve el valor de fábrica cuando está reseteado
   if (forAdmin && pinReset) {
     base.pinVisibleAuditoria = DEFAULT_CANCEL_PIN;
   }
@@ -61,20 +59,64 @@ export function createOperadoresService(req) {
   const { users, ID } = createAdminClient(req);
 
   return {
+    /**
+     * Perfil del usuario logueado.
+     * Si no hay documento pero tiene label admin/operador, lo provisiona.
+     */
     async me({ identity }) {
       if (!identity.userId) throw new AppError('UNAUTHORIZED', 'Sin sesión', 401);
-      const doc = await repo.findByUserId(identity.userId);
-      if (!doc) {
+
+      let doc = null;
+      try {
+        doc = await repo.findByUserId(identity.userId);
+      } catch (e) {
         throw new AppError(
-          'FORBIDDEN',
-          'No hay registro en operadores para esta cuenta. Un administrador debe crearla.',
-          403,
+          'CONFIG',
+          `No se pudo leer colección operadores: ${e?.message || e}. Revisa APPWRITE_COLLECTION_OPERADORES y API key.`,
+          500,
         );
       }
+
+      if (!doc) {
+        // Auto-provision si Auth tiene label admin/operador
+        try {
+          const user = await users.get(identity.userId);
+          const labels = (user.labels || []).map((l) => String(l).toLowerCase());
+          const isAdminLabel = labels.includes('admin');
+          const isOpLabel = isAdminLabel || labels.includes('operador');
+          if (!isOpLabel) {
+            throw new AppError(
+              'FORBIDDEN',
+              'No hay registro en operadores para esta cuenta. Un administrador debe crearla o asignarte label admin/operador.',
+              403,
+            );
+          }
+          doc = await repo.create({
+            userId: identity.userId,
+            email: user.email,
+            nombre: user.name || user.email,
+            rol: isAdminLabel ? 'admin' : 'operador',
+            activo: 'true',
+            cancelPinHash: hashPin(DEFAULT_CANCEL_PIN),
+            mustChangePassword: 'false',
+          });
+        } catch (e) {
+          if (e instanceof AppError) throw e;
+          throw new AppError(
+            'CONFIG',
+            `No se pudo crear perfil operador: ${e?.message || e}`,
+            500,
+          );
+        }
+      }
+
       if (!parseActivo(doc.activo)) {
         throw new AppError('FORBIDDEN', 'Cuenta desactivada', 403);
       }
-      return publicOperador(doc, { forAdmin: String(doc.rol).toLowerCase() === 'admin' });
+
+      return publicOperador(doc, {
+        forAdmin: String(doc.rol).toLowerCase() === 'admin',
+      });
     },
 
     async list(payload, identity) {
@@ -88,11 +130,6 @@ export function createOperadoresService(req) {
       };
     },
 
-    /**
-     * Admin crea cuenta.
-     * Password inicial = DEFAULT_PASSWORD (mustChangePassword).
-     * PIN inicial = 0000 (pinNeedsReset).
-     */
     async create(input, identity) {
       assertOnlyAdmin(identity);
 
@@ -114,15 +151,21 @@ export function createOperadoresService(req) {
 
       await syncLabels(users, user.$id, input.rol);
 
-      const doc = await repo.create({
+      const data = {
         userId: user.$id,
         email: input.email,
         nombre: input.nombre,
         rol: input.rol,
         activo: 'true',
         cancelPinHash: hashPin(DEFAULT_CANCEL_PIN),
-        mustChangePassword: 'true',
-      });
+      };
+
+      let doc;
+      try {
+        doc = await repo.create({ ...data, mustChangePassword: 'true' });
+      } catch {
+        doc = await repo.create(data);
+      }
 
       return {
         ...publicOperador(doc, { forAdmin: true }),
@@ -167,12 +210,10 @@ export function createOperadoresService(req) {
         }
       }
 
-      // Schema Appwrite: activo es text
       const updated = await repo.update(operadorId, { activo: activo ? 'true' : 'false' });
       return publicOperador(updated, { forAdmin: true });
     },
 
-    /** Admin: solo resetea PIN a 0000 (no elige otro valor). */
     async resetCancelPin({ operadorId }, identity) {
       assertOnlyAdmin(identity);
       const doc = await repo.getById(operadorId);
@@ -188,16 +229,15 @@ export function createOperadoresService(req) {
       };
     },
 
-    /**
-     * El titular establece su PIN personal.
-     * Solo permitido si el actual es 0000 (reseteado) o si envía el PIN actual correcto y uno nuevo.
-     * Política: tras reset solo se acepta cambio desde 0000 → nuevo (≠ 0000).
-     */
     async setOwnCancelPin({ pin, pinActual }, identity) {
-      if (!identity.operadorDocId) {
+      if (!identity.operadorDocId && !identity.userId) {
         throw new AppError('FORBIDDEN', 'Sin perfil de operador', 403);
       }
-      const doc = await repo.getById(identity.operadorDocId);
+
+      let doc = identity.operadorDocId
+        ? await repo.getById(identity.operadorDocId)
+        : await repo.findByUserId(identity.userId);
+
       if (!doc) throw new AppError('NOT_FOUND', 'Operador no encontrado', 404);
 
       const nuevo = String(pin).trim();
@@ -214,7 +254,6 @@ export function createOperadoresService(req) {
       const needsReset = isDefaultPinHash(doc.cancelPinHash);
 
       if (needsReset) {
-        // Debe confirmar que conoce el valor de fábrica (auditoría de reseteo)
         if (pinActual != null && String(pinActual).trim() !== DEFAULT_CANCEL_PIN) {
           throw new AppError(
             'FORBIDDEN',
@@ -223,7 +262,6 @@ export function createOperadoresService(req) {
           );
         }
       } else {
-        // Cambio voluntario: exige PIN actual
         if (!pinActual || !verifyPin(pinActual, doc.cancelPinHash)) {
           throw new AppError('FORBIDDEN', 'PIN actual incorrecto', 403);
         }
@@ -239,7 +277,6 @@ export function createOperadoresService(req) {
       };
     },
 
-    /** Admin: solo resetea password a 12345678 + flag mustChangePassword. */
     async resetPassword({ operadorId }, identity) {
       assertOnlyAdmin(identity);
       const doc = await repo.getById(operadorId);
@@ -255,7 +292,7 @@ export function createOperadoresService(req) {
       try {
         updated = await repo.update(operadorId, { mustChangePassword: 'true' });
       } catch {
-        // atributo opcional si aún no existe en schema
+        // atributo opcional
       }
 
       return {
@@ -266,9 +303,8 @@ export function createOperadoresService(req) {
       };
     },
 
-    /** Titular cambia su contraseña (obligatorio si mustChangePassword). */
     async changeOwnPassword({ passwordActual, passwordNueva }, identity) {
-      if (!identity.userId || !identity.operadorDocId) {
+      if (!identity.userId) {
         throw new AppError('UNAUTHORIZED', 'Sin sesión', 401);
       }
 
@@ -280,14 +316,15 @@ export function createOperadoresService(req) {
         throw new AppError('VALIDATION', 'No puedes reutilizar la contraseña temporal 12345678');
       }
 
-      // Appwrite Users API no verifica la actual con API key fácilmente;
-      // confiamos en sesión JWT activa + flag. Opcional: exigir passwordActual === DEFAULT si mustChange.
-      const doc = await repo.getById(identity.operadorDocId);
+      const doc =
+        (identity.operadorDocId && (await repo.getById(identity.operadorDocId))) ||
+        (await repo.findByUserId(identity.userId));
+
       if (!doc) throw new AppError('NOT_FOUND', 'Operador no encontrado', 404);
 
       const must =
         doc.mustChangePassword === true ||
-        doc.mustChangePassword === 'true' ||
+        String(doc.mustChangePassword || '').toLowerCase() === 'true' ||
         doc.mustChangePassword === '1';
 
       if (must) {
@@ -308,7 +345,7 @@ export function createOperadoresService(req) {
       }
 
       try {
-        await repo.update(identity.operadorDocId, { mustChangePassword: 'false' });
+        await repo.update(doc.$id, { mustChangePassword: 'false' });
       } catch {
         // ignore
       }
@@ -316,9 +353,6 @@ export function createOperadoresService(req) {
       return { passwordActualizada: true, mensaje: 'Contraseña actualizada correctamente.' };
     },
 
-    /**
-     * Cancelación: exige PIN personal configurado (no 0000).
-     */
     async assertCancelPin(identity, pin) {
       if (!identity?.userId) {
         throw new AppError('UNAUTHORIZED', 'Sesión requerida', 401);
