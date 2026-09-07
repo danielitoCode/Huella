@@ -1,6 +1,5 @@
 /** Tipos compartidos de la plataforma Huella */
 
-/** Estados canónicos (Appwrite enum + huella-api). */
 export type EstadoSolicitud =
   | 'pendiente'
   | 'sin_verificar'
@@ -12,6 +11,13 @@ export type Zona = 'public' | 'admin';
 
 export type RutaPublica = 'home' | 'solicitud' | 'seguimiento';
 export type RutaAdmin = 'login' | 'dashboard' | 'solicitudes' | 'detalle';
+
+export type OperatorContact = {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  note: string;
+};
 
 export type Solicitud = {
   id: string;
@@ -26,9 +32,11 @@ export type Solicitud = {
   mensajePublico?: string | null;
   notasInternas?: string | null;
   diditSessionId?: string | null;
+  diditVerificationUrl?: string | null;
   kycResultado?: string | null;
   fechaCreacion: string;
   fechaActualizacion: string;
+  operatorContact?: OperatorContact;
 };
 
 export type SeguimientoPublico = {
@@ -38,6 +46,9 @@ export type SeguimientoPublico = {
   fechaCreacion: string;
   fechaActualizacion: string;
   kycCompletado?: boolean;
+  /** Solo si estado === sin_verificar */
+  verificationUrl?: string | null;
+  operatorContact?: OperatorContact;
 };
 
 export type CreateSolicitudResult = {

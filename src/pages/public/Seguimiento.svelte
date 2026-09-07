@@ -21,13 +21,13 @@
 
   const descripcionesEstado: Record<EstadoSolicitud, string> = {
     pendiente:
-      'El expediente ha sido registrado correctamente en la plataforma y está pendiente de atención.',
+      'El expediente ha sido registrado y está pendiente de atención.',
     sin_verificar:
-      'Un operador está atendiendo el caso. La identidad del solicitante aún no está confirmada.',
+      'Un operador está atendiendo el caso. Completa la verificación digital o contacta al equipo para una vía asistida.',
     verificado:
       'La identidad del solicitante ha sido confirmada. El equipo continúa con la investigación documental.',
-    cerrado: 'El expediente ha sido archivado o finalizado por el operador asignado.',
-    cancelada: 'Esta solicitud fue cancelada. Si crees que se trata de un error, contacta al equipo.',
+    cerrado: 'El expediente ha sido archivado o finalizado.',
+    cancelada: 'Esta solicitud fue cancelada. Si crees que es un error, contacta al equipo.',
   };
 
   function getStepIndex(estado: EstadoSolicitud): number {
@@ -100,16 +100,11 @@
     <span class="eyebrow">Consulta de expediente</span>
     <h1 class="serif-title">Seguimiento confidencial</h1>
     <p class="header-desc">
-      Introduce el código de seguimiento que recibiste al registrar tu solicitud para conocer el
-      avance.
+      Introduce el código de seguimiento que recibiste al registrar tu solicitud.
     </p>
 
     <form class="search-card card animate-fade-in" onsubmit={onSubmit}>
       <div class="input-wrapper">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
         <input
           type="text"
           bind:value={codigoInput}
@@ -128,21 +123,19 @@
 
 <section class="results-container">
   {#if errorMsg}
-    <div class="error-banner card animate-fade-in" role="alert">
-      <span>{errorMsg}</span>
-    </div>
+    <div class="error-banner card" role="alert">{errorMsg}</div>
   {/if}
 
   {#if data}
     {@const currentStep = getStepIndex(data.estado)}
 
-    <article class="expediente-card glass-panel animate-fade-in" aria-live="polite">
+    <article class="expediente-card glass-panel" aria-live="polite">
       <div class="expediente-header">
         <div>
           <span class="expediente-label">Expediente</span>
           <h2 class="codigo-title">{data.codigoSeguimiento}</h2>
         </div>
-        <div class="status-badge-wrap">
+        <div>
           {#if data.estado === 'verificado'}
             <span class="badge badge-positive">Verificado</span>
           {:else if data.estado === 'sin_verificar'}
@@ -183,7 +176,6 @@
       <div class="status-details">
         <h3>{etiquetasEstado[data.estado]}</h3>
         <p class="status-desc">{descripcionesEstado[data.estado]}</p>
-
         {#if data.mensajePublico}
           <div class="mensaje-publico-box">
             <span class="box-title">Nota del equipo</span>
@@ -192,9 +184,54 @@
         {/if}
       </div>
 
+      {#if data.estado === 'sin_verificar'}
+        <div class="verify-panel">
+          <h3>Verificación de identidad</h3>
+          <p class="verify-intro">
+            Para avanzar con tu expediente puedes usar la verificación digital (Didit) o, si no tienes
+            buena conectividad, contactar al operador para una verificación asistida.
+          </p>
+
+          {#if data.verificationUrl}
+            <a
+              class="btn btn-gold verify-btn"
+              href={data.verificationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Verificar identidad con Didit
+            </a>
+          {:else}
+            <p class="verify-pending">
+              El enlace Didit aún no está disponible. Usa el contacto del operador o espera el correo
+              de verificación.
+            </p>
+          {/if}
+
+          {#if data.operatorContact}
+            <div class="operator-card">
+              <span class="box-title">Verificación asistida (fuera de Didit)</span>
+              <p>{data.operatorContact.note}</p>
+              {#if data.operatorContact.name}
+                <p><strong>Operador:</strong> {data.operatorContact.name}</p>
+              {/if}
+              {#if data.operatorContact.email}
+                <p>
+                  <strong>Email:</strong>
+                  <a href="mailto:{data.operatorContact.email}">{data.operatorContact.email}</a>
+                </p>
+              {/if}
+              {#if data.operatorContact.phone}
+                <p><strong>Teléfono:</strong> {data.operatorContact.phone}</p>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       <div class="expediente-footer">
         <div class="date-item">
-          <span class="date-label">Fecha de apertura</span>
+          <span class="date-label">Apertura</span>
           <span class="date-val">
             {new Date(data.fechaCreacion).toLocaleString('es', {
               dateStyle: 'medium',
@@ -224,12 +261,10 @@
     text-align: center;
     border-bottom: 1px solid var(--color-border-gold);
   }
-
   .header-container {
     max-width: 640px;
     margin: 0 auto;
   }
-
   .eyebrow {
     font-size: 0.75rem;
     letter-spacing: 0.14em;
@@ -238,236 +273,173 @@
     display: block;
     margin-bottom: 0.5rem;
   }
-
   .header-desc {
     color: #a4b4c0;
-    font-size: 1.05rem;
     margin: 0.5rem 0 2rem;
   }
-
   .search-card {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.6rem 0.6rem 0.6rem 1.25rem;
+    padding: 0.6rem;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid var(--color-border-gold);
-    backdrop-filter: blur(16px);
   }
-
   .input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
     flex-grow: 1;
-    color: var(--gold);
   }
-
   .input-wrapper input {
+    width: 100%;
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: #fff;
     font-family: var(--font-mono);
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 600;
-    letter-spacing: 0.04em;
-    padding: 0.5rem 0;
+    padding: 0.5rem 0.75rem;
     box-shadow: none !important;
-    width: 100%;
   }
-
-  .input-wrapper input::placeholder {
-    font-family: var(--font-sans);
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.45);
-  }
-
   .results-container {
-    width: 100%;
     max-width: 840px;
     margin: 2.5rem auto 5rem;
     padding: 0 1.5rem;
-    box-sizing: border-box;
-    position: relative;
-    z-index: 10;
   }
-
   .error-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
     background: rgba(217, 56, 58, 0.12);
     border: 1px solid rgba(217, 56, 58, 0.4);
     color: var(--color-alert);
-    font-weight: 500;
+    margin-bottom: 1rem;
   }
-
   .expediente-card {
     padding: 2.5rem;
     background: var(--surface);
   }
-
   .expediente-header {
     display: flex;
-    align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid var(--border);
   }
-
   .expediente-label {
     font-size: 0.75rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--gold);
-    display: block;
-    margin-bottom: 0.25rem;
   }
-
   .codigo-title {
     font-family: var(--font-mono);
-    font-size: 1.8rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    margin: 0;
+    font-size: 1.6rem;
+    margin: 0.25rem 0 0;
   }
-
-  .timeline-wrapper {
-    margin-bottom: 3rem;
-  }
-
   .timeline-track {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    position: relative;
     gap: 1rem;
+    margin-bottom: 2rem;
   }
-
-  .timeline-track::before {
-    content: '';
-    position: absolute;
-    top: 18px;
-    left: 10%;
-    right: 10%;
-    height: 3px;
-    background: var(--border);
-    z-index: 1;
-  }
-
   .step-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    position: relative;
-    z-index: 2;
   }
-
   .step-circle {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--bg-elevated);
     border: 2px solid var(--border);
-    color: var(--text-muted);
     display: grid;
     place-items: center;
+    margin-bottom: 0.4rem;
     font-weight: 700;
-    font-size: 0.9rem;
-    margin-bottom: 0.6rem;
   }
-
   .step-name {
     font-size: 0.8rem;
-    font-weight: 600;
     color: var(--text-muted);
   }
-
   .step-item.completed .step-circle {
     background: var(--gold);
     border-color: var(--gold);
     color: #071927;
   }
-
-  .step-item.completed .step-name {
-    color: var(--text-h);
-  }
-
   .step-item.active .step-circle {
     border-color: var(--positive);
     color: var(--positive);
-    background: rgba(42, 157, 143, 0.15);
   }
-
   .status-details {
     background: var(--surface-muted);
     border-radius: var(--radius);
     padding: 1.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
   }
-
-  .status-details h3 {
-    margin-bottom: 0.5rem;
-  }
-
   .status-desc {
-    color: var(--text);
-    font-size: 0.95rem;
     margin: 0;
+    color: var(--text);
   }
-
   .mensaje-publico-box {
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px dashed var(--border);
   }
-
   .box-title {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--gold);
     display: block;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.35rem;
   }
-
+  .verify-panel {
+    margin-bottom: 1.75rem;
+    padding: 1.5rem;
+    border: 1px solid var(--color-border-gold);
+    border-radius: var(--radius);
+    background: rgba(198, 164, 106, 0.06);
+  }
+  .verify-panel h3 {
+    margin: 0 0 0.5rem;
+  }
+  .verify-intro {
+    margin: 0 0 1rem;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  .verify-btn {
+    display: inline-flex;
+    margin-bottom: 1rem;
+  }
+  .verify-pending {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+  .operator-card {
+    margin-top: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border);
+  }
+  .operator-card p {
+    margin: 0.35rem 0 0;
+    font-size: 0.92rem;
+  }
   .expediente-footer {
     display: flex;
     justify-content: space-between;
-    gap: 1.5rem;
+    gap: 1rem;
     padding-top: 1.25rem;
     border-top: 1px solid var(--border);
   }
-
   .date-label {
     font-size: 0.72rem;
-    letter-spacing: 0.08em;
     text-transform: uppercase;
+    letter-spacing: 0.06em;
     color: var(--text-muted);
     display: block;
   }
-
   .date-val {
-    font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-h);
-  }
-
-  @media (max-width: 640px) {
-    .search-card {
-      flex-direction: column;
-      align-items: stretch;
-      padding: 1rem;
-    }
-    .timeline-track {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1.5rem;
-    }
-    .timeline-track::before {
-      display: none;
-    }
   }
 </style>
