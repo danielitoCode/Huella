@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { irAAdmin } from '../../lib/stores/router';
-  import { sessionUser, loadSession } from '../../lib/stores/session';
+  import { sessionUser, sessionLoading, loadSession } from '../../lib/stores/session';
   import { executeApi, ApiError } from '../../lib/appwrite';
   import type { Operador, OperadorRol } from '../../lib/types';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
@@ -9,38 +8,63 @@
   type ListResult = { operadores: Operador[]; total: number };
 
   let operadores = $state<Operador[]>([]);
+  let me = $state<Operador | null>(null);
   let cargando = $state(true);
   let errorMsg = $state('');
   let okMsg = $state('');
   let busy = $state(false);
+  let loadToken = 0;
 
   let nuevo = $state({ nombre: '', email: '', rol: 'operador' as OperadorRol });
-
-  // titular: cambiar PIN cuando no está en gate
   let pinActual = $state('');
   let pinNuevo = $state('');
 
-  const isAdmin = $derived($sessionUser?.rol === 'admin');
+  /** Admin si el perfil API lo dice o la sesión (labels / me previo). */
+  const isAdmin = $derived(
+    me?.rol === 'admin' || $sessionUser?.rol === 'admin',
+  );
 
   async function cargar() {
+    const token = ++loadToken;
     cargando = true;
     errorMsg = '';
     try {
-      if (isAdmin) {
-        const res = await executeApi<ListResult>('operadores.list', { limit: 100 });
-        operadores = res.operadores;
+      // 1) Siempre perfil propio (fuente de verdad del rol)
+      const perfil = await executeApi<Operador>('operadores.me', {});
+      if (token !== loadToken) return;
+      me = perfil;
+
+      // 2) Listado completo solo admin
+      if (perfil.rol === 'admin') {
+        try {
+          const res = await executeApi<ListResult>('operadores.list', { limit: 100 });
+          if (token !== loadToken) return;
+          operadores = res.operadores ?? [];
+        } catch (listErr) {
+          // Si list falla, al menos mostrar el propio perfil y el error
+          operadores = [perfil];
+          errorMsg =
+            listErr instanceof ApiError
+              ? `Listado: ${listErr.message}`
+              : 'No se pudo listar el equipo (se muestra solo tu perfil).';
+        }
       } else {
-        const me = await executeApi<Operador>('operadores.me', {});
-        operadores = [me];
+        operadores = [perfil];
       }
     } catch (err) {
+      if (token !== loadToken) return;
       errorMsg = err instanceof ApiError ? err.message : 'No se pudo cargar el equipo.';
+      operadores = [];
+      me = null;
     } finally {
-      cargando = false;
+      if (token === loadToken) cargando = false;
     }
   }
 
-  onMount(() => {
+  // Esperar a que la sesión deje de cargar y entonces pedir equipo
+  $effect(() => {
+    if ($sessionLoading) return;
+    if (!$sessionUser) return;
     void cargar();
   });
 
@@ -141,7 +165,7 @@
     errorMsg = '';
     try {
       await executeApi('operadores.setOwnCancelPin', {
-        pinActual: pinActual || ($sessionUser?.pinNeedsReset ? '0000' : ''),
+        pinActual: pinActual || (me?.pinNeedsReset || $sessionUser?.pinNeedsReset ? '0000' : ''),
         pin: pinNuevo,
       });
       pinActual = '';
@@ -165,6 +189,9 @@
       <p class="sub">
         Los administradores resetean (PIN → 0000, password → 12345678). Cada usuario establece los suyos.
       </p>
+      {#if me}
+        <p class="hint">Sesión: <strong>{me.nombre}</strong> · rol <code>{me.rol}</code></p>
+      {/if}
     </div>
     <button type="button" class="btn btn-secondary" onclick={() => irAAdmin('dashboard')}>
       ← Dashboard
@@ -177,7 +204,7 @@
   <div class="card block">
     <h2>Mi PIN de cancelación</h2>
     <p class="hint">
-      {#if $sessionUser?.pinNeedsReset}
+      {#if me?.pinNeedsReset || $sessionUser?.pinNeedsReset}
         Tu PIN está en <strong>0000</strong> (reseteado). Debes poner uno personal.
       {:else}
         Estado: <strong>configurado</strong>. Puedes cambiarlo indicando el actual.
@@ -186,7 +213,14 @@
     <form class="inline-form" onsubmit={setOwnPin}>
       <label>
         PIN actual
-        <input type="password" inputmode="numeric" maxlength="4" bind:value={pinActual} disabled={busy} placeholder={$sessionUser?.pinNeedsReset ? '0000' : '····'} />
+        <input
+          type="password"
+          inputmode="numeric"
+          maxlength="4"
+          bind:value={pinActual}
+          disabled={busy}
+          placeholder={me?.pinNeedsReset ? '0000' : '····'}
+        />
       </label>
       <label>
         PIN nuevo
@@ -199,7 +233,9 @@
   {#if isAdmin}
     <div class="card block">
       <h2>Crear cuenta</h2>
-      <p class="hint">Se crea con password <code>12345678</code> y PIN <code>0000</code>; el usuario los cambia al entrar.</p>
+      <p class="hint">
+        Se crea con password <code>12345678</code> y PIN <code>0000</code>; el usuario los cambia al entrar.
+      </p>
       <form class="create-form" onsubmit={crearUsuario}>
         <label>Nombre<input bind:value={nuevo.nombre} required disabled={busy} /></label>
         <label>Email<input type="email" bind:value={nuevo.email} required disabled={busy} /></label>
@@ -213,12 +249,22 @@
         <button type="submit" class="btn btn-gold" disabled={busy}>Crear usuario</button>
       </form>
     </div>
+  {:else if !cargando && me}
+    <div class="card block">
+      <p class="hint">
+        Tu rol es <code>{me.rol}</code>. Solo un <strong>admin</strong> ve el listado completo y puede crear
+        cuentas / resetear credenciales.
+      </p>
+    </div>
   {/if}
 
   <div class="card block">
     <h2>{isAdmin ? 'Miembros del equipo' : 'Tu perfil'}</h2>
-    {#if cargando}
-      <LoadingHint message="Cargando…" />
+    {#if cargando || $sessionLoading}
+      <LoadingHint message="Cargando equipo desde el servidor…" />
+    {:else if operadores.length === 0}
+      <p class="hint">No hay operadores para mostrar.</p>
+      <button type="button" class="btn btn-secondary" onclick={() => cargar()}>Reintentar</button>
     {:else}
       <div class="table-wrap">
         <table>
