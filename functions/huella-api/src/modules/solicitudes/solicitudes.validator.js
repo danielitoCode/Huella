@@ -39,7 +39,6 @@ export function validateMarcarAtendido(payload = {}) {
 }
 
 export function validateMarcarSinVerificar(payload = {}) {
-  // Retrocompat: alias de marcarAtendido + iniciarKyc
   return { ...validateMarcarAtendido(payload), iniciarKyc: true };
 }
 
@@ -50,6 +49,12 @@ export function validateIniciarKyc(payload = {}) {
     solicitudId,
     notasInternas: payload.notasInternas ? String(payload.notasInternas).trim() : undefined,
   };
+}
+
+export function validateSolicitudIdOnly(payload = {}) {
+  const solicitudId = String(payload.solicitudId || payload.id || '').trim();
+  if (!solicitudId) throw new AppError('VALIDATION', 'solicitudId requerido');
+  return { solicitudId };
 }
 
 export function validateMarcarVerificado(payload = {}) {
@@ -75,9 +80,7 @@ export function validateList(payload = {}) {
 }
 
 export function validateGetById(payload = {}) {
-  const solicitudId = String(payload.solicitudId || payload.id || '').trim();
-  if (!solicitudId) throw new AppError('VALIDATION', 'solicitudId requerido');
-  return { solicitudId };
+  return validateSolicitudIdOnly(payload);
 }
 
 export function validateCerrar(payload = {}) {

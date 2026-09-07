@@ -1,5 +1,6 @@
 <script lang="ts">
   import Layout from './components/Layout.svelte';
+  import LoadingHint from './components/ui/LoadingHint.svelte';
   import { router, irAAdmin } from './lib/stores/router';
   import { sessionUser, sessionLoading } from './lib/stores/session';
 
@@ -11,12 +12,9 @@
   import Dashboard from './pages/admin/Dashboard.svelte';
   import Solicitudes from './pages/admin/Solicitudes.svelte';
   import SolicitudDetalle from './pages/admin/SolicitudDetalle.svelte';
+  import Equipo from './pages/admin/Equipo.svelte';
+  import SecurityGate from './pages/admin/SecurityGate.svelte';
 
-  /**
-   * Guards de zona admin:
-   * - Sin sesión en rutas internas → login
-   * - Con sesión en login → dashboard (un solo login / sesión persistente)
-   */
   $effect(() => {
     if ($sessionLoading || $router.zona !== 'admin') return;
 
@@ -36,6 +34,10 @@
       !$sessionLoading &&
       $sessionUser !== null,
   );
+
+  let needsSecurityGate = $derived(
+    Boolean($sessionUser?.mustChangePassword || $sessionUser?.pinNeedsReset),
+  );
 </script>
 
 <Layout>
@@ -48,9 +50,13 @@
       <Seguimiento />
     {/if}
   {:else if $sessionLoading && $router.rutaAdmin !== 'login'}
-    <div class="session-check" aria-live="polite" aria-label="Verificando sesión…"></div>
+    <div class="session-check">
+      <LoadingHint message="Verificando sesión de operador…" />
+    </div>
   {:else if $router.rutaAdmin === 'login' && !$sessionUser}
     <Login />
+  {:else if adminReady && needsSecurityGate}
+    <SecurityGate />
   {:else if adminReady}
     {#if $router.rutaAdmin === 'dashboard'}
       <Dashboard />
@@ -58,6 +64,8 @@
       <Solicitudes />
     {:else if $router.rutaAdmin === 'detalle'}
       <SolicitudDetalle />
+    {:else if $router.rutaAdmin === 'equipo'}
+      <Equipo />
     {/if}
   {/if}
 </Layout>
@@ -65,5 +73,9 @@
 <style>
   .session-check {
     min-height: 40vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
   }
 </style>

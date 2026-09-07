@@ -1,36 +1,44 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { irAAdmin, irAPublica } from '../../lib/stores/router';
-  import { sessionUser, logout } from '../../lib/stores/session';
+  import { sessionUser, sessionLoading, logout } from '../../lib/stores/session';
   import { executeApi } from '../../lib/appwrite';
+  import Skeleton from '../../components/ui/Skeleton.svelte';
+  import LoadingHint from '../../components/ui/LoadingHint.svelte';
 
   type StatsResult = {
     solicitudes: { estado: string }[];
     total: number;
   };
 
-  let stats = $state({ pendientes: 0, sin_verificar: 0, verificado: 0, cerrado: 0, total: 0 });
+  let stats = $state({
+    pendientes: 0,
+    sin_verificar: 0,
+    verificado: 0,
+    cerrado: 0,
+    cancelada: 0,
+    total: 0,
+  });
   let cargando = $state(true);
   let saliendo = $state(false);
 
   onMount(async () => {
     try {
-      const [p, sv, v, c] = await Promise.allSettled([
+      const results = await Promise.allSettled([
         executeApi<StatsResult>('solicitudes.list', { estado: 'pendiente', limit: 1 }),
         executeApi<StatsResult>('solicitudes.list', { estado: 'sin_verificar', limit: 1 }),
         executeApi<StatsResult>('solicitudes.list', { estado: 'verificado', limit: 1 }),
         executeApi<StatsResult>('solicitudes.list', { estado: 'cerrado', limit: 1 }),
+        executeApi<StatsResult>('solicitudes.list', { estado: 'cancelada', limit: 1 }),
       ]);
+      const totals = results.map((r) => (r.status === 'fulfilled' ? r.value.total : 0));
       stats = {
-        pendientes: p.status === 'fulfilled' ? p.value.total : 0,
-        sin_verificar: sv.status === 'fulfilled' ? sv.value.total : 0,
-        verificado: v.status === 'fulfilled' ? v.value.total : 0,
-        cerrado: c.status === 'fulfilled' ? c.value.total : 0,
-        total:
-          (p.status === 'fulfilled' ? p.value.total : 0) +
-          (sv.status === 'fulfilled' ? sv.value.total : 0) +
-          (v.status === 'fulfilled' ? v.value.total : 0) +
-          (c.status === 'fulfilled' ? c.value.total : 0),
+        pendientes: totals[0],
+        sin_verificar: totals[1],
+        verificado: totals[2],
+        cerrado: totals[3],
+        cancelada: totals[4],
+        total: totals.reduce((a, b) => a + b, 0),
       };
     } catch {
       // silencioso
@@ -49,89 +57,68 @@
 <div class="dash-wrap">
   <div class="dash-header glass-panel animate-fade-in">
     <div>
-      <span class="eyebrow">Módulo Operativo</span>
-      <h1 class="serif-title text-gradient-gold">Dashboard de Gestión</h1>
-      {#if $sessionUser}
+      <span class="eyebrow">Módulo operativo</span>
+      <h1 class="serif-title text-gradient-gold">Dashboard de gestión</h1>
+      {#if $sessionLoading}
+        <p class="welcome loading-line">
+          <Skeleton width="14rem" height="0.95rem" />
+        </p>
+      {:else if $sessionUser}
         <p class="welcome">
-          Operador Activo: <strong>{$sessionUser.name || $sessionUser.email}</strong>
+          Operador activo: <strong>{$sessionUser.name || $sessionUser.email}</strong>
         </p>
       {/if}
     </div>
 
     <div class="dash-actions">
-      <button class="btn btn-secondary" onclick={() => irAPublica('home')}>
-        Sitio Público
+      <button type="button" class="btn btn-secondary" onclick={() => irAPublica('home')}>
+        Sitio público
       </button>
-      <button class="btn btn-danger" onclick={handleLogout} disabled={saliendo}>
-        {saliendo ? 'Saliendo...' : 'Cerrar Sesión'}
+      <button type="button" class="btn btn-danger" onclick={handleLogout} disabled={saliendo}>
+        {saliendo ? 'Saliendo…' : 'Cerrar sesión'}
       </button>
     </div>
   </div>
 
-  <!-- METRICAS KPI -->
-  <div class="kpi-grid animate-fade-in" class:loading={cargando}>
-    <div class="kpi-card card">
-      <div class="kpi-icon gold">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-        </svg>
-      </div>
-      <div>
-        <span class="num">{cargando ? '–' : stats.pendientes}</span>
-        <span class="kpi-label">Pendientes</span>
-      </div>
+  {#if cargando}
+    <div class="load-banner">
+      <LoadingHint message="Sincronizando métricas con Appwrite…" />
     </div>
+  {/if}
 
-    <div class="kpi-card card">
-      <div class="kpi-icon amber">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-        </svg>
+  <div class="kpi-grid animate-fade-in" aria-busy={cargando}>
+    {#each [
+      { key: 'pendientes', label: 'Pendientes', class: '' },
+      { key: 'sin_verificar', label: 'Atendidos · sin verificar', class: 'amber' },
+      { key: 'verificado', label: 'Verificados', class: 'teal' },
+      { key: 'cerrado', label: 'Cerrados', class: 'muted' },
+    ] as card}
+      <div class="kpi-card card">
+        <div class="kpi-icon {card.class || 'gold'}"></div>
+        <div class="kpi-body">
+          {#if cargando}
+            <Skeleton width="3rem" height="2rem" radius="8px" />
+            <Skeleton width="6.5rem" height="0.75rem" />
+          {:else}
+            <span class="num {card.class}">
+              {stats[card.key as keyof typeof stats]}
+            </span>
+            <span class="kpi-label">{card.label}</span>
+          {/if}
+        </div>
       </div>
-      <div>
-        <span class="num amber">{cargando ? '–' : stats.sin_verificar}</span>
-        <span class="kpi-label">Sin Verificar (KYC)</span>
-      </div>
-    </div>
-
-    <div class="kpi-card card">
-      <div class="kpi-icon teal">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-      </div>
-      <div>
-        <span class="num teal">{cargando ? '–' : stats.verificado}</span>
-        <span class="kpi-label">Verificados</span>
-      </div>
-    </div>
-
-    <div class="kpi-card card">
-      <div class="kpi-icon muted">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-      </div>
-      <div>
-        <span class="num muted">{cargando ? '–' : stats.cerrado}</span>
-        <span class="kpi-label">Cerrados</span>
-      </div>
-    </div>
+    {/each}
   </div>
 
   <div class="action-banner card animate-fade-in">
     <div>
-      <h3>Administración de Expedientes</h3>
-      <p>Revisa solicitudes pendientes, activa sesiones KYC Didit o asigna notas internas de seguimiento.</p>
+      <h3>Administración de expedientes</h3>
+      <p>
+        Revisa solicitudes pendientes, activa KYC Didit o registra notas internas de seguimiento.
+      </p>
     </div>
-    <button class="btn btn-gold" onclick={() => irAAdmin('solicitudes')}>
-      <span>Gestionar Expedientes</span>
-      <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
-        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
-      </svg>
+    <button type="button" class="btn btn-gold" onclick={() => irAAdmin('solicitudes')}>
+      Gestionar expedientes
     </button>
   </div>
 </div>
@@ -152,7 +139,7 @@
     flex-wrap: wrap;
     gap: 1.5rem;
     padding: 2rem 2.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.25rem;
     background: var(--color-obsidian-navy);
     color: #ffffff;
     border: 1px solid var(--color-border-gold);
@@ -178,9 +165,19 @@
     font-size: 0.92rem;
   }
 
+  .loading-line {
+    display: flex;
+    align-items: center;
+    min-height: 1.2rem;
+  }
+
   .dash-actions {
     display: flex;
     gap: 0.75rem;
+  }
+
+  .load-banner {
+    margin-bottom: 1rem;
   }
 
   .kpi-grid {
@@ -190,10 +187,6 @@
     margin-bottom: 2rem;
   }
 
-  .kpi-grid.loading {
-    opacity: 0.6;
-  }
-
   .kpi-card {
     display: flex;
     align-items: center;
@@ -201,33 +194,49 @@
     padding: 1.5rem;
   }
 
+  .kpi-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
   .kpi-icon {
     width: 46px;
     height: 46px;
     border-radius: var(--radius);
-    display: grid;
-    place-items: center;
-    background: var(--surface-muted);
-    color: var(--text-h);
+    flex-shrink: 0;
+    background: rgba(212, 175, 55, 0.15);
   }
 
-  .kpi-icon.gold { background: rgba(212, 175, 55, 0.15); color: var(--gold); }
-  .kpi-icon.amber { background: rgba(230, 160, 40, 0.15); color: #d97706; }
-  .kpi-icon.teal { background: rgba(42, 157, 143, 0.15); color: var(--positive); }
-  .kpi-icon.muted { background: rgba(120, 135, 148, 0.15); color: var(--text-muted); }
+  .kpi-icon.amber {
+    background: rgba(230, 160, 40, 0.15);
+  }
+  .kpi-icon.teal {
+    background: rgba(42, 157, 143, 0.15);
+  }
+  .kpi-icon.muted {
+    background: rgba(120, 135, 148, 0.15);
+  }
 
   .num {
     display: block;
-    font-family: var(--font-serif);
+    font-family: var(--font-serif, var(--font-display));
     font-size: 2.2rem;
     font-weight: 700;
     line-height: 1;
     color: var(--text-h);
   }
 
-  .num.amber { color: #d97706; }
-  .num.teal { color: var(--positive); }
-  .num.muted { color: var(--text-muted); }
+  .num.amber {
+    color: #d97706;
+  }
+  .num.teal {
+    color: var(--positive);
+  }
+  .num.muted {
+    color: var(--text-muted);
+  }
 
   .kpi-label {
     font-size: 0.85rem;
@@ -242,7 +251,6 @@
     flex-wrap: wrap;
     gap: 1.5rem;
     padding: 2rem;
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(212, 175, 55, 0.05) 100%);
     border-color: var(--color-border-gold);
   }
 

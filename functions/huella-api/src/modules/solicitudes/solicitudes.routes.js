@@ -11,6 +11,7 @@ import {
   validateGetById,
   validateCerrar,
   validateCancelar,
+  validateSolicitudIdOnly,
 } from './solicitudes.validator.js';
 
 export const solicitudesRoutes = {
@@ -63,6 +64,22 @@ export const solicitudesRoutes = {
       });
     },
   },
+  'solicitudes.reenviarKycEmail': {
+    auth: AUTH.ADMIN,
+    validate: validateSolicitudIdOnly,
+    handler: async (ctx, payload) => {
+      const service = createSolicitudesService(ctx.req);
+      return service.reenviarKycEmail(payload);
+    },
+  },
+  'solicitudes.getKycEmailTemplate': {
+    auth: AUTH.ADMIN,
+    validate: validateSolicitudIdOnly,
+    handler: async (ctx, payload) => {
+      const service = createSolicitudesService(ctx.req);
+      return service.getKycEmailTemplate(payload);
+    },
+  },
   'solicitudes.marcarVerificado': {
     auth: AUTH.ADMIN,
     validate: validateMarcarVerificado,
@@ -100,7 +117,7 @@ export const solicitudesRoutes = {
     validate: validateCancelar,
     handler: async (ctx, payload) => {
       const service = createSolicitudesService(ctx.req);
-      return service.cancelar(payload);
+      return service.cancelar({ ...payload, identity: ctx.identity });
     },
   },
 };

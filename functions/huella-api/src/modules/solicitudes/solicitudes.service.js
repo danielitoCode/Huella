@@ -4,7 +4,11 @@ import { generarCodigoSeguimiento } from '../../shared/codigo.js';
 import { createSolicitudesRepo, createKycRepo } from '../../infrastructure/appwrite/appwrite.database.js';
 import { createDiditSession } from '../../infrastructure/didit/didit.client.js';
 import { sendEmail } from '../../infrastructure/email/email.client.js';
-import { renderTemplate } from '../email/email.templates.js';
+import {
+  renderTemplate,
+  buildKycCopyPasteHtml,
+  getOperatorContactPublic,
+} from '../email/email.templates.js';
 
 function assertTransition(from, to) {
   const allowed = TRANSICIONES[to] || [];
@@ -21,18 +25,13 @@ function appendNota(existing, label, text) {
   return [existing, block].filter(Boolean).join('\n---\n');
 }
 
-function verifyCancelPin(pin) {
-  const expected = String(process.env.BACKOFFICE_CANCEL_PIN || '').trim();
-  if (!expected) {
-    throw new AppError(
-      'CONFIG',
-      'BACKOFFICE_CANCEL_PIN no configurado en huella-api. El administrador debe definir un PIN de 4 dígitos.',
-      500,
-    );
-  }
-  if (expected !== pin) {
-    throw new AppError('FORBIDDEN', 'PIN de cancelación incorrecto', 403);
-  }
+function operatorEmailVars() {
+  return {
+    operatorName: process.env.OPERATOR_CONTACT_NAME || '',
+    operatorEmail: process.env.OPERATOR_CONTACT_EMAIL || '',
+    operatorPhone: process.env.OPERATOR_CONTACT_PHONE || '',
+    operatorNote: process.env.OPERATOR_CONTACT_NOTE || '',
+  };
 }
 
 export function createSolicitudesService(req) {
@@ -46,15 +45,27 @@ export function createSolicitudesService(req) {
       callbackUrl: process.env.DIDIT_CALLBACK_URL,
     });
 
-    const updated = await repo.update(solicitudId, {
+    const patch = {
       estado: ESTADOS.SIN_VERIFICAR,
       diditSessionId: session.sessionId,
+      diditVerificationUrl: session.url,
       notasInternas: notasInternas
         ? appendNota(doc.notasInternas, 'KYC', notasInternas)
-        : doc.notasInternas ?? null,
+        : doc.notasInternas != null
+          ? doc.notasInternas
+          : null,
       mensajePublico:
-        'Te enviamos un enlace para verificar tu identidad. Revisa tu correo.',
-    });
+        'Tu caso está en atención. Completa la verificación de identidad o contacta al operador si necesitas ayuda.',
+    };
+
+    let updated;
+    try {
+      updated = await repo.update(solicitudId, patch);
+    } catch (_e) {
+      const fallback = { ...patch };
+      delete fallback.diditVerificationUrl;
+      updated = await repo.update(solicitudId, fallback);
+    }
 
     await kycRepo.create({
       solicitud_id: solicitudId,
@@ -68,6 +79,7 @@ export function createSolicitudesService(req) {
       nombreFamiliar: doc.nombreFamiliar,
       codigo: doc.codigoSeguimiento,
       verificationUrl: session.url,
+      ...operatorEmailVars(),
     });
     await sendEmail({ to: doc.email, ...tpl });
 
@@ -75,6 +87,7 @@ export function createSolicitudesService(req) {
       estado: updated.estado,
       sessionId: session.sessionId,
       verificationUrl: session.url,
+      emailHtml: tpl.html,
     };
   }
 
@@ -99,17 +112,17 @@ export function createSolicitudesService(req) {
         mensajePublico: 'Hemos recibido tu solicitud. Pronto la revisaremos.',
       });
 
-      const trackingUrl = `${publicUrl}/seguimiento/${codigo}`;
+      const trackingUrl = publicUrl + '/seguimiento/' + codigo;
       const tpl = renderTemplate(EMAIL_TEMPLATES.TRACKING, {
         nombreFamiliar: input.nombreFamiliar,
-        codigo,
-        trackingUrl,
+        codigo: codigo,
+        trackingUrl: trackingUrl,
       });
       await sendEmail({ to: input.email, ...tpl });
 
       return {
         codigoSeguimiento: codigo,
-        trackingUrl,
+        trackingUrl: trackingUrl,
         estado: ESTADOS.PENDIENTE,
         id: doc.$id,
       };
@@ -118,17 +131,28 @@ export function createSolicitudesService(req) {
     async getByCode({ codigo }) {
       const doc = await repo.findByCodigo(codigo);
       if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
-      return {
+
+      const base = {
         codigoSeguimiento: doc.codigoSeguimiento,
         estado: doc.estado,
         mensajePublico: doc.mensajePublico || null,
         fechaCreacion: doc.$createdAt,
         fechaActualizacion: doc.$updatedAt,
-        kycCompletado: doc.estado === ESTADOS.VERIFICADO || doc.estado === ESTADOS.CERRADO,
+        kycCompletado:
+          doc.estado === ESTADOS.VERIFICADO || doc.estado === ESTADOS.CERRADO,
       };
+
+      if (doc.estado === ESTADOS.SIN_VERIFICAR) {
+        return {
+          ...base,
+          verificationUrl: doc.diditVerificationUrl || null,
+          operatorContact: getOperatorContactPublic(),
+        };
+      }
+
+      return base;
     },
 
-    /** pendiente → sin_verificar (atendido). KYC opcional. */
     async marcarAtendido({ solicitudId, notasInternas, mensajePublico, iniciarKyc, operatorId }) {
       const doc = await repo.getById(solicitudId);
       if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
@@ -136,42 +160,104 @@ export function createSolicitudesService(req) {
 
       if (iniciarKyc) {
         const kyc = await startDiditKyc(doc, solicitudId, operatorId, notasInternas);
-        return { solicitudId, ...kyc };
+        return { solicitudId: solicitudId, ...kyc };
       }
 
       const updated = await repo.update(solicitudId, {
         estado: ESTADOS.SIN_VERIFICAR,
         notasInternas: notasInternas
           ? appendNota(doc.notasInternas, 'ATENDIDO', notasInternas)
-          : doc.notasInternas ?? null,
+          : doc.notasInternas != null
+            ? doc.notasInternas
+            : null,
         mensajePublico:
           mensajePublico ||
-          'Tu solicitud está siendo atendida por nuestro equipo.',
+          'Tu solicitud está siendo atendida. Pronto recibirás instrucciones de verificación.',
       });
 
-      return { solicitudId, estado: updated.estado, sessionId: null, verificationUrl: null };
+      return {
+        solicitudId: solicitudId,
+        estado: updated.estado,
+        sessionId: null,
+        verificationUrl: null,
+        emailHtml: null,
+      };
     },
 
-    /** Alias legacy: atender + Didit */
     async marcarSinVerificar(args) {
       return this.marcarAtendido({ ...args, iniciarKyc: true });
     },
 
-    /** Solo inicia Didit si ya está en sin_verificar */
     async iniciarKyc({ solicitudId, notasInternas, operatorId }) {
       const doc = await repo.getById(solicitudId);
       if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
-      if (doc.estado !== ESTADOS.SIN_VERIFICAR) {
+      if (doc.estado !== ESTADOS.SIN_VERIFICAR && doc.estado !== ESTADOS.PENDIENTE) {
         throw new AppError(
           'INVALID_TRANSITION',
-          'Solo se puede iniciar KYC desde el estado atendido (sin_verificar)',
+          'Solo se puede iniciar KYC desde pendiente o atendido (sin_verificar)',
         );
       }
+      if (doc.estado === ESTADOS.PENDIENTE) {
+        assertTransition(doc.estado, ESTADOS.SIN_VERIFICAR);
+      }
       const kyc = await startDiditKyc(doc, solicitudId, operatorId, notasInternas);
-      return { solicitudId, ...kyc };
+      return { solicitudId: solicitudId, ...kyc };
     },
 
-    /** Verificación manual (baja conectividad / vía extraoficial) */
+    async reenviarKycEmail({ solicitudId }) {
+      const doc = await repo.getById(solicitudId);
+      if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
+      if (doc.estado !== ESTADOS.SIN_VERIFICAR) {
+        throw new AppError('INVALID_TRANSITION', 'Solo disponible en estado sin_verificar');
+      }
+      if (!doc.diditVerificationUrl) {
+        throw new AppError('VALIDATION', 'No hay enlace Didit. Usa «Iniciar KYC» primero.');
+      }
+
+      const vars = {
+        nombreFamiliar: doc.nombreFamiliar,
+        codigo: doc.codigoSeguimiento,
+        verificationUrl: doc.diditVerificationUrl,
+        ...operatorEmailVars(),
+      };
+      const tpl = renderTemplate(EMAIL_TEMPLATES.KYC_LINK, vars);
+      await sendEmail({ to: doc.email, ...tpl });
+
+      return {
+        solicitudId: solicitudId,
+        sentTo: doc.email,
+        verificationUrl: doc.diditVerificationUrl,
+        emailHtml: tpl.html,
+      };
+    },
+
+    async getKycEmailTemplate({ solicitudId }) {
+      const doc = await repo.getById(solicitudId);
+      if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
+      if (doc.estado !== ESTADOS.SIN_VERIFICAR) {
+        throw new AppError('INVALID_TRANSITION', 'Solo disponible en estado sin_verificar');
+      }
+      if (!doc.diditVerificationUrl) {
+        throw new AppError('VALIDATION', 'No hay enlace Didit. Inicia KYC para generar el enlace.');
+      }
+
+      const vars = {
+        nombreFamiliar: doc.nombreFamiliar,
+        codigo: doc.codigoSeguimiento,
+        verificationUrl: doc.diditVerificationUrl,
+        ...operatorEmailVars(),
+      };
+
+      return {
+        solicitudId: solicitudId,
+        to: doc.email,
+        subject: 'Huella — Verificación de identidad (' + doc.codigoSeguimiento + ')',
+        verificationUrl: doc.diditVerificationUrl,
+        emailHtml: buildKycCopyPasteHtml(vars),
+        operatorContact: getOperatorContactPublic(),
+      };
+    },
+
     async marcarVerificado({ solicitudId, motivo, mensajePublico }) {
       const doc = await repo.getById(solicitudId);
       if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
@@ -186,28 +272,30 @@ export function createSolicitudesService(req) {
           'La identidad del solicitante ha sido confirmada. Continuamos con la investigación.',
       });
 
-      return { solicitudId, estado: updated.estado };
+      return { solicitudId: solicitudId, estado: updated.estado };
     },
 
     async list({ estado, limit = 25, offset = 0 } = {}) {
-      const { documents, total } = await repo.list({ estado, limit, offset });
+      const { documents, total } = await repo.list({ estado: estado, limit: limit, offset: offset });
       return {
-        solicitudes: documents.map((doc) => ({
-          id: doc.$id,
-          codigoSeguimiento: doc.codigoSeguimiento,
-          nombreFamiliar: doc.nombreFamiliar,
-          email: doc.email,
-          nombrePersona: doc.nombrePersona,
-          relacion: doc.relacion,
-          estado: doc.estado,
-          mensajePublico: doc.mensajePublico || null,
-          diditSessionId: doc.diditSessionId || null,
-          fechaCreacion: doc.$createdAt,
-          fechaActualizacion: doc.$updatedAt,
-        })),
-        total,
-        limit,
-        offset,
+        solicitudes: documents.map(function (doc) {
+          return {
+            id: doc.$id,
+            codigoSeguimiento: doc.codigoSeguimiento,
+            nombreFamiliar: doc.nombreFamiliar,
+            email: doc.email,
+            nombrePersona: doc.nombrePersona,
+            relacion: doc.relacion,
+            estado: doc.estado,
+            mensajePublico: doc.mensajePublico || null,
+            diditSessionId: doc.diditSessionId || null,
+            fechaCreacion: doc.$createdAt,
+            fechaActualizacion: doc.$updatedAt,
+          };
+        }),
+        total: total,
+        limit: limit,
+        offset: offset,
       };
     },
 
@@ -227,9 +315,11 @@ export function createSolicitudesService(req) {
         mensajePublico: doc.mensajePublico || null,
         notasInternas: doc.notasInternas || null,
         diditSessionId: doc.diditSessionId || null,
+        diditVerificationUrl: doc.diditVerificationUrl || null,
         kycResultado: doc.kycResultado || null,
         fechaCreacion: doc.$createdAt,
         fechaActualizacion: doc.$updatedAt,
+        operatorContact: getOperatorContactPublic(),
       };
     },
 
@@ -246,11 +336,15 @@ export function createSolicitudesService(req) {
           'Tu expediente ha sido cerrado. Gracias por contactarnos.',
       });
 
-      return { solicitudId, estado: updated.estado };
+      return { solicitudId: solicitudId, estado: updated.estado };
     },
 
-    async cancelar({ solicitudId, motivoInterno, pin }) {
-      verifyCancelPin(pin);
+    async cancelar({ solicitudId, motivoInterno, pin, identity }) {
+      // import dinámico: no tumba el arranque de solicitudes.list si operadores falla
+      const mod = await import('../operadores/operadores.service.js');
+      const ops = mod.createOperadoresService(req);
+      await ops.assertCancelPin(identity || {}, pin);
+
       const doc = await repo.getById(solicitudId);
       if (!doc) throw new AppError('NOT_FOUND', 'Solicitud no encontrada', 404);
       assertTransition(doc.estado, ESTADOS.CANCELADA);
@@ -260,12 +354,12 @@ export function createSolicitudesService(req) {
         notasInternas: appendNota(
           doc.notasInternas,
           'CANCELADA',
-          `${motivoInterno} (confirmación PIN OK)`,
+          motivoInterno + ' (PIN OK · user ' + (identity && identity.userId ? identity.userId : 'n/a') + ')',
         ),
         mensajePublico: 'Esta solicitud ha sido cancelada.',
       });
 
-      return { solicitudId, estado: updated.estado };
+      return { solicitudId: solicitudId, estado: updated.estado };
     },
   };
 }

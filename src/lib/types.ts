@@ -1,6 +1,5 @@
 /** Tipos compartidos de la plataforma Huella */
 
-/** Estados canónicos (Appwrite enum + huella-api). */
 export type EstadoSolicitud =
   | 'pendiente'
   | 'sin_verificar'
@@ -11,7 +10,35 @@ export type EstadoSolicitud =
 export type Zona = 'public' | 'admin';
 
 export type RutaPublica = 'home' | 'solicitud' | 'seguimiento';
-export type RutaAdmin = 'login' | 'dashboard' | 'solicitudes' | 'detalle';
+export type RutaAdmin = 'login' | 'dashboard' | 'solicitudes' | 'detalle' | 'equipo';
+
+export type OperatorContact = {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  note: string;
+};
+
+export type OperadorRol = 'admin' | 'operador';
+
+export type Operador = {
+  id: string;
+  userId: string;
+  email: string;
+  nombre: string;
+  rol: OperadorRol;
+  activo: boolean;
+  pinNeedsReset: boolean;
+  pinEstado: 'reseteado_0000' | 'configurado' | string;
+  /** Solo admin + PIN reseteado: valor de auditoría 0000 */
+  pinVisibleAuditoria?: string;
+  mustChangePassword: boolean;
+  ultimoLoginAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  passwordTemporal?: string;
+  mensaje?: string;
+};
 
 export type Solicitud = {
   id: string;
@@ -26,9 +53,11 @@ export type Solicitud = {
   mensajePublico?: string | null;
   notasInternas?: string | null;
   diditSessionId?: string | null;
+  diditVerificationUrl?: string | null;
   kycResultado?: string | null;
   fechaCreacion: string;
   fechaActualizacion: string;
+  operatorContact?: OperatorContact;
 };
 
 export type SeguimientoPublico = {
@@ -38,6 +67,8 @@ export type SeguimientoPublico = {
   fechaCreacion: string;
   fechaActualizacion: string;
   kycCompletado?: boolean;
+  verificationUrl?: string | null;
+  operatorContact?: OperatorContact;
 };
 
 export type CreateSolicitudResult = {

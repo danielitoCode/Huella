@@ -1,19 +1,36 @@
 # Política de autenticación
 
-## Familiares
+## Familiares (zona pública)
 
 - Sin registro ni login.
-- Acceso solo por código de seguimiento o enlace firmado (caducidad / renovación por email).
-- Rate limit en consulta por código.
+- Acceso solo por **código de seguimiento**.
+- No comparten sesión con el backoffice.
 
-## Operadores (backoffice)
+## Operadores y administradores (backoffice)
 
-- Login obligatorio (email + contraseña en fase 1; MFA en fase 2).
-- Roles: `operador`, `admin`.
-- Sesión separada de cualquier token de tracking público.
-- Auditoría de logins y acciones sensibles.
+### Fuente de verdad de acceso
 
-## Secrets
+- Autenticación: **Appwrite Account** (email + contraseña).
+- Autorización: documento en colección **`operadores`** vinculado por `userId`.
+- Debe existir fila con `activo = "true"` y `rol` ∈ {`operador`, `admin`}.
+- **No** se usa `ADMIN_USER_IDS` en variables de entorno.
+- **No** hay PIN global de cancelación en env; el PIN es **por usuario**.
 
-- `DIDIT_API_KEY`, `DIDIT_WORKFLOW_ID`, `DIDIT_WEBHOOK_SECRET`, credenciales de email y DB solo en entorno serverless.
+### Roles
+
+| Rol | Capacidades |
+|-----|-------------|
+| `operador` | Gestionar solicitudes (estados, KYC, notas). Establecer su propio PIN y password. |
+| `admin` | Todo lo de operador + gestión de equipo (crear cuentas, roles, activar/desactivar, **reset** de PIN/password). |
+
+### Sesión
+
+- Login en `/admin/login`.
+- Si hay sesión activa y se entra desde “Acceso operadores”, ir al dashboard según rol.
+- Sin sesión: no mostrar navegación interna del backoffice; solo enlace al sitio público.
+- Tras login, si `mustChangePassword` o `pinNeedsReset`, se muestra **SecurityGate** y se bloquea el resto del panel hasta completar el cambio.
+
+### Secrets (solo functions / Appwrite)
+
+- `DIDIT_*`, `RESEND_*` / email, `APPWRITE_API_KEY`, `PIN_SALT`.
 - Nunca en frontend ni en git.

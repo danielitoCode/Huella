@@ -1,34 +1,43 @@
 # Políticas de dominio — Huella
 
 Fuente de verdad de reglas de negocio y seguridad.
-Cualquier cambio de estados, KYC o autenticación se documenta aquí **antes** de tocar código.
+Cualquier cambio de estados, verificación, usuarios o autenticación se documenta aquí **antes** de tocar código.
 
 ## Documentos
 
 | Archivo | Alcance |
 |---------|---------|
-| [01-peticiones-usuario.md](./01-peticiones-usuario.md) | Ciclo de vida y estados de una solicitud |
-| [02-autenticacion.md](./02-autenticacion.md) | Tracking sin login + autenticación de operadores |
-| [03-administracion-peticiones.md](./03-administracion-peticiones.md) | Transiciones, aceptación de contacto y cierre |
-| [04-kyc-didit.md](./04-kyc-didit.md) | Verificación de identidad (Didit) al pasar a *Sin verificar* |
-| [05-arquitectura.md](./05-arquitectura.md) | Clean Architecture feature-first, capas y DI |
+| [01-peticiones-usuario.md](./01-peticiones-usuario.md) | Ciclo de vida y tracking público |
+| [02-autenticacion.md](./02-autenticacion.md) | Tracking sin login + sesión de operadores |
+| [03-administracion-peticiones.md](./03-administracion-peticiones.md) | Transiciones de estado, cierre y cancelación |
+| [04-kyc-didit.md](./04-kyc-didit.md) | Verificación Didit **y** verificación manual |
+| [05-arquitectura.md](./05-arquitectura.md) | Clean Architecture feature-first |
+| [06-appwrite-env.md](./06-appwrite-env.md) | Variables y colecciones Appwrite |
+| [07-usuarios-operadores.md](./07-usuarios-operadores.md) | Cuentas, roles, passwords y PINs de cancelación |
 
 ## Estados canónicos de una solicitud
 
-```
+```text
 pendiente → sin_verificar → verificado → cerrado
+                │
+                └── (también) → cerrado | cancelada
+pendiente ─────────────────────────────→ cancelada
 ```
 
 | Estado | Propósito |
 |--------|-----------|
-| `pendiente` | Solicitud recién enviada por el familiar; aún no hay contacto confirmado con el caso |
-| `sin_verificar` | Se confirmó hallazgo / contacto con el familiar (o persona de interés) y se inician negociaciones; se dispara KYC |
-| `verificado` | El familiar completó la verificación de identidad (Didit) |
-| `cerrado` | El proceso terminó (con o sin resolución favorable) |
+| `pendiente` | Solicitud recién enviada; en cola de atención |
+| `sin_verificar` | **Atendida** por operador; identidad del solicitante aún no confirmada |
+| `verificado` | Identidad confirmada (Didit **o** vía manual documentada) |
+| `cerrado` | Proceso llevado a término |
+| `cancelada` | Descartada con PIN personal del operador + motivo |
 
 ## Principios
 
-1. Mínima fricción al enviar (sin login, sin KYC inicial).
-2. KYC solo cuando el caso pasa a `sin_verificar`.
-3. Tracking por código para el familiar.
-4. Dominio y casos de uso independientes de UI e infraestructura.
+1. Mínima fricción al enviar (sin login de familiar, sin KYC inicial).
+2. Producto orientado a **averiguación de familiares**; la gestión de primas es offline/condicional y no se procesa en la app.
+3. KYC Didit **opcional** al atender; disponible también en tracking y por correo.
+4. Verificación **manual** legítima (baja conectividad / vías extraoficiales) con motivo obligatorio.
+5. Tracking por código para el familiar.
+6. Operadores gestionados en colección `operadores` (sin `ADMIN_USER_IDS` ni PIN global en env).
+7. Admin **resetea** credenciales; el titular **establece** las suyas.
