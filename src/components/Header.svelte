@@ -1,17 +1,42 @@
 <script lang="ts">
   import { router, irAPublica, irAAdmin } from '../lib/stores/router';
+  import { sessionUser, sessionLoading, logout } from '../lib/stores/session';
 
   let { zona, rutaPublica, rutaAdmin } = $derived($router);
   let mobileMenuOpen = $state(false);
+  let loggingOut = $state(false);
+
+  /** Sesión de operador confirmada (no en loading). */
+  let isOperator = $derived(!$sessionLoading && $sessionUser !== null);
 
   function toggleMobileMenu() {
     mobileMenuOpen = !mobileMenuOpen;
+  }
+
+  /** Desde público: si hay sesión → dashboard; si no → login. */
+  function accesoOperadores() {
+    mobileMenuOpen = false;
+    if (isOperator) {
+      irAAdmin('dashboard');
+    } else {
+      irAAdmin('login');
+    }
+  }
+
+  async function handleLogout() {
+    loggingOut = true;
+    mobileMenuOpen = false;
+    try {
+      await logout();
+      irAAdmin('login');
+    } finally {
+      loggingOut = false;
+    }
   }
 </script>
 
 <header class="header">
   <div class="header-inner">
-    <!-- Logotipo y Marca -->
     <button type="button" class="brand" onclick={() => irAPublica('home')}>
       <div class="logo-wrapper">
         <img src="/icon_huellas.svg" alt="" class="logo" width="30" height="30" />
@@ -22,22 +47,18 @@
       </div>
       <div class="cuban-badge" title="Plataforma de Apoyo a Familias Cubanas">
         <svg class="cuban-flag-icon" viewBox="0 0 300 200" width="18" height="12">
-          <!-- Franjas Azules y Blancas -->
           <rect width="300" height="40" fill="#002a8f"/>
           <rect y="40" width="300" height="40" fill="#ffffff"/>
           <rect y="80" width="300" height="40" fill="#002a8f"/>
           <rect y="120" width="300" height="40" fill="#ffffff"/>
           <rect y="160" width="300" height="40" fill="#002a8f"/>
-          <!-- Triángulo Rojo -->
           <polygon points="0,0 173.2,100 0,200" fill="#cf2e2e"/>
-          <!-- Estrella Blanca -->
           <polygon points="57.7,65 65.5,89 90.7,89 70.3,103.8 78.1,127.8 57.7,113 37.3,127.8 45.1,103.8 24.7,89 49.9,89" fill="#ffffff"/>
         </svg>
         <span>Cuba</span>
       </div>
     </button>
 
-    <!-- Navegación Desktop -->
     <nav class="desktop-nav" aria-label="Navegación principal">
       {#if zona === 'public'}
         <button
@@ -56,24 +77,14 @@
         >
           Seguimiento
         </button>
-        <button
-          type="button"
-          class="btn btn-gold nav-btn"
-          onclick={() => irAPublica('solicitud')}
-        >
+        <button type="button" class="btn btn-gold nav-btn" onclick={() => irAPublica('solicitud')}>
           <span>Comenzar una búsqueda</span>
-          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
-          </svg>
         </button>
-        <button
-          type="button"
-          class="nav-link subtle"
-          onclick={() => irAAdmin('login')}
-        >
-          Acceso Operadores
+        <button type="button" class="nav-link subtle" onclick={accesoOperadores}>
+          {isOperator ? 'Panel operadores' : 'Acceso operadores'}
         </button>
-      {:else}
+      {:else if isOperator}
+        <!-- Solo con sesión: navegación interna del backoffice -->
         <button
           type="button"
           class="nav-link"
@@ -90,17 +101,20 @@
         >
           Solicitudes
         </button>
-        <button
-          type="button"
-          class="nav-link subtle"
-          onclick={() => irAPublica('home')}
-        >
-          Ver sitio público
+        <button type="button" class="nav-link subtle" onclick={() => irAPublica('home')}>
+          Sitio público
+        </button>
+        <button type="button" class="nav-link subtle" disabled={loggingOut} onclick={handleLogout}>
+          {loggingOut ? 'Saliendo…' : 'Cerrar sesión'}
+        </button>
+      {:else}
+        <!-- Admin sin sesión (login): solo volver al público -->
+        <button type="button" class="nav-link subtle" onclick={() => irAPublica('home')}>
+          Sitio público
         </button>
       {/if}
     </nav>
 
-    <!-- Botón Menú Móvil -->
     <button
       type="button"
       class="mobile-toggle"
@@ -117,7 +131,6 @@
     </button>
   </div>
 
-  <!-- Drawer Menú Móvil -->
   {#if mobileMenuOpen}
     <div class="mobile-drawer animate-fade-in">
       {#if zona === 'public'}
@@ -125,21 +138,28 @@
           Inicio
         </button>
         <button type="button" class="mobile-link" onclick={() => { irAPublica('seguimiento'); mobileMenuOpen = false; }}>
-          Seguimiento de Expediente
+          Seguimiento de expediente
         </button>
         <button type="button" class="btn btn-gold mobile-btn" onclick={() => { irAPublica('solicitud'); mobileMenuOpen = false; }}>
           Comenzar una búsqueda
         </button>
-        <button type="button" class="mobile-link subtle" onclick={() => { irAAdmin('login'); mobileMenuOpen = false; }}>
-          Acceso Operadores
+        <button type="button" class="mobile-link subtle" onclick={accesoOperadores}>
+          {isOperator ? 'Panel operadores' : 'Acceso operadores'}
         </button>
-      {:else}
+      {:else if isOperator}
         <button type="button" class="mobile-link" onclick={() => { irAAdmin('dashboard'); mobileMenuOpen = false; }}>
-          Dashboard Operativo
+          Dashboard
         </button>
         <button type="button" class="mobile-link" onclick={() => { irAAdmin('solicitudes'); mobileMenuOpen = false; }}>
-          Listado de Solicitudes
+          Solicitudes
         </button>
+        <button type="button" class="mobile-link subtle" onclick={() => { irAPublica('home'); mobileMenuOpen = false; }}>
+          Sitio público
+        </button>
+        <button type="button" class="mobile-link subtle" disabled={loggingOut} onclick={handleLogout}>
+          {loggingOut ? 'Saliendo…' : 'Cerrar sesión'}
+        </button>
+      {:else}
         <button type="button" class="mobile-link subtle" onclick={() => { irAPublica('home'); mobileMenuOpen = false; }}>
           Sitio público
         </button>
@@ -157,7 +177,6 @@
     position: sticky;
     top: 0;
     z-index: 50;
-    transition: background 0.3s ease;
   }
 
   .header-inner {
@@ -200,7 +219,7 @@
   }
 
   .name {
-    font-family: var(--font-serif);
+    font-family: var(--font-serif, var(--font-display));
     font-size: 1.35rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -222,7 +241,7 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.2rem 0.55rem;
-    border-radius: var(--radius-pill);
+    border-radius: 999px;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     font-size: 0.65rem;
@@ -234,7 +253,6 @@
 
   .cuban-flag-icon {
     border-radius: 2px;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
   }
 
   .desktop-nav {
@@ -253,10 +271,9 @@
     font-family: var(--font-sans);
     font-size: 0.88rem;
     font-weight: 500;
-    transition: all 0.2s ease;
   }
 
-  .nav-link:hover {
+  .nav-link:hover:not(:disabled) {
     color: var(--gold);
     background: rgba(255, 255, 255, 0.06);
   }
@@ -275,12 +292,8 @@
   }
 
   .nav-link.subtle {
-    opacity: 0.7;
+    opacity: 0.75;
     font-size: 0.8rem;
-  }
-
-  .nav-link.subtle:hover {
-    opacity: 1;
   }
 
   .mobile-toggle {
