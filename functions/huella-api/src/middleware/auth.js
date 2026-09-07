@@ -8,9 +8,15 @@ function parseActivo(v) {
   if (v === true || v === 1) return true;
   if (v === false || v === 0) return false;
   const s = String(v ?? '').trim().toLowerCase();
-  // text vacío o null: tratar como activo si hay documento (compat schema)
   if (s === '') return true;
   return s === 'true' || s === '1' || s === 'si' || s === 'sí' || s === 'activo';
+}
+
+function parseMustChangePassword(v) {
+  if (v === true || v === 1) return true;
+  if (v === false || v === 0 || v == null) return false;
+  const s = String(v).trim().toLowerCase();
+  return s === 'true' || s === '1';
 }
 
 export function resolveIdentity(req) {
@@ -33,10 +39,6 @@ export function resolveIdentity(req) {
   };
 }
 
-/**
- * 1) Colección operadores
- * 2) Fallback: labels Appwrite Auth (admin / operador)
- */
 export async function enrichIdentity(req, identity) {
   if (!identity.userId) return identity;
 
@@ -52,19 +54,15 @@ export async function enrichIdentity(req, identity) {
       identity.activo = activo;
       identity.cancelPinHash = doc.cancelPinHash || null;
       identity.pinNeedsReset = isDefaultPinHash(doc.cancelPinHash);
-      identity.mustChangePassword =
-        doc.mustChangePassword === true ||
-        String(doc.mustChangePassword || '').toLowerCase() === 'true' ||
-        doc.mustChangePassword === '1';
+      identity.mustChangePassword = parseMustChangePassword(doc.mustChangePassword);
       identity.isAdmin = activo && rol === 'admin';
       identity.isOperador = activo && (rol === 'admin' || rol === 'operador');
       return identity;
     }
-  } catch (e) {
-    // colección ausente o sin permiso: seguir con labels
+  } catch {
+    // colección ausente
   }
 
-  // Fallback labels del usuario Auth
   try {
     const { users } = createAdminClient(req);
     const user = await users.get(identity.userId);

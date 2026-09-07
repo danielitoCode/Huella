@@ -18,6 +18,14 @@ function parseActivo(v) {
   return s === 'true' || s === '1' || s === 'si' || s === 'sí' || s === 'activo';
 }
 
+/** Lee mustChangePassword (boolean o legacy text). */
+function parseMustChangePassword(v) {
+  if (v === true || v === 1) return true;
+  if (v === false || v === 0 || v == null) return false;
+  const s = String(v).trim().toLowerCase();
+  return s === 'true' || s === '1';
+}
+
 function publicOperador(doc, { forAdmin = false } = {}) {
   const pinReset = isDefaultPinHash(doc.cancelPinHash);
   const base = {
@@ -29,10 +37,7 @@ function publicOperador(doc, { forAdmin = false } = {}) {
     activo: parseActivo(doc.activo),
     pinNeedsReset: pinReset,
     pinEstado: pinReset ? 'reseteado_0000' : 'configurado',
-    mustChangePassword:
-      doc.mustChangePassword === true ||
-      String(doc.mustChangePassword || '').toLowerCase() === 'true' ||
-      doc.mustChangePassword === '1',
+    mustChangePassword: parseMustChangePassword(doc.mustChangePassword),
     ultimoLoginAt: doc.ultimoLoginAt || null,
     createdAt: doc.$createdAt,
     updatedAt: doc.$updatedAt,
@@ -54,15 +59,47 @@ async function syncLabels(users, userId, rol) {
   }
 }
 
+/**
+ * Crea documento operador.
+ * mustChangePassword se escribe como boolean (schema actual).
+ * Si el atributo no existiera, reintenta sin él.
+ */
+async function createOperadorDoc(repo, data, { mustChangePassword = false } = {}) {
+  const base = {
+    userId: data.userId,
+    email: data.email,
+    nombre: data.nombre,
+    rol: data.rol,
+    activo: data.activo != null ? data.activo : 'true',
+    cancelPinHash: data.cancelPinHash != null ? data.cancelPinHash : null,
+    mustChangePassword: Boolean(mustChangePassword),
+  };
+
+  try {
+    return await repo.create(base);
+  } catch (e) {
+    const msg = String(e?.message || e);
+    if (msg.includes('mustChangePassword') || msg.includes('Unknown attribute')) {
+      const { mustChangePassword: _drop, ...without } = base;
+      return repo.create(without);
+    }
+    throw e;
+  }
+}
+
+async function setMustChangePassword(repo, id, value) {
+  try {
+    return await repo.update(id, { mustChangePassword: Boolean(value) });
+  } catch {
+    return null;
+  }
+}
+
 export function createOperadoresService(req) {
   const repo = createOperadoresRepo(req);
   const { users, ID } = createAdminClient(req);
 
   return {
-    /**
-     * Perfil del usuario logueado.
-     * Si no hay documento pero tiene label admin/operador, lo provisiona.
-     */
     async me({ identity }) {
       if (!identity.userId) throw new AppError('UNAUTHORIZED', 'Sin sesión', 401);
 
@@ -78,7 +115,6 @@ export function createOperadoresService(req) {
       }
 
       if (!doc) {
-        // Auto-provision si Auth tiene label admin/operador
         try {
           const user = await users.get(identity.userId);
           const labels = (user.labels || []).map((l) => String(l).toLowerCase());
@@ -91,15 +127,18 @@ export function createOperadoresService(req) {
               403,
             );
           }
-          doc = await repo.create({
-            userId: identity.userId,
-            email: user.email,
-            nombre: user.name || user.email,
-            rol: isAdminLabel ? 'admin' : 'operador',
-            activo: 'true',
-            cancelPinHash: hashPin(DEFAULT_CANCEL_PIN),
-            mustChangePassword: 'false',
-          });
+          doc = await createOperadorDoc(
+            repo,
+            {
+              userId: identity.userId,
+              email: user.email,
+              nombre: user.name || user.email,
+              rol: isAdminLabel ? 'admin' : 'operador',
+              activo: 'true',
+              cancelPinHash: hashPin(DEFAULT_CANCEL_PIN),
+            },
+            { mustChangePassword: false },
+          );
         } catch (e) {
           if (e instanceof AppError) throw e;
           throw new AppError(
@@ -151,21 +190,18 @@ export function createOperadoresService(req) {
 
       await syncLabels(users, user.$id, input.rol);
 
-      const data = {
-        userId: user.$id,
-        email: input.email,
-        nombre: input.nombre,
-        rol: input.rol,
-        activo: 'true',
-        cancelPinHash: hashPin(DEFAULT_CANCEL_PIN),
-      };
-
-      let doc;
-      try {
-        doc = await repo.create({ ...data, mustChangePassword: 'true' });
-      } catch {
-        doc = await repo.create(data);
-      }
+      const doc = await createOperadorDoc(
+        repo,
+        {
+          userId: user.$id,
+          email: input.email,
+          nombre: input.nombre,
+          rol: input.rol,
+          activo: 'true',
+          cancelPinHash: hashPin(DEFAULT_CANCEL_PIN),
+        },
+        { mustChangePassword: true },
+      );
 
       return {
         ...publicOperador(doc, { forAdmin: true }),
@@ -288,12 +324,7 @@ export function createOperadoresService(req) {
         throw new AppError('APPWRITE', e?.message || 'No se pudo resetear la contraseña', 502);
       }
 
-      let updated = doc;
-      try {
-        updated = await repo.update(operadorId, { mustChangePassword: 'true' });
-      } catch {
-        // atributo opcional
-      }
+      const updated = (await setMustChangePassword(repo, operadorId, true)) || doc;
 
       return {
         ...publicOperador(updated, { forAdmin: true }),
@@ -322,10 +353,7 @@ export function createOperadoresService(req) {
 
       if (!doc) throw new AppError('NOT_FOUND', 'Operador no encontrado', 404);
 
-      const must =
-        doc.mustChangePassword === true ||
-        String(doc.mustChangePassword || '').toLowerCase() === 'true' ||
-        doc.mustChangePassword === '1';
+      const must = parseMustChangePassword(doc.mustChangePassword);
 
       if (must) {
         const actual = String(passwordActual || '').trim();
@@ -344,11 +372,7 @@ export function createOperadoresService(req) {
         throw new AppError('APPWRITE', e?.message || 'No se pudo actualizar la contraseña', 502);
       }
 
-      try {
-        await repo.update(doc.$id, { mustChangePassword: 'false' });
-      } catch {
-        // ignore
-      }
+      await setMustChangePassword(repo, doc.$id, false);
 
       return { passwordActualizada: true, mensaje: 'Contraseña actualizada correctamente.' };
     },
