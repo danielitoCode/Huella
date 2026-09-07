@@ -4,6 +4,8 @@
   import { router, irAAdmin } from '../../lib/stores/router';
   import { executeApi, ApiError } from '../../lib/appwrite';
   import { ESTADO_LABEL, type EstadoSolicitud } from '../../lib/types';
+  import Skeleton from '../../components/ui/Skeleton.svelte';
+  import LoadingHint from '../../components/ui/LoadingHint.svelte';
 
   type SolicitudDetalle = {
     id: string;
@@ -174,11 +176,22 @@
 
 <div class="detalle-wrap">
   <button type="button" class="btn btn-secondary back-btn" onclick={() => irAAdmin('solicitudes')}>
-    ← Volver a Solicitudes
+    ← Volver a solicitudes
   </button>
 
   {#if cargando}
-    <div class="card loading-card">Cargando expediente…</div>
+    <div class="load-panel card">
+      <LoadingHint message="Recuperando el expediente desde Appwrite…" />
+      <div class="skel-header">
+        <Skeleton width="12rem" height="1.6rem" />
+        <Skeleton width="6rem" height="1.5rem" radius="999px" />
+      </div>
+      <div class="skel-grid">
+        <Skeleton width="100%" height="6rem" radius="10px" />
+        <Skeleton width="100%" height="6rem" radius="10px" />
+      </div>
+      <Skeleton width="100%" height="5rem" radius="10px" />
+    </div>
   {:else if errorMsg}
     <div class="error-banner" role="alert">{errorMsg}</div>
   {:else if solicitud}
@@ -235,12 +248,15 @@
       <div class="card action-card">
         <h3>Gestión de estado</h3>
         <p class="hint-text">
-          Flujo: pendiente → atendido (sin verificar) → verificado → cerrado. Cancelar exige PIN de
-          auditoría.
+          Flujo: pendiente → atendido (sin verificar) → verificado → cerrado. Cancelar exige PIN.
         </p>
 
         {#if actionError && modal === 'none'}
           <div class="error-banner" role="alert">{actionError}</div>
+        {/if}
+
+        {#if actionLoading}
+          <LoadingHint message="Aplicando cambio de estado en el servidor…" compact />
         {/if}
 
         <label for="notas-op">Notas (se anexan en la siguiente acción)</label>
@@ -248,69 +264,34 @@
 
         <div class="actions-row">
           {#if solicitud.estado === 'pendiente'}
-            <button
-              type="button"
-              class="btn btn-primary"
-              disabled={actionLoading}
-              onclick={() => marcarAtendido(false)}
-            >
+            <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={() => marcarAtendido(false)}>
               Marcar atendido
             </button>
-            <button
-              type="button"
-              class="btn btn-secondary"
-              disabled={actionLoading}
-              onclick={() => marcarAtendido(true)}
-            >
+            <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => marcarAtendido(true)}>
               Atender + iniciar KYC Didit
             </button>
           {/if}
 
           {#if solicitud.estado === 'sin_verificar'}
-            <button
-              type="button"
-              class="btn btn-secondary"
-              disabled={actionLoading}
-              onclick={() => iniciarKyc()}
-            >
+            <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => iniciarKyc()}>
               Iniciar / reenviar KYC Didit
             </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              disabled={actionLoading}
-              onclick={() => openModal('verificar')}
-            >
+            <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={() => openModal('verificar')}>
               Marcar verificado (manual)
             </button>
-            <button
-              type="button"
-              class="btn btn-secondary"
-              disabled={actionLoading}
-              onclick={() => openModal('cerrar')}
-            >
+            <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => openModal('cerrar')}>
               Cerrar expediente
             </button>
           {/if}
 
           {#if solicitud.estado === 'verificado'}
-            <button
-              type="button"
-              class="btn btn-primary"
-              disabled={actionLoading}
-              onclick={() => openModal('cerrar')}
-            >
+            <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={() => openModal('cerrar')}>
               Cerrar expediente
             </button>
           {/if}
 
           {#if solicitud.estado === 'pendiente' || solicitud.estado === 'sin_verificar' || solicitud.estado === 'verificado'}
-            <button
-              type="button"
-              class="btn btn-danger"
-              disabled={actionLoading}
-              onclick={() => openModal('cancelar')}
-            >
+            <button type="button" class="btn btn-danger" disabled={actionLoading} onclick={() => openModal('cancelar')}>
               Cancelar solicitud
             </button>
           {/if}
@@ -332,7 +313,7 @@
         <span class={badgeFor(solicitud.estado)}>
           {ESTADO_LABEL[solicitud.estado]}
         </span>
-        <p class="hint-text">Este expediente está en estado terminal; no admite más cambios de estado.</p>
+        <p class="hint-text">Estado terminal: no admite más cambios.</p>
       </div>
     {/if}
   {/if}
@@ -357,41 +338,27 @@
     >
       {#if modal === 'verificar'}
         <h2>Verificación manual</h2>
-        <p>
-          Usa esta opción cuando Didit no sea viable (p. ej. baja conectividad) y la identidad se haya
-          confirmado por otra vía documentada.
-        </p>
+        <p>Motivo obligatorio cuando Didit no es viable.</p>
         <label>
-          Motivo obligatorio
+          Motivo
           <textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea>
         </label>
       {:else if modal === 'cerrar'}
         <h2>Cerrar expediente</h2>
-        <p>El proceso negociado o la investigación se dan por terminados.</p>
         <label>
-          Motivo interno obligatorio
+          Motivo interno
           <textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea>
         </label>
       {:else if modal === 'cancelar'}
         <h2>Cancelar solicitud</h2>
-        <p>
-          Requiere el PIN de cancelación del backoffice (4 dígitos). No elimina el expediente; queda
-          auditado.
-        </p>
+        <p>Requiere PIN de 4 dígitos (auditoría).</p>
         <label>
-          Motivo obligatorio
+          Motivo
           <textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea>
         </label>
         <label>
-          PIN de cancelación
-          <input
-            type="password"
-            inputmode="numeric"
-            maxlength="4"
-            bind:value={cancelPin}
-            disabled={actionLoading}
-            autocomplete="one-time-code"
-          />
+          PIN
+          <input type="password" inputmode="numeric" maxlength="4" bind:value={cancelPin} disabled={actionLoading} />
         </label>
       {/if}
 
@@ -405,7 +372,7 @@
         </button>
         {#if modal === 'verificar'}
           <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={confirmarVerificado}>
-            {actionLoading ? 'Guardando…' : 'Confirmar verificado'}
+            {actionLoading ? 'Guardando…' : 'Confirmar'}
           </button>
         {:else if modal === 'cerrar'}
           <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={confirmarCierre}>
@@ -431,6 +398,28 @@
   }
   .back-btn {
     margin-bottom: 1.5rem;
+  }
+  .load-panel {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .skel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+  .skel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 640px) {
+    .skel-grid {
+      grid-template-columns: 1fr;
+    }
   }
   .detalle-header {
     display: flex;
@@ -508,11 +497,6 @@
     color: var(--color-alert, #b84c4c);
     font-size: 0.88rem;
     margin: 0.75rem 0;
-  }
-  .loading-card {
-    text-align: center;
-    padding: 3rem;
-    color: var(--text-muted);
   }
   .modal-backdrop {
     position: fixed;

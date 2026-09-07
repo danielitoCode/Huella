@@ -1,5 +1,6 @@
 <script lang="ts">
   import Layout from './components/Layout.svelte';
+  import LoadingHint from './components/ui/LoadingHint.svelte';
   import { router, irAAdmin } from './lib/stores/router';
   import { sessionUser, sessionLoading } from './lib/stores/session';
 
@@ -12,11 +13,6 @@
   import Solicitudes from './pages/admin/Solicitudes.svelte';
   import SolicitudDetalle from './pages/admin/SolicitudDetalle.svelte';
 
-  /**
-   * Guards de zona admin:
-   * - Sin sesión en rutas internas → login
-   * - Con sesión en login → dashboard (un solo login / sesión persistente)
-   */
   $effect(() => {
     if ($sessionLoading || $router.zona !== 'admin') return;
 
@@ -48,7 +44,9 @@
       <Seguimiento />
     {/if}
   {:else if $sessionLoading && $router.rutaAdmin !== 'login'}
-    <div class="session-check" aria-live="polite" aria-label="Verificando sesión…"></div>
+    <div class="session-check">
+      <LoadingHint message="Verificando sesión de operador…" />
+    </div>
   {:else if $router.rutaAdmin === 'login' && !$sessionUser}
     <Login />
   {:else if adminReady}
@@ -65,5 +63,9 @@
 <style>
   .session-check {
     min-height: 40vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
   }
 </style>
