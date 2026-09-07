@@ -1,54 +1,38 @@
-# Appwrite — variables de entorno y sincronización local
+# Appwrite — entorno y colecciones (resumen de políticas)
 
-## Objetivo
+## Frontend (`VITE_*`)
 
-Conectar el frontend (Vite) y el backend lógico (functions / node-appwrite) al proyecto Appwrite sin secretos en el código.
+- `VITE_APPWRITE_ENDPOINT`
+- `VITE_APPWRITE_PROJECT_ID`
+- `VITE_APPWRITE_FUNCTION_API_ID` (huella-api)
 
-## Archivos
+## Function `huella-api`
 
-| Archivo | Uso |
-|---------|-----|
-| `.env.example` | Plantilla versionada (sin secretos) |
-| `.env` | Copia local (gitignored) |
+| Variable | Uso |
+|----------|-----|
+| `APPWRITE_ENDPOINT` / `PROJECT_ID` / `API_KEY` | Admin SDK (DB + Users) |
+| `APPWRITE_DATABASE_ID` | p. ej. `huella` |
+| `APPWRITE_COLLECTION_SOLICITUDES` | solicitudes |
+| `APPWRITE_COLLECTION_KYC` | kyc_verifications |
+| `APPWRITE_COLLECTION_OPERADORES` | operadores |
+| `PUBLIC_APP_URL` | Enlaces en emails |
+| `PIN_SALT` | Hash de PIN de cancelación |
+| `OPERATOR_CONTACT_*` | Nombre, email, teléfono, nota (tracking + emails) |
+| `DIDIT_*` | KYC |
+| `RESEND_API_KEY` / `EMAIL_FROM` | Correo |
 
-```bash
-cp .env.example .env
-# editar .env con valores de la Console
-```
+### Explicitamente **no** usar
 
-## Dónde obtener cada valor (Appwrite Console)
+- `ADMIN_USER_IDS` — roles solo en colección `operadores`.
+- `BACKOFFICE_CANCEL_PIN` — PIN solo por operador.
 
-| Variable | Dónde |
-|----------|--------|
-| `VITE_APPWRITE_ENDPOINT` / `APPWRITE_ENDPOINT` | Project **Settings** → API endpoint (`https://<REGION>.cloud.appwrite.io/v1`) |
-| `VITE_APPWRITE_PROJECT_ID` / `APPWRITE_PROJECT_ID` | Project **Settings** → Project ID |
-| `APPWRITE_API_KEY` | **Overview → Integrations → API keys** (scopes: databases, users, etc. según necesidad) |
-| `VITE_APPWRITE_DEV_KEY` (opcional) | **Overview → Integrations → Dev keys** (solo local) |
-| IDs de database/collections | **Databases** → copiar IDs |
+## Atributos recomendados extra
 
-## Plataforma Web obligatoria
+**solicitudes:** `diditVerificationUrl` (varchar, opcional).
 
-En el proyecto Appwrite: **Add platform → Web** con hostname `localhost` (y el dominio de producción cuando exista). Sin esto, el navegador recibe errores CORS.
+**operadores:** `mustChangePassword` (text `true`/`false`).
 
-## Separación cliente / servidor
+## Functions
 
-| Prefijo | Visible en el navegador | Uso |
-|---------|-------------------------|-----|
-| `VITE_*` | Sí (`import.meta.env`) | Endpoint, project ID, IDs de colección si hay permisos de lectura públicos/documentales |
-| Sin `VITE_` | No | `APPWRITE_API_KEY`, Didit, email, JWT |
-
-La **API Key de servidor no debe** usarse en el frontend. El front usa el Web SDK con sesión de usuario o permisos de colección; operaciones privilegiadas van en functions Appwrite o backend con `APPWRITE_API_KEY`.
-
-## Functions en Appwrite Cloud
-
-En runtime Appwrite inyecta:
-
-- `APPWRITE_FUNCTION_API_ENDPOINT`
-- `APPWRITE_FUNCTION_PROJECT_ID`
-- header `x-appwrite-key` (dynamic key)
-
-Para desarrollo local de functions, reutiliza `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID` y `APPWRITE_API_KEY` del `.env`.
-
-## Relación con el dominio Huella
-
-Los adaptadores de infrastructure implementarán `SolicitudRepository`, `KycProvider` y `EmailNotifier` contra Appwrite (y Didit/email). Las variables de database/collection alimentan esos adaptadores.
+- `huella-api`: API modular (`solicitudes.*`, `operadores.*`, `didit.*`, `email.*`).
+- `huella-webhooks`: Didit (y futuros proveedores).

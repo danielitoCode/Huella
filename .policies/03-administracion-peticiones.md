@@ -2,72 +2,75 @@
 
 ## Objetivo
 
-Reglas para que el operador mueva una solicitud entre los estados canónicos, con soporte a verificación manual (baja conectividad) y cancelación auditada.
+Reglas para que operador/admin mueva una solicitud entre estados canónicos, con verificación Didit o manual y cancelación auditada por PIN personal.
 
 ## Estados canónicos
 
 | Estado | Significado |
 |--------|-------------|
-| `pendiente` | Solicitud recién creada; aún no atendida por un operador. |
-| `sin_verificar` | **Atendida y sin verificar.** El operador recogió/atendió el caso. La identidad del solicitante aún no está confirmada (Didit o vía extraoficial). |
-| `verificado` | Identidad del solicitante confirmada (Didit **o** verificación manual documentada). |
-| `cerrado` | Proceso negociado / investigación llevada a término (con o sin resultado). |
-| `cancelada` | Caso descartado; requiere confirmación fuerte (PIN o contraseña) + motivo. |
+| `pendiente` | Recién creada; no atendida. |
+| `sin_verificar` | **Atendida · sin verificar.** Operador ya gestiona el caso; identidad del solicitante pendiente. |
+| `verificado` | Identidad confirmada (Didit **o** manual con motivo). |
+| `cerrado` | Proceso terminado. |
+| `cancelada` | Descartada; no es borrado físico. |
 
 ## Transiciones permitidas
 
 ```text
-pendiente ──► sin_verificar   (marcar atendido; KYC opcional después)
-sin_verificar ──► verificado  (Didit webhook O marcar verificado manual)
+pendiente     ──► sin_verificar     (marcar atendido; KYC Didit opcional en el mismo acto)
+sin_verificar ──► verificado        (webhook Didit Approved O marcar verificado manual)
 sin_verificar ──► cerrado
-verificado ──► cerrado
-*
-  └──► cancelada              (PIN/contraseña + motivo; no es borrado)
+verificado    ──► cerrado
+pendiente | sin_verificar | verificado ──► cancelada   (PIN personal + motivo)
 ```
 
-No se permite reabrir `cerrado` ni `cancelada` sin proceso de excepción futura.
+No se reabre `cerrado` ni `cancelada` sin proceso de excepción futuro.
 
 ## `pendiente` → `sin_verificar` (atender)
 
-Cuando el operador **atiende** el caso (recoge datos, contacta, inicia gestión):
-
 1. Estado → `sin_verificar`.
-2. Mensaje público actualizable.
-3. Auditoría: quién, cuándo, nota.
-4. **Didit KYC no es obligatorio** en este paso (conectividad en Cuba, vías extraoficiales).
-
-Opcionalmente, desde `sin_verificar`, el operador puede **iniciar sesión Didit** (email al familiar).
+2. Notas internas opcionales; mensaje público actualizable.
+3. **Didit no es obligatorio** en este paso (conectividad, vías asistidas).
+4. Opciones de UI:
+   - *Marcar atendido* (sin Didit).
+   - *Atender + iniciar KYC Didit* (crea sesión, guarda URL, envía email).
+5. Desde `sin_verificar` se puede *Iniciar / regenerar KYC* más tarde.
 
 ## `sin_verificar` → `verificado`
 
-Dos vías válidas:
-
-1. **Didit** (webhook Approved) — preferente cuando sea viable.
-2. **Manual** — el operador marca verificado con **motivo obligatorio** (p. ej. verificación por vía alternativa documentada). Uso legítimo en baja conectividad.
+Ver [04-kyc-didit.md](./04-kyc-didit.md).
 
 ## → `cerrado`
 
 - Desde `sin_verificar` o `verificado`.
 - **Motivo interno obligatorio.**
-- Mensaje público opcional para tracking.
+- Mensaje público opcional.
 
 ## → `cancelada`
 
-- Desde cualquier estado no terminal (`pendiente`, `sin_verificar`, `verificado`).
+- Desde `pendiente`, `sin_verificar` o `verificado`.
 - **Motivo interno obligatorio.**
-- **Confirmación fuerte obligatoria:** PIN de cancelación del backoffice (4 dígitos) o, si se configura, revalidación de contraseña de la cuenta.
-- No elimina el documento; queda auditado.
-- El PIN de operadores/equipos lo define el **rol administrador** (env `BACKOFFICE_CANCEL_PIN` o gestión futura en colección `operadores`).
+- **PIN de cancelación personal** del operador que ejecuta la acción (4 dígitos).
+  - Si el PIN del operador está en estado reseteado (`0000`), la API responde `PIN_RESET_REQUIRED` y debe establecer un PIN propio antes de cancelar.
+  - No existe respaldo de PIN global en entorno.
+- El documento permanece; auditoría anota motivo + userId (sin guardar el PIN en claro).
+
+## Canales de verificación hacia el familiar (estado `sin_verificar`)
+
+1. **Tracking público**: botón Didit + contacto de verificación asistida.
+2. **Email automático** (plantilla HTML memorial) al iniciar/reenviar KYC.
+3. **Plantilla HTML copiable** en detalle de backoffice (pegar en cliente de correo del operador).
 
 ## Visibilidad
 
 | Dato | Familiar | Operador |
 |------|----------|----------|
-| Estado | Sí (etiquetas humanas) | Sí |
-| Mensaje público | Sí | Sí |
+| Estado / mensaje público | Sí | Sí |
 | Notas / motivos internos | No | Sí |
-| Detalle KYC / PIN | No | Sí |
+| URL Didit (si aplica) | Sí (tracking) | Sí |
+| Contacto operador asistido | Sí (tracking) | Sí |
+| PIN / passwords | No | Solo propio / admin según [07](./07-usuarios-operadores.md) |
 
-## Auditoría
+## Auditoría recomendada
 
-Todo cambio de estado: `actor`, `timestamp`, `estadoAnterior`, `estadoNuevo`, `motivo` cuando aplique. Cancelaciones siempre con motivo + evidencia de confirmación (PIN verificado, sin almacenar el PIN en claro en auditoría).
+Todo cambio de estado: actor, timestamp, estado anterior/nuevo, motivo cuando aplique.

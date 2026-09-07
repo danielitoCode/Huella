@@ -2,46 +2,58 @@
 
 ## Objetivo
 
-Definir el ciclo de vida de una solicitud y qué ve el familiar en cada estado.
+Definir el ciclo de vida de una solicitud y qué ve el familiar en cada estado, sin cuenta de usuario.
 
-## Estados
+## Estados (vista familiar)
 
-| Estado | Quién lo provoca | Qué significa | Visible al familiar |
-|--------|------------------|---------------|---------------------|
-| `pendiente` | Sistema al crear | Solicitud recibida; cola de revisión | Sí — “Recibida, en espera de revisión” |
-| `sin_verificar` | Operador al confirmar hallazgo/contacto e iniciar negociaciones | Se envió enlace de verificación KYC | Sí — “Te enviamos un enlace para verificar tu identidad” |
-| `verificado` | Sistema (webhook Didit) o operador si aplica | Identidad confirmada; negociaciones pueden avanzar con certeza | Sí — “Identidad verificada” |
-| `cerrado` | Operador | Caso finalizado | Sí — “Proceso cerrado” + mensaje público opcional |
+| Estado | Quién lo provoca | Significado para el familiar |
+|--------|------------------|------------------------------|
+| `pendiente` | Sistema al crear | Solicitud recibida; en espera de revisión |
+| `sin_verificar` | Operador al **atender** | Caso en atención; puede completar verificación Didit o contactar verificación asistida |
+| `verificado` | Didit (webhook) **o** operador (manual) | Identidad confirmada; continúa la investigación |
+| `cerrado` | Operador | Expediente finalizado |
+| `cancelada` | Operador (con PIN) | Solicitud cancelada |
 
-## Transiciones permitidas
+## Transiciones (resumen)
 
-```
+```text
 pendiente ──► sin_verificar ──► verificado ──► cerrado
-     │              │                │
-     └──────────────┴────────────────┴──► cerrado   (cierre anticipado justificado)
+                 │                  │
+                 ├──────────────────┴──► cerrado
+                 │
+                 └──► cancelada ◄── pendiente / verificado
 ```
-
-- No se salta de `pendiente` a `verificado` sin pasar por el flujo de KYC (salvo excepción documentada por admin).
-- De `pendiente` se puede ir a `cerrado` si el caso no procede (fuera de alcance, duplicado, etc.) con motivo interno.
 
 ## Creación (web pública)
 
-1. Formulario: nombre familiar, email, teléfono opcional, nombre de la persona buscada/fallecida, relación, descripción.
+1. Formulario: nombre familiar, email, teléfono opcional, nombre de la persona buscada, relación, descripción/contexto.
 2. Validación de campos y email.
-3. Generación de **código de seguimiento** (`HUE-YYYY-XXXXXX`).
-4. Persistencia en estado `pendiente`.
-5. Correo de confirmación con código + enlace de tracking.
-6. **No** se solicita KYC en este paso.
+3. Código de seguimiento `HUE-YYYY-XXXXXX`.
+4. Persistencia en `pendiente`.
+5. Correo HTML de confirmación con código + enlace de tracking.
+6. **No** se solicita KYC ni login en este paso.
 
 ## Consulta (tracking sin login)
 
-- Entrada: código o enlace firmado.
+- Entrada: código de seguimiento.
 - Salida pública: estado, fechas, mensaje público.
-- No se exponen notas internas ni datos de otros casos.
+- En `sin_verificar`, además:
+  - Enlace Didit (`verificationUrl`) si existe sesión generada.
+  - Contacto de **verificación asistida** (operador / equipo) desde variables de entorno públicas de contacto.
+- No se exponen notas internas, PIN, ni datos de otros casos.
 
 ## Qué ve el familiar según estado
 
-- **pendiente**: confirmación de recepción.
-- **sin_verificar**: aviso de que debe completar verificación (y que el enlace fue enviado por email).
-- **verificado**: confirmación de identidad verificada; el equipo continúa.
-- **cerrado**: cierre del proceso y, si existe, mensaje público del operador.
+| Estado | UI pública |
+|--------|------------|
+| `pendiente` | Confirmación de recepción |
+| `sin_verificar` | CTA Didit (si hay URL) + bloque de contacto asistido |
+| `verificado` | Identidad verificada; el equipo continúa |
+| `cerrado` | Cierre + mensaje público opcional |
+| `cancelada` | Aviso de cancelación |
+
+## Correos al familiar
+
+- Alta: plantilla tracking (código + enlace).
+- KYC: plantilla memorial con botón Didit + bloque de verificación asistida.
+- El operador puede **reenviar** el email o **copiar HTML** de la misma plantilla desde el backoffice.
