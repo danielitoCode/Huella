@@ -13,19 +13,23 @@
   import SolicitudDetalle from './pages/admin/SolicitudDetalle.svelte';
 
   /**
-   * Guard: si la zona es admin y la ruta no es 'login',
-   * pero no hay sesión activa → redirige a login.
-   * Se evalúa solo cuando la carga de sesión ya terminó.
+   * Guards de zona admin:
+   * - Sin sesión en rutas internas → login
+   * - Con sesión en login → dashboard (un solo login / sesión persistente)
    */
   $effect(() => {
-    if (!$sessionLoading && $router.zona === 'admin' && $router.rutaAdmin !== 'login') {
-      if (!$sessionUser) {
-        irAAdmin('login');
-      }
+    if ($sessionLoading || $router.zona !== 'admin') return;
+
+    if (!$sessionUser && $router.rutaAdmin !== 'login') {
+      irAAdmin('login');
+      return;
+    }
+
+    if ($sessionUser && $router.rutaAdmin === 'login') {
+      irAAdmin('dashboard');
     }
   });
 
-  /** Muestra el contenido admin solo cuando hay sesión confirmada. */
   let adminReady = $derived(
     $router.zona === 'admin' &&
       $router.rutaAdmin !== 'login' &&
@@ -43,11 +47,10 @@
     {:else if $router.rutaPublica === 'seguimiento'}
       <Seguimiento />
     {/if}
-  {:else if $router.rutaAdmin === 'login'}
-    <Login />
-  {:else if $sessionLoading}
-    <!-- Espera silenciosa mientras se verifica la sesión -->
+  {:else if $sessionLoading && $router.rutaAdmin !== 'login'}
     <div class="session-check" aria-live="polite" aria-label="Verificando sesión…"></div>
+  {:else if $router.rutaAdmin === 'login' && !$sessionUser}
+    <Login />
   {:else if adminReady}
     {#if $router.rutaAdmin === 'dashboard'}
       <Dashboard />

@@ -1,34 +1,29 @@
 /** Tipos compartidos de la plataforma Huella */
 
-/** Estados canónicos de una solicitud (alineados con el dominio y huella-api). */
+/** Estados canónicos (Appwrite enum + huella-api). */
 export type EstadoSolicitud =
   | 'pendiente'
   | 'sin_verificar'
   | 'verificado'
-  | 'cerrado';
+  | 'cerrado'
+  | 'cancelada';
 
 export type Zona = 'public' | 'admin';
 
 export type RutaPublica = 'home' | 'solicitud' | 'seguimiento';
 export type RutaAdmin = 'login' | 'dashboard' | 'solicitudes' | 'detalle';
 
-/**
- * DTO de lectura pública de una solicitud (surface lista/detalle admin).
- * Refleja el contrato de `solicitudes.list` y `solicitudes.getById`.
- */
 export type Solicitud = {
   id: string;
   codigoSeguimiento: string;
   nombreFamiliar: string;
   email: string;
   telefono?: string | null;
-  /** Nombre de la persona buscada */
   nombrePersona: string;
   relacion: string;
   descripcion: string;
   estado: EstadoSolicitud;
   mensajePublico?: string | null;
-  /** Solo disponible en detalle (solicitudes.getById) */
   notasInternas?: string | null;
   diditSessionId?: string | null;
   kycResultado?: string | null;
@@ -36,7 +31,6 @@ export type Solicitud = {
   fechaActualizacion: string;
 };
 
-/** Respuesta pública de solicitudes.getByCode */
 export type SeguimientoPublico = {
   codigoSeguimiento: string;
   estado: EstadoSolicitud;
@@ -46,10 +40,17 @@ export type SeguimientoPublico = {
   kycCompletado?: boolean;
 };
 
-/** Respuesta de solicitudes.create */
 export type CreateSolicitudResult = {
   codigoSeguimiento: string;
   trackingUrl: string;
   estado: EstadoSolicitud;
   id: string;
+};
+
+export const ESTADO_LABEL: Record<EstadoSolicitud, string> = {
+  pendiente: 'Pendiente',
+  sin_verificar: 'Atendido · sin verificar',
+  verificado: 'Verificado',
+  cerrado: 'Cerrado',
+  cancelada: 'Cancelada',
 };

@@ -1,8 +1,18 @@
 export const ESTADOS = Object.freeze({
   PENDIENTE: 'pendiente',
+  /** Atendido por operador; identidad aún no confirmada */
   SIN_VERIFICAR: 'sin_verificar',
   VERIFICADO: 'verificado',
   CERRADO: 'cerrado',
+  CANCELADA: 'cancelada',
+});
+
+/** Transiciones de negocio permitidas (destino → orígenes válidos). */
+export const TRANSICIONES = Object.freeze({
+  [ESTADOS.SIN_VERIFICAR]: [ESTADOS.PENDIENTE],
+  [ESTADOS.VERIFICADO]: [ESTADOS.SIN_VERIFICAR],
+  [ESTADOS.CERRADO]: [ESTADOS.SIN_VERIFICAR, ESTADOS.VERIFICADO],
+  [ESTADOS.CANCELADA]: [ESTADOS.PENDIENTE, ESTADOS.SIN_VERIFICAR, ESTADOS.VERIFICADO],
 });
 
 export const AUTH = Object.freeze({

@@ -11,7 +11,6 @@
   }
 </script>
 
-<!-- HERO PRINCIPAL CINEMATOGRÁFICO AJUSTADO AL VIEWPORT (100% ZOOM) -->
 <section class="hero-section">
   <div class="hero-backdrop">
     <div class="hero-light-glow"></div>
@@ -49,7 +48,6 @@
         </svg>
       </button>
 
-      <!-- Buscador Rápido de Seguimiento -->
       <form onsubmit={handleQuickSearch} class="quick-search-box">
         <input
           type="text"
@@ -63,7 +61,6 @@
       </form>
     </div>
 
-    <!-- Indicadores de Confianza -->
     <div class="trust-bar animate-fade-in">
       <div class="trust-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -89,7 +86,6 @@
     </div>
   </div>
 
-  <!-- Indicador visual de desplazamiento hacia abajo -->
   <a href="#proceso" class="scroll-indicator animate-fade-in" aria-label="Desplazarse hacia el proceso">
     <span>Conoce más</span>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -98,7 +94,6 @@
   </a>
 </section>
 
-<!-- SECCIÓN PROCESO METÓDICO -->
 <section class="process-section" id="proceso">
   <div class="section-header">
     <span class="section-tag">Rigor e Investigación</span>
@@ -109,7 +104,6 @@
   </div>
 
   <div class="process-grid">
-    <!-- Pilar 1 -->
     <div class="process-card card">
       <div class="process-num">01</div>
       <h3>Averiguación Documental</h3>
@@ -121,7 +115,6 @@
       </div>
     </div>
 
-    <!-- Pilar 2 -->
     <div class="process-card card highlight">
       <div class="process-num gold">02</div>
       <h3>Verificación Didit KYC</h3>
@@ -133,7 +126,6 @@
       </div>
     </div>
 
-    <!-- Pilar 3 -->
     <div class="process-card card">
       <div class="process-num">03</div>
       <h3>Orientación sobre Primas</h3>
@@ -147,7 +139,6 @@
   </div>
 </section>
 
-<!-- SECCIÓN MANIFIESTO Y VALORES -->
 <section class="manifesto-section">
   <div class="manifesto-card glass-panel">
     <div class="manifesto-content">
@@ -176,7 +167,6 @@
   </div>
 </section>
 
-<!-- BANNER CTA FINAL CINEMATOGRÁFICO -->
 <section class="cta-banner">
   <div class="cta-inner">
     <h2 class="serif-title text-gradient-gold">¿Necesitas iniciar una búsqueda?</h2>
@@ -190,10 +180,10 @@
 </section>
 
 <style>
-  /* HERO AJUSTADO AL 100% DEL VIEWPORT (100% ZOOM) */
+  /* Fondo transparente: los rayos del Layout se ven a través del hero */
   .hero-section {
     position: relative;
-    background: var(--color-obsidian-deep);
+    background: transparent;
     color: var(--color-stone);
     min-height: calc(100vh - 65px);
     min-height: calc(100svh - 65px);
@@ -221,19 +211,19 @@
     height: 60vw;
     max-width: 800px;
     max-height: 800px;
-    background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, rgba(14, 39, 56, 0.2) 40%, transparent 70%);
+    background: radial-gradient(circle, rgba(232, 201, 122, 0.12) 0%, transparent 65%);
     filter: blur(40px);
   }
 
   .hero-radial-mesh {
     position: absolute;
     inset: 0;
-    background-image: 
-      radial-gradient(rgba(212, 175, 55, 0.08) 1px, transparent 1px),
-      radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-image:
+      radial-gradient(rgba(212, 175, 55, 0.06) 1px, transparent 1px),
+      radial-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px);
     background-size: 32px 32px;
     background-position: 0 0, 16px 16px;
-    opacity: 0.6;
+    opacity: 0.5;
   }
 
   .hero-container {
@@ -254,8 +244,8 @@
     gap: 0.6rem;
     padding: 0.35rem 1rem;
     border-radius: var(--radius-pill);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(212, 175, 55, 0.3);
+    background: rgba(7, 25, 35, 0.45);
+    border: 1px solid rgba(212, 175, 55, 0.35);
     backdrop-filter: blur(12px);
     font-size: 0.78rem;
     font-weight: 600;
@@ -274,6 +264,7 @@
     line-height: 1.12;
     margin-bottom: 1rem;
     color: #ffffff;
+    text-shadow: 0 2px 24px rgba(7, 25, 35, 0.55);
   }
 
   .highlight-dignity {
@@ -294,10 +285,11 @@
 
   .hero-subtitle {
     font-size: clamp(0.95rem, 1.8vw, 1.15rem);
-    color: #a4b4c0;
+    color: #c5d0d8;
     max-width: 700px;
     margin: 0 auto 1.75rem;
     line-height: 1.55;
+    text-shadow: 0 1px 12px rgba(7, 25, 35, 0.5);
   }
 
   .hero-actions {
@@ -318,7 +310,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(7, 25, 35, 0.55);
     border: 1px solid rgba(255, 255, 255, 0.18);
     backdrop-filter: blur(12px);
     padding: 0.35rem 0.35rem 0.35rem 0.9rem;
@@ -347,7 +339,6 @@
     white-space: nowrap;
   }
 
-  /* TRUST BAR */
   .trust-bar {
     display: flex;
     flex-wrap: wrap;
@@ -355,8 +346,8 @@
     justify-content: center;
     gap: 1.25rem;
     padding: 0.75rem 1.5rem;
-    background: rgba(14, 39, 56, 0.6);
-    border: 1px solid rgba(212, 175, 55, 0.2);
+    background: rgba(7, 25, 35, 0.55);
+    border: 1px solid rgba(212, 175, 55, 0.25);
     border-radius: var(--radius-pill);
     backdrop-filter: blur(12px);
   }
@@ -389,9 +380,8 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--gold);
-    opacity: 0.8;
+    opacity: 0.85;
     text-decoration: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
   }
 
   .scroll-indicator:hover {
@@ -399,21 +389,12 @@
     transform: translateY(3px);
   }
 
-  .trust-item svg {
-    color: var(--gold);
-  }
-
-  .trust-divider {
-    width: 1px;
-    height: 16px;
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  /* SECCIÓN PROCESO */
   .process-section {
     max-width: 1140px;
     margin: 0 auto;
     padding: 5rem 1.5rem;
+    position: relative;
+    z-index: 2;
   }
 
   .section-header {
@@ -487,11 +468,12 @@
     border-top: 1px solid var(--border);
   }
 
-  /* MANIFIESTO */
   .manifesto-section {
     max-width: 1140px;
     margin: 0 auto 5rem;
     padding: 0 1.5rem;
+    position: relative;
+    z-index: 2;
   }
 
   .manifesto-card {
@@ -563,12 +545,13 @@
     margin: 0;
   }
 
-  /* CTA FINAL */
   .cta-banner {
-    background: radial-gradient(circle at 50% 30%, rgba(212, 175, 55, 0.12) 0%, var(--color-obsidian-deep) 80%);
+    background: radial-gradient(circle at 50% 30%, rgba(212, 175, 55, 0.12) 0%, rgba(7, 25, 35, 0.92) 80%);
     padding: 5rem 1.5rem;
     text-align: center;
     border-top: 1px solid var(--color-border-gold);
+    position: relative;
+    z-index: 2;
   }
 
   .cta-inner {

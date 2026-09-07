@@ -3,10 +3,14 @@ import { createSolicitudesService } from './solicitudes.service.js';
 import {
   validateCreate,
   validateGetByCode,
+  validateMarcarAtendido,
   validateMarcarSinVerificar,
+  validateIniciarKyc,
+  validateMarcarVerificado,
   validateList,
   validateGetById,
   validateCerrar,
+  validateCancelar,
 } from './solicitudes.validator.js';
 
 export const solicitudesRoutes = {
@@ -26,6 +30,17 @@ export const solicitudesRoutes = {
       return service.getByCode(payload);
     },
   },
+  'solicitudes.marcarAtendido': {
+    auth: AUTH.ADMIN,
+    validate: validateMarcarAtendido,
+    handler: async (ctx, payload) => {
+      const service = createSolicitudesService(ctx.req);
+      return service.marcarAtendido({
+        ...payload,
+        operatorId: ctx.identity.userId,
+      });
+    },
+  },
   'solicitudes.marcarSinVerificar': {
     auth: AUTH.ADMIN,
     validate: validateMarcarSinVerificar,
@@ -35,6 +50,25 @@ export const solicitudesRoutes = {
         ...payload,
         operatorId: ctx.identity.userId,
       });
+    },
+  },
+  'solicitudes.iniciarKyc': {
+    auth: AUTH.ADMIN,
+    validate: validateIniciarKyc,
+    handler: async (ctx, payload) => {
+      const service = createSolicitudesService(ctx.req);
+      return service.iniciarKyc({
+        ...payload,
+        operatorId: ctx.identity.userId,
+      });
+    },
+  },
+  'solicitudes.marcarVerificado': {
+    auth: AUTH.ADMIN,
+    validate: validateMarcarVerificado,
+    handler: async (ctx, payload) => {
+      const service = createSolicitudesService(ctx.req);
+      return service.marcarVerificado(payload);
     },
   },
   'solicitudes.list': {
@@ -59,6 +93,14 @@ export const solicitudesRoutes = {
     handler: async (ctx, payload) => {
       const service = createSolicitudesService(ctx.req);
       return service.cerrar(payload);
+    },
+  },
+  'solicitudes.cancelar': {
+    auth: AUTH.ADMIN,
+    validate: validateCancelar,
+    handler: async (ctx, payload) => {
+      const service = createSolicitudesService(ctx.req);
+      return service.cancelar(payload);
     },
   },
 };

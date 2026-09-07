@@ -12,26 +12,38 @@
   let ultimoConsultado = $state('');
 
   const etiquetasEstado: Record<EstadoSolicitud, string> = {
-    pendiente: 'Solicitud Recibida',
-    sin_verificar: 'Pendiente de Verificación KYC',
-    verificado: 'Identidad Verificada — En Investigación',
-    cerrado: 'Expediente Cerrado',
+    pendiente: 'Solicitud recibida',
+    sin_verificar: 'Atendido · sin verificar',
+    verificado: 'Identidad verificada — en investigación',
+    cerrado: 'Expediente cerrado',
+    cancelada: 'Solicitud cancelada',
   };
 
   const descripcionesEstado: Record<EstadoSolicitud, string> = {
-    pendiente: 'El expediente ha sido registrado correctamente en la plataforma y está pendiente de asignación.',
-    sin_verificar: 'El operador ha iniciado el protocolo de verificación de identidad de la familia (Didit KYC). Se envió un enlace de verificación por correo.',
-    verificado: 'La identidad ha sido confirmada satisfactoriamente mediante Didit KYC. El equipo trabaja en la documentación de evidencias.',
+    pendiente:
+      'El expediente ha sido registrado correctamente en la plataforma y está pendiente de atención.',
+    sin_verificar:
+      'Un operador está atendiendo el caso. La identidad del solicitante aún no está confirmada.',
+    verificado:
+      'La identidad del solicitante ha sido confirmada. El equipo continúa con la investigación documental.',
     cerrado: 'El expediente ha sido archivado o finalizado por el operador asignado.',
+    cancelada: 'Esta solicitud fue cancelada. Si crees que se trata de un error, contacta al equipo.',
   };
 
   function getStepIndex(estado: EstadoSolicitud): number {
     switch (estado) {
-      case 'pendiente': return 1;
-      case 'sin_verificar': return 2;
-      case 'verificado': return 3;
-      case 'cerrado': return 4;
-      default: return 1;
+      case 'pendiente':
+        return 1;
+      case 'sin_verificar':
+        return 2;
+      case 'verificado':
+        return 3;
+      case 'cerrado':
+        return 4;
+      case 'cancelada':
+        return 0;
+      default:
+        return 1;
     }
   }
 
@@ -85,18 +97,18 @@
 
 <div class="page-header">
   <div class="header-container">
-    <span class="eyebrow">Consulta de Expediente</span>
-    <h1 class="serif-title">Seguimiento Confidencial</h1>
+    <span class="eyebrow">Consulta de expediente</span>
+    <h1 class="serif-title">Seguimiento confidencial</h1>
     <p class="header-desc">
-      Introduce el código de seguimiento que recibiste al momento de registrar tu solicitud para conocer el avance en tiempo real.
+      Introduce el código de seguimiento que recibiste al registrar tu solicitud para conocer el
+      avance.
     </p>
 
-    <!-- FORMULARIO DE BÚSQUEDA -->
     <form class="search-card card animate-fade-in" onsubmit={onSubmit}>
       <div class="input-wrapper">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-          <circle cx="11" cy="11" r="8"/>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <input
           type="text"
@@ -108,7 +120,7 @@
         />
       </div>
       <button type="submit" class="btn btn-gold" disabled={cargando}>
-        {cargando ? 'Consultando...' : 'Consultar Estado'}
+        {cargando ? 'Consultando...' : 'Consultar estado'}
       </button>
     </form>
   </div>
@@ -117,9 +129,6 @@
 <section class="results-container">
   {#if errorMsg}
     <div class="error-banner card animate-fade-in" role="alert">
-      <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
-        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-      </svg>
       <span>{errorMsg}</span>
     </div>
   {/if}
@@ -130,77 +139,76 @@
     <article class="expediente-card glass-panel animate-fade-in" aria-live="polite">
       <div class="expediente-header">
         <div>
-          <span class="expediente-label">Expediente Oficial</span>
+          <span class="expediente-label">Expediente</span>
           <h2 class="codigo-title">{data.codigoSeguimiento}</h2>
         </div>
         <div class="status-badge-wrap">
           {#if data.estado === 'verificado'}
-            <span class="badge badge-positive">✓ Identidad Verificada</span>
+            <span class="badge badge-positive">Verificado</span>
           {:else if data.estado === 'sin_verificar'}
-            <span class="badge badge-progress">⚡ Proceso KYC Didit</span>
+            <span class="badge badge-progress">Atendido · sin verificar</span>
           {:else if data.estado === 'cerrado'}
-            <span class="badge">Archivado / Cerrado</span>
+            <span class="badge">Cerrado</span>
+          {:else if data.estado === 'cancelada'}
+            <span class="badge badge-error">Cancelada</span>
           {:else}
-            <span class="badge badge-progress">Solicitud Recibida</span>
+            <span class="badge badge-progress">Pendiente</span>
           {/if}
         </div>
       </div>
 
-      <!-- TIMELINE VISUAL DE PASOS -->
-      <div class="timeline-wrapper">
-        <div class="timeline-track">
-          <!-- Paso 1 -->
-          <div class="step-item" class:completed={currentStep >= 1} class:active={currentStep === 1}>
-            <div class="step-circle">1</div>
-            <span class="step-name">Recibida</span>
-          </div>
-
-          <!-- Paso 2 -->
-          <div class="step-item" class:completed={currentStep >= 2} class:active={currentStep === 2}>
-            <div class="step-circle">2</div>
-            <span class="step-name">Verificación KYC</span>
-          </div>
-
-          <!-- Paso 3 -->
-          <div class="step-item" class:completed={currentStep >= 3} class:active={currentStep === 3}>
-            <div class="step-circle">3</div>
-            <span class="step-name">Investigación</span>
-          </div>
-
-          <!-- Paso 4 -->
-          <div class="step-item" class:completed={currentStep === 4} class:active={currentStep === 4}>
-            <div class="step-circle">4</div>
-            <span class="step-name">Cierre</span>
+      {#if data.estado !== 'cancelada'}
+        <div class="timeline-wrapper">
+          <div class="timeline-track">
+            <div class="step-item" class:completed={currentStep >= 1} class:active={currentStep === 1}>
+              <div class="step-circle">1</div>
+              <span class="step-name">Recibida</span>
+            </div>
+            <div class="step-item" class:completed={currentStep >= 2} class:active={currentStep === 2}>
+              <div class="step-circle">2</div>
+              <span class="step-name">Atención</span>
+            </div>
+            <div class="step-item" class:completed={currentStep >= 3} class:active={currentStep === 3}>
+              <div class="step-circle">3</div>
+              <span class="step-name">Investigación</span>
+            </div>
+            <div class="step-item" class:completed={currentStep === 4} class:active={currentStep === 4}>
+              <div class="step-circle">4</div>
+              <span class="step-name">Cierre</span>
+            </div>
           </div>
         </div>
-      </div>
+      {/if}
 
-      <!-- MENSAJE Y ESTADO DETALLADO -->
       <div class="status-details">
         <h3>{etiquetasEstado[data.estado]}</h3>
         <p class="status-desc">{descripcionesEstado[data.estado]}</p>
 
         {#if data.mensajePublico}
           <div class="mensaje-publico-box">
-            <span class="box-title">Nota oficial del operador:</span>
+            <span class="box-title">Nota del equipo</span>
             <p>{data.mensajePublico}</p>
           </div>
         {/if}
       </div>
 
-      <!-- METADATOS Y FECHAS -->
       <div class="expediente-footer">
         <div class="date-item">
           <span class="date-label">Fecha de apertura</span>
           <span class="date-val">
-            {new Date(data.fechaCreacion).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' })}
+            {new Date(data.fechaCreacion).toLocaleString('es', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })}
           </span>
         </div>
-
         <div class="date-item">
           <span class="date-label">Última actualización</span>
           <span class="date-val">
-            {new Date(data.fechaActualizacion).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' })}
+            {new Date(data.fechaActualizacion).toLocaleString('es', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })}
           </span>
         </div>
       </div>
@@ -265,6 +273,7 @@
     letter-spacing: 0.04em;
     padding: 0.5rem 0;
     box-shadow: none !important;
+    width: 100%;
   }
 
   .input-wrapper input::placeholder {
@@ -325,7 +334,6 @@
     margin: 0;
   }
 
-  /* TIMELINE */
   .timeline-wrapper {
     margin-bottom: 3rem;
   }
@@ -368,7 +376,6 @@
     place-items: center;
     font-weight: 700;
     font-size: 0.9rem;
-    transition: all 0.3s ease;
     margin-bottom: 0.6rem;
   }
 
@@ -382,7 +389,6 @@
     background: var(--gold);
     border-color: var(--gold);
     color: #071927;
-    box-shadow: 0 0 12px var(--color-gold-glow);
   }
 
   .step-item.completed .step-name {
@@ -393,10 +399,8 @@
     border-color: var(--positive);
     color: var(--positive);
     background: rgba(42, 157, 143, 0.15);
-    box-shadow: 0 0 12px var(--color-hope-glow);
   }
 
-  /* DETALLES */
   .status-details {
     background: var(--surface-muted);
     border-radius: var(--radius);
