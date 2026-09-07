@@ -32,7 +32,6 @@
   let notas = $state('');
   let kycUrl = $state('');
 
-  // Modales
   let modal: 'none' | 'verificar' | 'cerrar' | 'cancelar' = $state('none');
   let motivo = $state('');
   let cancelPin = $state('');
@@ -389,7 +388,6 @@
             type="password"
             inputmode="numeric"
             maxlength="4"
-            pattern="\d{{4}}"
             bind:value={cancelPin}
             disabled={actionLoading}
             autocomplete="one-time-code"
