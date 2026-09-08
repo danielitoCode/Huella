@@ -1,17 +1,14 @@
 /**
- * Configuración pública del cliente.
- * - Appwrite: Auth + (opcional) Database directa
- * - API backend: Render (VITE_API_BASE_URL) — preferido
- * - Fallback legacy: Appwrite Function ID si no hay API_BASE_URL
+ * Config pública:
+ * - Appwrite Auth + DB (SDK)
+ * - VITE_API_BASE_URL → Cloudflare Worker huella-api (secretos)
  */
 export type AppwritePublicConfig = {
   endpoint: string;
   projectId: string;
   databaseId: string;
   collectionSolicitudesId: string;
-  /** Backend Render, ej. https://huella-api.onrender.com */
   apiBaseUrl: string;
-  /** Legacy Appwrite Function (solo si apiBaseUrl vacío) */
   functionApiId: string;
   publicAppUrl: string;
   devKey?: string;
@@ -20,9 +17,7 @@ export type AppwritePublicConfig = {
 function required(name: string, value: string | undefined): string {
   const v = (value ?? '').trim();
   if (!v) {
-    throw new Error(
-      `Falta variable de entorno ${name}. Copia .env.example → .env y rellena los valores.`,
-    );
+    throw new Error(`Falta variable de entorno ${name}.`);
   }
   return v;
 }
@@ -35,9 +30,7 @@ export function getAppwriteConfig(): AppwritePublicConfig {
   const functionApiId = (import.meta.env.VITE_APPWRITE_FUNCTION_API_ID ?? '').trim();
 
   if (!apiBaseUrl && !functionApiId) {
-    throw new Error(
-      'Configura VITE_API_BASE_URL (Render) o VITE_APPWRITE_FUNCTION_API_ID (legacy).',
-    );
+    throw new Error('Configura VITE_API_BASE_URL (Cloudflare Worker huella-api).');
   }
 
   return {
