@@ -24,11 +24,17 @@ function parseActivo(v: unknown) {
 
 function roleFromLabels(labels: unknown): 'admin' | 'operador' | null {
   const normalized = Array.isArray(labels)
-    ? labels.map((label) => String(label).trim().toLowerCase())
-    : [];
+      ? labels.map((label) => String(label).trim().toLowerCase())
+      : [];
 
   if (normalized.includes('admin')) return 'admin';
   if (normalized.includes('operador')) return 'operador';
+  return null;
+}
+
+function roleFromProfile(role: unknown): 'admin' | 'operador' | null {
+  const normalized = String(role ?? '').trim().toLowerCase();
+  if (normalized === 'admin' || normalized === 'operador') return normalized;
   return null;
 }
 
@@ -45,8 +51,8 @@ export async function resolveIdentity(req: Request, env: Env): Promise<Identity>
   };
 
   const jwt =
-    req.headers.get('x-appwrite-user-jwt') ||
-    (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+      req.headers.get('x-appwrite-user-jwt') ||
+      (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (!jwt) return base;
 
   let userId = '';
@@ -65,6 +71,11 @@ export async function resolveIdentity(req: Request, env: Env): Promise<Identity>
 
   // Appwrite user labels are the authoritative source of role.
   // The operadores document is profile/operational metadata only.
+  // Labels are the preferred source because the current management endpoints
+  // keep them in sync. Existing operator accounts, however, may predate labels
+  // and only have their role in the protected operadores profile. Keep that
+  // profile as a migration fallback so a valid legacy administrator is not
+  // locked out before an administrator can update its labels.
   let role: 'admin' | 'operador' | null = null;
   try {
     const user = await users.get(userId);
@@ -95,7 +106,21 @@ export async function resolveIdentity(req: Request, env: Env): Promise<Identity>
 
       // A profile may disable an already-labelled operator, but it cannot grant
       // or change a role that is absent from Appwrite user labels.
+      // A valid, active profile is the compatibility fallback for accounts
+      // created before roles were synchronized to Appwrite labels. A label,
+      // when present, always takes precedence over the profile role.
+      if (!role && activo) {
+        const profileRole = roleFromProfile(doc.rol);
+        if (profileRole) {
+          base.rol = profileRole;
+          base.isAdmin = profileRole === 'admin';
+          base.isOperador = true;
+        }
+      }
+
+      // A profile may always disable an operator, including one with a label.
       if (!activo) {
+        base.rol = null;
         base.isAdmin = false;
         base.isOperador = false;
       }
@@ -106,6 +131,7 @@ export async function resolveIdentity(req: Request, env: Env): Promise<Identity>
 
   return base;
 }
+
 
 export function assertOperador(id: Identity) {
   if (!id.isOperador) {
