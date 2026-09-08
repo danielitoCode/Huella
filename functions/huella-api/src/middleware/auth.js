@@ -28,11 +28,16 @@ function projectId() {
   return process.env.APPWRITE_PROJECT_ID || process.env.APPWRITE_FUNCTION_PROJECT_ID || '';
 }
 
-/**
- * Resuelve identidad:
- * 1) x-appwrite-user-id (contexto Function Appwrite)
- * 2) JWT Bearer / x-appwrite-user-jwt (Render / HTTP)
- */
+function roleFromLabels(labels) {
+  const normalized = Array.isArray(labels)
+    ? labels.map((label) => String(label).trim().toLowerCase())
+    : [];
+
+  if (normalized.includes('admin')) return 'admin';
+  if (normalized.includes('operador')) return 'operador';
+  return null;
+}
+
 export async function resolveIdentity(req) {
   const headers = req.headers || {};
   let userId = headers['x-appwrite-user-id'] || '';
@@ -42,7 +47,6 @@ export async function resolveIdentity(req) {
       ? String(headers['authorization']).slice(7).trim()
       : '');
 
-  // Render: validar JWT con Appwrite Account
   if (!userId && userJwt) {
     try {
       const client = new Client()
@@ -52,8 +56,7 @@ export async function resolveIdentity(req) {
       const account = new Account(client);
       const user = await account.get();
       userId = user.$id;
-    } catch (e) {
-      // JWT inválido → queda sin autenticar
+    } catch {
       userJwt = '';
       userId = '';
     }
@@ -77,45 +80,48 @@ export async function resolveIdentity(req) {
 export async function enrichIdentity(req, identity) {
   if (!identity.userId) return identity;
 
+  // Appwrite labels are the authoritative source for authorization.
+  let labelRole = null;
+  try {
+    const { users } = createAdminClient(req);
+    const user = await users.get(identity.userId);
+    labelRole = roleFromLabels(user.labels);
+  } catch (error) {
+    identity.authRoleError = error?.message || 'No se pudieron leer los labels de Appwrite';
+  }
+
+  if (labelRole) {
+    identity.rol = labelRole;
+    identity.isAdmin = labelRole === 'admin';
+    identity.isOperador = true;
+    identity.activo = true;
+  }
+
   try {
     const repo = createOperadoresRepo(req);
     const doc = await repo.findByUserId(identity.userId);
     if (doc) {
-      const rol = String(doc.rol || 'operador').toLowerCase();
       const activo = parseActivo(doc.activo);
 
       identity.operadorDocId = doc.$id;
-      identity.rol = rol;
       identity.activo = activo;
       identity.cancelPinHash = doc.cancelPinHash || null;
       identity.pinNeedsReset = isDefaultPinHash(doc.cancelPinHash);
       identity.mustChangePassword = parseMustChangePassword(doc.mustChangePassword);
-      identity.isAdmin = activo && rol === 'admin';
-      identity.isOperador = activo && (rol === 'admin' || rol === 'operador');
-      return identity;
-    }
-  } catch {
-    // colección ausente
-  }
 
-  try {
-    const { users } = createAdminClient(req);
-    const user = await users.get(identity.userId);
-    const labels = (user.labels || []).map((l) => String(l).toLowerCase());
-    if (labels.includes('admin')) {
-      identity.rol = 'admin';
-      identity.isAdmin = true;
-      identity.isOperador = true;
-      identity.activo = true;
-      identity.pinNeedsReset = true;
-    } else if (labels.includes('operador')) {
-      identity.rol = 'operador';
-      identity.isOperador = true;
-      identity.activo = true;
-      identity.pinNeedsReset = true;
+      // The profile can disable an operator, but cannot grant a role that the
+      // Appwrite user labels do not currently contain.
+      if (labelRole) {
+        identity.isAdmin = labelRole === 'admin' && activo;
+        identity.isOperador = activo;
+      } else {
+        identity.rol = null;
+        identity.isAdmin = false;
+        identity.isOperador = false;
+      }
     }
-  } catch {
-    // sin Users API
+  } catch (error) {
+    identity.authProfileError = error?.message || 'No se pudo leer el perfil de operador';
   }
 
   return identity;
@@ -134,7 +140,7 @@ export function assertAuth(routeAuth, identity) {
     if (!identity.isOperador) {
       throw new AppError(
         'FORBIDDEN',
-        'Debes ser operador o administrador (colección operadores o label Appwrite admin/operador)',
+        'Debes ser operador o administrador (label Appwrite admin/operador)',
         403,
       );
     }
