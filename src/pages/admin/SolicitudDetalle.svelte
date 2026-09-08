@@ -3,7 +3,7 @@
   import { get } from 'svelte/store';
   import { router, irAAdmin } from '../../lib/stores/router';
   import { ApiError } from '../../lib/appwrite';
-  import { getHuellaRepository } from '../../lib/data/repositories';
+  import { getHuellaRepository, getSolicitudRepository } from '../../lib/data/repositories';
   import { ESTADO_LABEL, type EstadoSolicitud, type OperatorContact } from '../../lib/types';
   import Skeleton from '../../components/ui/Skeleton.svelte';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
@@ -65,8 +65,8 @@
       return;
     }
     try {
-      const res = await getHuellaRepository().request<SolicitudDetalle>('solicitudes.getById', { solicitudId });
-      solicitud = res;
+      const res = await getSolicitudRepository().getById(solicitudId);
+      solicitud = res as SolicitudDetalle;
       notas = solicitud.notasInternas ?? '';
       if (solicitud.diditVerificationUrl) kycUrl = solicitud.diditVerificationUrl;
       if (solicitud.estado === 'sin_verificar' && solicitud.diditVerificationUrl) {
