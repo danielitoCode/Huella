@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { irAAdmin, irAPublica } from '../../lib/stores/router';
   import { sessionUser, sessionLoading, logout } from '../../lib/stores/session';
-  import { executeApi } from '../../lib/appwrite';
+  import { getHuellaRepository } from '../../lib/data/repositories';
   import Skeleton from '../../components/ui/Skeleton.svelte';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
 
@@ -25,11 +25,11 @@
   onMount(async () => {
     try {
       const results = await Promise.allSettled([
-        executeApi<StatsResult>('solicitudes.list', { estado: 'pendiente', limit: 1 }),
-        executeApi<StatsResult>('solicitudes.list', { estado: 'sin_verificar', limit: 1 }),
-        executeApi<StatsResult>('solicitudes.list', { estado: 'verificado', limit: 1 }),
-        executeApi<StatsResult>('solicitudes.list', { estado: 'cerrado', limit: 1 }),
-        executeApi<StatsResult>('solicitudes.list', { estado: 'cancelada', limit: 1 }),
+        getHuellaRepository().request<StatsResult>('solicitudes.list', { estado: 'pendiente', limit: 1 }),
+        getHuellaRepository().request<StatsResult>('solicitudes.list', { estado: 'sin_verificar', limit: 1 }),
+        getHuellaRepository().request<StatsResult>('solicitudes.list', { estado: 'verificado', limit: 1 }),
+        getHuellaRepository().request<StatsResult>('solicitudes.list', { estado: 'cerrado', limit: 1 }),
+        getHuellaRepository().request<StatsResult>('solicitudes.list', { estado: 'cancelada', limit: 1 }),
       ]);
       const totals = results.map((r) => (r.status === 'fulfilled' ? r.value.total : 0));
       stats = {

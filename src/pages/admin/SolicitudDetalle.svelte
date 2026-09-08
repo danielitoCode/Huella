@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { router, irAAdmin } from '../../lib/stores/router';
-  import { executeApi, ApiError } from '../../lib/appwrite';
+  import { ApiError } from '../../lib/appwrite';
+  import { getHuellaRepository } from '../../lib/data/repositories';
   import { ESTADO_LABEL, type EstadoSolicitud, type OperatorContact } from '../../lib/types';
   import Skeleton from '../../components/ui/Skeleton.svelte';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
@@ -64,7 +65,7 @@
       return;
     }
     try {
-      const res = await executeApi<SolicitudDetalle>('solicitudes.getById', { solicitudId });
+      const res = await getHuellaRepository().request<SolicitudDetalle>('solicitudes.getById', { solicitudId });
       solicitud = res;
       notas = solicitud.notasInternas ?? '';
       if (solicitud.diditVerificationUrl) kycUrl = solicitud.diditVerificationUrl;
@@ -104,7 +105,7 @@
     if (!solicitud) return;
     templateLoading = true;
     try {
-      const res = await executeApi<KycTemplateResult>('solicitudes.getKycEmailTemplate', {
+      const res = await getHuellaRepository().request<KycTemplateResult>('solicitudes.getKycEmailTemplate', {
         solicitudId: solicitud.id,
       });
       emailHtml = res.emailHtml;
@@ -131,7 +132,7 @@
   async function marcarAtendido(conKyc: boolean) {
     if (!solicitud) return;
     await runAction(async () => {
-      const res = await executeApi<{
+      const res = await getHuellaRepository().request<{
         estado: EstadoSolicitud;
         verificationUrl?: string;
         sessionId?: string;
@@ -156,7 +157,7 @@
   async function iniciarKyc() {
     if (!solicitud) return;
     await runAction(async () => {
-      const res = await executeApi<{
+      const res = await getHuellaRepository().request<{
         estado: EstadoSolicitud;
         verificationUrl?: string;
         sessionId?: string;
@@ -180,7 +181,7 @@
   async function reenviarEmail() {
     if (!solicitud) return;
     await runAction(async () => {
-      const res = await executeApi<{ emailHtml?: string; verificationUrl?: string }>(
+      const res = await getHuellaRepository().request<{ emailHtml?: string; verificationUrl?: string }>(
         'solicitudes.reenviarKycEmail',
         { solicitudId: solicitud!.id },
       );
@@ -195,7 +196,7 @@
       return;
     }
     await runAction(async () => {
-      const res = await executeApi<{ estado: EstadoSolicitud }>('solicitudes.marcarVerificado', {
+      const res = await getHuellaRepository().request<{ estado: EstadoSolicitud }>('solicitudes.marcarVerificado', {
         solicitudId: solicitud!.id,
         motivo: motivo.trim(),
       });
@@ -209,7 +210,7 @@
       return;
     }
     await runAction(async () => {
-      const res = await executeApi<{ estado: EstadoSolicitud }>('solicitudes.cerrar', {
+      const res = await getHuellaRepository().request<{ estado: EstadoSolicitud }>('solicitudes.cerrar', {
         solicitudId: solicitud!.id,
         motivoInterno: motivo.trim(),
       });
@@ -227,7 +228,7 @@
       return;
     }
     await runAction(async () => {
-      const res = await executeApi<{ estado: EstadoSolicitud }>('solicitudes.cancelar', {
+      const res = await getHuellaRepository().request<{ estado: EstadoSolicitud }>('solicitudes.cancelar', {
         solicitudId: solicitud!.id,
         motivoInterno: motivo.trim(),
         pin: cancelPin,
