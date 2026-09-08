@@ -1,39 +1,122 @@
 import { ExecutionMethod } from 'appwrite';
-import { getFunctions, getPublicConfig } from './client';
+import { getAccount, getFunctions, getPublicConfig } from './client';
 import { ApiError, type ApiResponse } from './types';
 import { addDevLog } from '../stores/devLogger';
 
 export type ExecuteApiOptions = {
-  /** ID de function; por defecto VITE_APPWRITE_FUNCTION_API_ID */
   functionId?: string;
 };
 
-/**
- * Invoca huella-api: POST { action, payload }.
- * Parsea responseBody y lanza ApiError si success === false o la ejecución falla.
- */
-export async function executeApi<T = unknown>(
+async function getJwtIfSession(): Promise<string | null> {
+  try {
+    const account = getAccount();
+    const jwt = await account.createJWT();
+    return jwt?.jwt || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Backend en Render (HTTP). */
+async function executeViaRender<T>(
+  baseUrl: string,
   action: string,
-  payload: Record<string, unknown> = {},
-  options: ExecuteApiOptions = {},
+  payload: Record<string, unknown>,
+  startTime: number,
 ): Promise<T> {
-  if (!action || typeof action !== 'string') {
-    throw new ApiError('INVALID_ACTION', 'action es requerida');
+  const jwt = await getJwtIfSession();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (jwt) {
+    headers['Authorization'] = `Bearer ${jwt}`;
   }
 
-  const config = getPublicConfig();
-  const functionId = options.functionId ?? config.functionApiId;
-  const functions = getFunctions();
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action, payload }),
+    });
+  } catch (err) {
+    const latencyMs = Math.round(performance.now() - startTime);
+    const message = err instanceof Error ? err.message : 'Red / CORS hacia la API';
+    addDevLog({
+      type: 'api_err',
+      title: `FAIL ${action} (${message})`,
+      action,
+      latencyMs,
+      payload,
+      error: message,
+    });
+    throw new ApiError('NETWORK', message);
+  }
 
-  const body = JSON.stringify({ action, payload });
-  const startTime = performance.now();
+  const latencyMs = Math.round(performance.now() - startTime);
+  const raw = await res.text();
+  let parsed: ApiResponse<T>;
+  try {
+    parsed = JSON.parse(raw || '{}') as ApiResponse<T>;
+  } catch {
+    addDevLog({
+      type: 'api_err',
+      title: `FAIL ${action} (JSON inválido · HTTP ${res.status})`,
+      action,
+      latencyMs,
+      payload,
+      response: raw.slice(0, 500),
+    });
+    throw new ApiError('INVALID_RESPONSE', `HTTP ${res.status}: respuesta no JSON`, res.status);
+  }
+
+  if (!parsed || typeof parsed.success !== 'boolean') {
+    addDevLog({
+      type: 'api_err',
+      title: `FAIL ${action} (formato inesperado)`,
+      action,
+      latencyMs,
+      payload,
+      response: parsed,
+    });
+    throw new ApiError('INVALID_RESPONSE', 'Formato de respuesta inesperado');
+  }
+
+  if (!parsed.success) {
+    const code = parsed.error?.code ?? 'API_ERROR';
+    const message = parsed.error?.message ?? 'Error en la API';
+    addDevLog({
+      type: 'api_err',
+      title: `ERR ${action} [${code}]: ${message}`,
+      action,
+      latencyMs,
+      payload,
+      error: parsed.error,
+    });
+    throw new ApiError(code, message, res.status);
+  }
 
   addDevLog({
-    type: 'api_req',
-    title: `POST ${action}`,
+    type: 'api_res',
+    title: `SUCCESS ${action}`,
     action,
+    latencyMs,
     payload,
+    response: parsed.data,
   });
+
+  return parsed.data as T;
+}
+
+/** Legacy: Appwrite Functions (solo si no hay VITE_API_BASE_URL). */
+async function executeViaAppwriteFunction<T>(
+  action: string,
+  payload: Record<string, unknown>,
+  functionId: string,
+  startTime: number,
+): Promise<T> {
+  const functions = getFunctions();
+  const body = JSON.stringify({ action, payload });
 
   let execution: {
     status: string;
@@ -54,7 +137,6 @@ export async function executeApi<T = unknown>(
   } catch (err) {
     const latencyMs = Math.round(performance.now() - startTime);
     const message = err instanceof Error ? err.message : 'Error al ejecutar la function';
-
     addDevLog({
       type: 'api_err',
       title: `FAIL ${action} (${message})`,
@@ -62,9 +144,7 @@ export async function executeApi<T = unknown>(
       latencyMs,
       payload,
       error: message,
-      stack: err instanceof Error ? err.stack : undefined,
     });
-
     throw new ApiError('EXECUTION_FAILED', message);
   }
 
@@ -72,7 +152,6 @@ export async function executeApi<T = unknown>(
 
   if (execution.status === 'failed') {
     const errText = execution.errors || 'La function falló sin detalle';
-
     addDevLog({
       type: 'api_err',
       title: `FAIL ${action} (Status ${execution.responseStatusCode || 500})`,
@@ -81,12 +160,7 @@ export async function executeApi<T = unknown>(
       payload,
       error: errText,
     });
-
-    throw new ApiError(
-      'EXECUTION_FAILED',
-      errText,
-      execution.responseStatusCode,
-    );
+    throw new ApiError('EXECUTION_FAILED', errText, execution.responseStatusCode);
   }
 
   const raw = execution.responseBody ?? '';
@@ -94,49 +168,15 @@ export async function executeApi<T = unknown>(
   try {
     parsed = JSON.parse(raw || '{}') as ApiResponse<T>;
   } catch {
-    addDevLog({
-      type: 'api_err',
-      title: `FAIL ${action} (JSON Inválido)`,
-      action,
-      latencyMs,
-      payload,
-      response: raw,
-    });
+    throw new ApiError('INVALID_RESPONSE', 'La function no devolvió JSON válido');
+  }
 
+  if (!parsed?.success) {
     throw new ApiError(
-      'INVALID_RESPONSE',
-      'La function no devolvió JSON válido',
+      parsed?.error?.code ?? 'API_ERROR',
+      parsed?.error?.message ?? 'Error en la API',
       execution.responseStatusCode,
     );
-  }
-
-  if (!parsed || typeof parsed !== 'object' || typeof (parsed as ApiResponse<T>).success !== 'boolean') {
-    addDevLog({
-      type: 'api_err',
-      title: `FAIL ${action} (Formato Inesperado)`,
-      action,
-      latencyMs,
-      payload,
-      response: parsed,
-    });
-
-    throw new ApiError('INVALID_RESPONSE', 'Formato de respuesta inesperado');
-  }
-
-  if (!parsed.success) {
-    const code = parsed.error?.code ?? 'API_ERROR';
-    const message = parsed.error?.message ?? 'Error en la API';
-
-    addDevLog({
-      type: 'api_err',
-      title: `ERR ${action} [${code}]: ${message}`,
-      action,
-      latencyMs,
-      payload,
-      error: parsed.error,
-    });
-
-    throw new ApiError(code, message, execution.responseStatusCode);
   }
 
   addDevLog({
@@ -148,10 +188,40 @@ export async function executeApi<T = unknown>(
     response: parsed.data,
   });
 
-  return parsed.data;
+  return parsed.data as T;
 }
 
-/** Variante que no lanza: útil en UI para mostrar errores. */
+/**
+ * Invoca la API de Huella: POST { action, payload }.
+ * Preferencia: Render (VITE_API_BASE_URL). Fallback: Appwrite Function.
+ */
+export async function executeApi<T = unknown>(
+  action: string,
+  payload: Record<string, unknown> = {},
+  options: ExecuteApiOptions = {},
+): Promise<T> {
+  if (!action || typeof action !== 'string') {
+    throw new ApiError('INVALID_ACTION', 'action es requerida');
+  }
+
+  const config = getPublicConfig();
+  const startTime = performance.now();
+
+  addDevLog({
+    type: 'api_req',
+    title: `POST ${action}`,
+    action,
+    payload,
+  });
+
+  if (config.apiBaseUrl) {
+    return executeViaRender<T>(config.apiBaseUrl, action, payload, startTime);
+  }
+
+  const functionId = options.functionId ?? config.functionApiId;
+  return executeViaAppwriteFunction<T>(action, payload, functionId, startTime);
+}
+
 export async function executeApiSafe<T = unknown>(
   action: string,
   payload: Record<string, unknown> = {},

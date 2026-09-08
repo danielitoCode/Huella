@@ -1,3 +1,4 @@
+import { Client, Account } from 'node-appwrite';
 import { AppError } from '../shared/errors.js';
 import { AUTH } from '../shared/constants.js';
 import { createOperadoresRepo } from '../infrastructure/appwrite/appwrite.database.js';
@@ -19,10 +20,44 @@ function parseMustChangePassword(v) {
   return s === 'true' || s === '1';
 }
 
-export function resolveIdentity(req) {
+function endpoint() {
+  return process.env.APPWRITE_ENDPOINT || process.env.APPWRITE_FUNCTION_API_ENDPOINT || '';
+}
+
+function projectId() {
+  return process.env.APPWRITE_PROJECT_ID || process.env.APPWRITE_FUNCTION_PROJECT_ID || '';
+}
+
+/**
+ * Resuelve identidad:
+ * 1) x-appwrite-user-id (contexto Function Appwrite)
+ * 2) JWT Bearer / x-appwrite-user-jwt (Render / HTTP)
+ */
+export async function resolveIdentity(req) {
   const headers = req.headers || {};
-  const userId = headers['x-appwrite-user-id'] || '';
-  const userJwt = headers['x-appwrite-user-jwt'] || '';
+  let userId = headers['x-appwrite-user-id'] || '';
+  let userJwt =
+    headers['x-appwrite-user-jwt'] ||
+    (String(headers['authorization'] || '').toLowerCase().startsWith('bearer ')
+      ? String(headers['authorization']).slice(7).trim()
+      : '');
+
+  // Render: validar JWT con Appwrite Account
+  if (!userId && userJwt) {
+    try {
+      const client = new Client()
+        .setEndpoint(endpoint())
+        .setProject(projectId())
+        .setJWT(userJwt);
+      const account = new Account(client);
+      const user = await account.get();
+      userId = user.$id;
+    } catch (e) {
+      // JWT inválido → queda sin autenticar
+      userJwt = '';
+      userId = '';
+    }
+  }
 
   return {
     userId: userId || null,
