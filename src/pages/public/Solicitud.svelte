@@ -1,7 +1,7 @@
 <script lang="ts">
   import { irAPublica } from '../../lib/stores/router';
   import { ApiError } from '../../lib/appwrite';
-  import { getHuellaRepository } from '../../lib/data/repositories';
+  import { getSolicitudRepository } from '../../lib/data/repositories';
   import type { CreateSolicitudResult } from '../../lib/types';
 
   let nombreFamiliar = $state('');
@@ -21,7 +21,7 @@
     errorMsg = '';
     enviando = true;
     try {
-      const data = await getHuellaRepository().request<CreateSolicitudResult>('solicitudes.create', {
+      const solicitud = await getSolicitudRepository().create({
         nombreFamiliar: nombreFamiliar.trim(),
         email: email.trim(),
         telefono: telefono.trim() || undefined,
@@ -29,7 +29,12 @@
         relacion: relacion.trim(),
         descripcion: descripcion.trim(),
       });
-      resultado = data;
+      resultado = {
+        id: solicitud.id,
+        codigoSeguimiento: solicitud.codigoSeguimiento,
+        estado: solicitud.estado,
+        trackingUrl: `/seguimiento/${solicitud.codigoSeguimiento}`,
+      };
     } catch (err) {
       if (err instanceof ApiError) {
         errorMsg = err.message;
