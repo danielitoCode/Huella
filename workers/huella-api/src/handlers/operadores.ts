@@ -5,7 +5,7 @@
  * 3) CRUD Users con API key
  * 4) Perfil extendido en colección `operadores` (PIN, mustChangePassword)
  */
-import { Databases, Query, ID } from 'node-appwrite';
+import { Client, Databases, Query, ID } from 'node-appwrite';
 import type { Env } from '../env';
 import { dbIds } from '../env';
 import {
@@ -40,10 +40,7 @@ function parseActivo(v: unknown) {
   return ['true', '1', 'si', 'sí', 'activo'].includes(s);
 }
 
-async function publicOp(
-  doc: Record<string, unknown>,
-  salt: string,
-) {
+async function publicOp(doc: Record<string, unknown>, salt: string) {
   const pinNeedsReset = await isDefaultPinHash(doc.cancelPinHash as string, salt);
   return {
     id: doc.$id,
@@ -61,13 +58,6 @@ async function publicOp(
   };
 }
 
-function databasesFromEnv(env: Env) {
-  const config = getAppwriteConfig(env);
-  const { Client } = require('node-appwrite') as typeof import('node-appwrite');
-  // Prefer static import style - fix below without require
-  return null as unknown as Databases;
-}
-
 export async function handleOperadores(
   action: string,
   payload: Record<string, unknown>,
@@ -80,8 +70,6 @@ export async function handleOperadores(
   const salt = env.PIN_SALT || 'huella';
   const ids = dbIds(env);
 
-  // Databases client (mismo patrón admin key)
-  const { Client } = await import('node-appwrite');
   const adminClient = new Client()
     .setEndpoint(config.endpoint)
     .setProject(config.projectId)
@@ -130,7 +118,6 @@ export async function handleOperadores(
     let doc = await findOperadorByUserId(requesterId);
     if (doc) return doc;
 
-    // Auto-provision perfil (PIN 0000) — como me() anterior
     const pinHash = await hashPin(defaultPin(), salt);
     doc = (await databases.createDocument(ids.databaseId, ids.operadores, ID.unique(), {
       userId: requesterId,
@@ -144,13 +131,11 @@ export async function handleOperadores(
     return doc;
   }
 
-  // ── me ──────────────────────────────────────────────
   if (action === 'operadores.me') {
     const doc = await ensurePerfilDoc();
     return publicOp(doc, salt);
   }
 
-  // ── list (admin) ────────────────────────────────────
   if (action === 'operadores.list') {
     ensureAdmin();
     const res = await databases.listDocuments(ids.databaseId, ids.operadores, [
@@ -163,7 +148,6 @@ export async function handleOperadores(
     return { operadores, total: res.total };
   }
 
-  // ── create (admin) — Users.create + labels + perfil ─
   if (action === 'operadores.create') {
     ensureAdmin();
     const email = String(payload.email || '').trim().toLowerCase();
@@ -176,8 +160,7 @@ export async function handleOperadores(
       });
     }
 
-    const labelsForUser =
-      rol === 'admin' ? ['admin', 'operador'] : ['operador'];
+    const labelsForUser = rol === 'admin' ? ['admin', 'operador'] : ['operador'];
 
     const user = await gateway.create({
       email,
@@ -204,7 +187,6 @@ export async function handleOperadores(
     };
   }
 
-  // ── setRole (admin) ─────────────────────────────────
   if (action === 'operadores.setRole') {
     ensureAdmin();
     const operadorId = String(payload.operadorId || '');
@@ -225,7 +207,6 @@ export async function handleOperadores(
     return publicOp(updated, salt);
   }
 
-  // ── setActive (admin) → Auth status + activo text ───
   if (action === 'operadores.setActive') {
     ensureAdmin();
     const operadorId = String(payload.operadorId || '');
@@ -243,7 +224,6 @@ export async function handleOperadores(
     return publicOp(updated, salt);
   }
 
-  // ── resetCancelPin (admin) ──────────────────────────
   if (action === 'operadores.resetCancelPin') {
     ensureAdmin();
     const operadorId = String(payload.operadorId || '');
@@ -257,7 +237,6 @@ export async function handleOperadores(
     };
   }
 
-  // ── resetPassword (admin) — como list_users setUserPassword ─
   if (action === 'operadores.resetPassword') {
     ensureAdmin();
     const operadorId = String(payload.operadorId || '');
@@ -278,7 +257,6 @@ export async function handleOperadores(
     };
   }
 
-  // ── setOwnCancelPin (titular) ───────────────────────
   if (action === 'operadores.setOwnCancelPin') {
     const pin = String(payload.pin || '').trim();
     const pinActual = String(payload.pinActual || '').trim();
@@ -312,7 +290,6 @@ export async function handleOperadores(
     return { ...(await publicOp(updated, salt)), mensaje: 'PIN actualizado' };
   }
 
-  // ── changeOwnPassword (titular) ─────────────────────
   if (action === 'operadores.changeOwnPassword') {
     const passwordNueva = String(payload.passwordNueva || '').trim();
     if (passwordNueva.length < 8 || passwordNueva === defaultPassword()) {
