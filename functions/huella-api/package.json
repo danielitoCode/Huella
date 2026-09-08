@@ -1,10 +1,12 @@
 {
   "name": "huella-api",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "ci": "npm test"
@@ -14,5 +16,8 @@
   },
   "devDependencies": {
     "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

@@ -1,62 +1,71 @@
-# huella-api
+# huella-api (Render Web Service)
 
-API modular server-side de Huella (1 Appwrite Function).
+API modular de Huella. **Appwrite** se usa solo como Auth + Database.
+Las ejecuciones van en **Render** (sin límite Free de Appwrite Functions).
 
-## Deploy en Appwrite (importante)
+## Contrato
 
-### Opción A — Git
+```http
+POST /
+Content-Type: application/json
+Authorization: Bearer <jwt-appwrite>   # rutas autenticadas
+
+{ "action": "solicitudes.list", "payload": { "limit": 20 } }
+```
+
+Respuesta: `{ "success": true, "data": ... }` o `{ "success": false, "error": { "code", "message" } }`.
+
+## Deploy en Render
+
+1. New → **Web Service** → repo Huella, branch `core1` (o `master` cuando merges).
+2. Configuración:
 
 | Campo | Valor |
 |--------|--------|
-| **Root directory** | `functions/huella-api` |
-| **Entrypoint** | `index.js` (o `src/index.js`) |
-| **Install command** | `npm install` |
-| **Build command** | *(vacío)* |
-| **Runtime** | Node.js 18 o 20 |
+| **Root Directory** | `functions/huella-api` |
+| **Runtime** | Node |
+| **Build Command** | `npm install` |
+| **Start Command** | `npm start` |
+| **Instance** | Free (o Starter) |
+| **Health Check Path** | `/` |
 
-Si el Root directory queda vacío o es la raíz del repo, Appwrite busca `src/index.js` en la raíz de Huella y falla con:
-`Failed to load entrypoint, file src/index.js does not exist`.
+3. **Environment** (mismas vars que tenías en Appwrite Function):
 
-### Opción B — Manual (CLI / zip)
+```
+APPWRITE_ENDPOINT=https://fra.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=...
+APPWRITE_API_KEY=...          # scopes: databases, users
+APPWRITE_DATABASE_ID=huella
+APPWRITE_COLLECTION_SOLICITUDES=solicitudes
+APPWRITE_COLLECTION_KYC=kyc_verifications
+APPWRITE_COLLECTION_OPERADORES=operadores
+PUBLIC_APP_URL=https://tu-site...
+CORS_ORIGINS=https://tu-site...,http://localhost:5173
+PIN_SALT=...
+DIDIT_API_KEY=...
+DIDIT_WORKFLOW_ID=...
+RESEND_API_KEY=...
+EMAIL_FROM=...
+OPERATOR_CONTACT_NAME=...
+OPERATOR_CONTACT_EMAIL=...
+```
 
-Empaqueta **el contenido** de `functions/huella-api` (debe verse `index.js`, `src/`, `package.json` en la raíz del zip):
+4. Copia la URL pública (`https://huella-api-xxxx.onrender.com`) → frontend:
+
+```
+VITE_API_BASE_URL=https://huella-api-xxxx.onrender.com
+```
+
+## Local
 
 ```bash
 cd functions/huella-api
-# appwrite deploy function  — o zip desde aquí
+cp ../../.env.example .env   # o exporta vars
+npm install
+npm start
+# http://localhost:10000
 ```
 
-## Acciones
+## Nota Free de Render
 
-| action | auth | Descripción |
-|--------|------|-------------|
-| `solicitudes.*` | public / admin | Solicitudes y estados |
-| `operadores.*` | admin | Usuarios, roles, PIN, password |
-| `didit.createSession` | admin | Sesión Didit |
-| `email.send` | admin | Email |
-
-## Extender
-
-1. `modules/<ns>/`
-2. Registrar en `router/routes.js`
-3. Redeploy — **sin nueva Function**
-
-## Env
-
-```
-APPWRITE_ENDPOINT
-APPWRITE_PROJECT_ID
-APPWRITE_API_KEY
-APPWRITE_DATABASE_ID
-APPWRITE_COLLECTION_SOLICITUDES_ID=solicitudes
-APPWRITE_COLLECTION_KYC_ID=kyc_verifications
-APPWRITE_COLLECTION_OPERADORES=operadores
-PUBLIC_APP_URL
-DIDIT_API_KEY
-DIDIT_WORKFLOW_ID
-PIN_SALT
-RESEND_API_KEY
-EMAIL_FROM
-OPERATOR_CONTACT_NAME
-OPERATOR_CONTACT_EMAIL
-```
+El plan free **duerme** tras inactividad (~15 min). La primera petición puede tardar 30–60 s (cold start). No tiene el tope mensual de executions de Appwrite Free.
