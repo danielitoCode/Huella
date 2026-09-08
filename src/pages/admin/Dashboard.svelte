@@ -6,10 +6,6 @@
   import Skeleton from '../../components/ui/Skeleton.svelte';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
 
-  type StatsResult = {
-    solicitudes: { estado: string }[];
-    total: number;
-  };
 
   let stats = $state({
     pendientes: 0,
