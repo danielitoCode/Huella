@@ -1,7 +1,8 @@
 <script lang="ts">
   import { irAAdmin } from '../../lib/stores/router';
   import { sessionUser, sessionLoading, loadSession } from '../../lib/stores/session';
-  import { executeApi, ApiError } from '../../lib/appwrite';
+  import { ApiError } from '../../lib/appwrite';
+  import { getHuellaRepository } from '../../lib/data/repositories';
   import type { Operador, OperadorRol } from '../../lib/types';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
 
@@ -30,14 +31,14 @@
     errorMsg = '';
     try {
       // 1) Siempre perfil propio (fuente de verdad del rol)
-      const perfil = await executeApi<Operador>('operadores.me', {});
+      const perfil = await getHuellaRepository().request<Operador>('operadores.me', {});
       if (token !== loadToken) return;
       me = perfil;
 
       // 2) Listado completo solo admin
       if (perfil.rol === 'admin') {
         try {
-          const res = await executeApi<ListResult>('operadores.list', { limit: 100 });
+          const res = await getHuellaRepository().request<ListResult>('operadores.list', { limit: 100 });
           if (token !== loadToken) return;
           operadores = res.operadores ?? [];
         } catch (listErr) {
@@ -79,7 +80,7 @@
     busy = true;
     errorMsg = '';
     try {
-      const res = await executeApi<Operador>('operadores.create', {
+      const res = await getHuellaRepository().request<Operador>('operadores.create', {
         nombre: nuevo.nombre.trim(),
         email: nuevo.email.trim(),
         rol: nuevo.rol,
@@ -101,7 +102,7 @@
     busy = true;
     errorMsg = '';
     try {
-      await executeApi('operadores.setRole', { operadorId: op.id, rol });
+      await getHuellaRepository().request('operadores.setRole', { operadorId: op.id, rol });
       flash('Rol actualizado');
       await cargar();
     } catch (err) {
@@ -115,7 +116,7 @@
     busy = true;
     errorMsg = '';
     try {
-      await executeApi('operadores.setActive', { operadorId: op.id, activo: !op.activo });
+      await getHuellaRepository().request('operadores.setActive', { operadorId: op.id, activo: !op.activo });
       flash(op.activo ? 'Usuario desactivado' : 'Usuario activado');
       await cargar();
     } catch (err) {
@@ -130,7 +131,7 @@
     busy = true;
     errorMsg = '';
     try {
-      const res = await executeApi<Operador>('operadores.resetCancelPin', { operadorId: op.id });
+      const res = await getHuellaRepository().request<Operador>('operadores.resetCancelPin', { operadorId: op.id });
       flash(res.mensaje || 'PIN reseteado a 0000');
       await cargar();
     } catch (err) {
@@ -145,7 +146,7 @@
     busy = true;
     errorMsg = '';
     try {
-      const res = await executeApi<Operador>('operadores.resetPassword', { operadorId: op.id });
+      const res = await getHuellaRepository().request<Operador>('operadores.resetPassword', { operadorId: op.id });
       flash(res.mensaje || 'Contraseña reseteada a 12345678');
       await cargar();
     } catch (err) {
@@ -164,7 +165,7 @@
     busy = true;
     errorMsg = '';
     try {
-      await executeApi('operadores.setOwnCancelPin', {
+      await getHuellaRepository().request('operadores.setOwnCancelPin', {
         pinActual: pinActual || (me?.pinNeedsReset || $sessionUser?.pinNeedsReset ? '0000' : ''),
         pin: pinNuevo,
       });
