@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getAccount, getPublicConfig } from '../../lib/appwrite/client';
-  import { sessionUser } from '../../lib/stores/session';
+  import { loadSession } from '../../lib/stores/session';
   import { irAAdmin } from '../../lib/stores/router';
   import { addDevLog } from '../../lib/stores/devLogger';
 
@@ -39,19 +39,22 @@
 
       addDevLog({
         type: 'info',
-        title: '🔐 [AUTH] Sesión creada. Obteniendo datos de cuenta (account.get)...',
-        action: 'account.get',
+        title: '🔐 [AUTH] Sesión creada. Resolviendo perfil y rol...',
+        action: 'loadSession',
       });
 
-      const user = await account.get();
+      // La identidad efectiva (rol, operadorId y estado de seguridad) se
+      // resuelve en un único punto: loadSession -> huella-api -> operadores.me.
+      // No construir sessionUser manualmente aquí para evitar una sesión
+      // autenticada sin sus permisos derivados.
+      await loadSession();
 
       addDevLog({
         type: 'info',
-        title: '✅ [AUTH_SUCCESS] Usuario autenticado correctamente',
-        response: { userId: user.$id, email: user.email, name: user.name },
+        title: '✅ [AUTH_SUCCESS] Sesión y perfil de operador cargados',
+        action: 'loadSession',
       });
 
-      sessionUser.set({ $id: user.$id, email: user.email, name: user.name });
       irAAdmin('dashboard');
     } catch (err: unknown) {
       console.error('[Appwrite Login Error]', err);
