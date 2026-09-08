@@ -2,5 +2,8 @@ name = "huella-webhooks"
 main = "src/index.ts"
 compatibility_date = "2026-03-18"
 compatibility_flags = ["nodejs_compat"]
-
+[observability.logs]
+enabled = true
+invocation_logs = true
+persist = true
 # Secrets: APPWRITE_*, DIDIT_WEBHOOK_SECRET
