@@ -2,7 +2,10 @@ name = "huella-api"
 main = "src/index.ts"
 compatibility_date = "2026-03-18"
 compatibility_flags = ["nodejs_compat"]
-
+[observability.logs]
+enabled = true
+invocation_logs = true
+persist = true
 # Secretos en Dashboard → Settings → Variables:
 # APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID, APPWRITE_API_KEY,
 # APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_SOLICITUDES,
