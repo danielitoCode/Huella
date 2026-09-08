@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { router, irAPublica } from '../../lib/stores/router';
-  import { executeApi, ApiError } from '../../lib/appwrite';
+  import { ApiError } from '../../lib/appwrite';
+  import { getHuellaRepository } from '../../lib/data/repositories';
   import type { EstadoSolicitud, SeguimientoPublico } from '../../lib/types';
 
   let codigoInput = $state('');
@@ -59,7 +60,7 @@
     data = null;
     cargando = true;
     try {
-      const res = await executeApi<SeguimientoPublico>('solicitudes.getByCode', { codigo: c });
+      const res = await getHuellaRepository().request<SeguimientoPublico>('solicitudes.getByCode', { codigo: c });
       data = res;
       ultimoConsultado = res.codigoSeguimiento;
       codigoInput = res.codigoSeguimiento;
