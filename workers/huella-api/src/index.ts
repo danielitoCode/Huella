@@ -11,6 +11,8 @@ import { resolveIdentity } from './auth';
 import { handleOperadores } from './handlers/operadores';
 import { handleSecrets } from './handlers/secrets';
 
+const WORKER_VERSION = '3.0.0';
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     if (req.method === 'OPTIONS') {
@@ -26,7 +28,8 @@ export default {
           data: {
             service: 'huella-api',
             runtime: 'cloudflare-workers',
-            version: '3.0.0',
+            version: WORKER_VERSION,
+            commit: env.WORKERS_CI_COMMIT_SHA || null,
             scope: [
               'operadores.*',
               'solicitudes.getByCode',
