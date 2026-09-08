@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { irAAdmin } from '../../lib/stores/router';
   import { ApiError } from '../../lib/appwrite';
-  import { getHuellaRepository } from '../../lib/data/repositories';
+  import { getSolicitudRepository } from '../../lib/data/repositories';
   import { ESTADO_LABEL, type EstadoSolicitud } from '../../lib/types';
   import Skeleton from '../../components/ui/Skeleton.svelte';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
@@ -49,7 +49,11 @@
     try {
       const payload: Record<string, unknown> = { limit, offset: nuevoOffset };
       if (filtroEstado) payload.estado = filtroEstado;
-      const res = await getHuellaRepository().request<ListResult>('solicitudes.list', payload);
+      const res = await getSolicitudRepository().list({
+        limit,
+        offset: nuevoOffset,
+        estado: (payload.estado as EstadoSolicitud | undefined),
+      });
       solicitudes = res.solicitudes;
       total = res.total;
       offset = nuevoOffset;
