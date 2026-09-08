@@ -1,25 +1,64 @@
 /**
- * Acciones que SÍ deben quedarse en Worker (secretos / tracking público).
- * CRUD de solicitudes del backoffice → SDK Appwrite en el cliente.
+ * Acciones con secretos / tracking público.
+ * Auth operador: mismo patrón JWT de list_users.
  */
+import { Client, Databases, Query } from 'node-appwrite';
 import type { Env } from '../env';
-import type { Identity } from '../auth';
-import { assertOperador } from '../auth';
-import { adminClient } from '../appwrite';
-import { Query } from 'node-appwrite';
+import { dbIds } from '../env';
+import {
+  createAppwriteUsersGateway,
+  getAppwriteConfig,
+} from '../infrastructure/usersGateway';
+import { isOperadorByLabels } from '../domain/adminPolicy';
 import { isDefaultPinHash, verifyPin } from '../pin';
+
+function extractJwt(req: Request, payload: Record<string, unknown>): string | null {
+  const h =
+    req.headers.get('x-appwrite-user-jwt') ||
+    req.headers.get('x-appwrite-jwt') ||
+    (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (h) return h;
+  const fromBody = payload.requesterJwt || payload.jwt || null;
+  return fromBody ? String(fromBody) : null;
+}
+
+async function requireOperador(req: Request, payload: Record<string, unknown>, env: Env) {
+  const config = getAppwriteConfig(env);
+  const gateway = createAppwriteUsersGateway(config);
+  const jwt = extractJwt(req, payload);
+  const { requesterId, requester } = await gateway.getRequester({ requesterJwt: jwt });
+  if (!requesterId || !requester) {
+    throw Object.assign(new Error('No autorizado. Inicie sesión.'), {
+      code: 'UNAUTHORIZED',
+      status: 401,
+    });
+  }
+  if (!isOperadorByLabels(requester.labels)) {
+    throw Object.assign(new Error('Se requiere operador/admin'), {
+      code: 'FORBIDDEN',
+      status: 403,
+    });
+  }
+  return { requesterId, requester, gateway, config };
+}
 
 export async function handleSecrets(
   action: string,
   payload: Record<string, unknown>,
-  identity: Identity,
+  req: Request,
   env: Env,
 ) {
-  const { databases, ids } = adminClient(env);
+  const ids = dbIds(env);
   const salt = env.PIN_SALT || 'huella';
 
-  // Seguimiento público por código (permisos Appwrite no modelan bien “quien conoce el código”)
   if (action === 'solicitudes.getByCode') {
+    const config = getAppwriteConfig(env);
+    const client = new Client()
+      .setEndpoint(config.endpoint)
+      .setProject(config.projectId)
+      .setKey(config.apiKey);
+    const databases = new Databases(client);
+
     const code = String(payload.codigoSeguimiento || payload.code || '')
       .trim()
       .toUpperCase();
@@ -32,7 +71,10 @@ export async function handleSecrets(
     ]);
     const doc = res.documents[0];
     if (!doc) {
-      throw Object.assign(new Error('Solicitud no encontrada'), { code: 'NOT_FOUND', status: 404 });
+      throw Object.assign(new Error('Solicitud no encontrada'), {
+        code: 'NOT_FOUND',
+        status: 404,
+      });
     }
     return {
       id: doc.$id,
@@ -43,8 +85,8 @@ export async function handleSecrets(
       mensajePublico: doc.mensajePublico || null,
       diditSessionId: doc.diditSessionId || null,
       verificationUrl: doc.verificationUrl || null,
-      createdAt: doc.$createdAt,
-      updatedAt: doc.$updatedAt,
+      fechaCreacion: doc.$createdAt,
+      fechaActualizacion: doc.$updatedAt,
       operatorContact: {
         name: env.OPERATOR_CONTACT_NAME || 'Equipo Huella',
         email: env.OPERATOR_CONTACT_EMAIL || null,
@@ -54,36 +96,35 @@ export async function handleSecrets(
     };
   }
 
-  // Cancelar con PIN (hash solo en servidor)
   if (action === 'solicitudes.cancelar') {
-    assertOperador(identity);
+    const { requesterId, config } = await requireOperador(req, payload, env);
+    const client = new Client()
+      .setEndpoint(config.endpoint)
+      .setProject(config.projectId)
+      .setKey(config.apiKey);
+    const databases = new Databases(client);
+
     const solicitudId = String(payload.solicitudId || '');
     const pin = String(payload.pin || '').trim();
     const motivo = String(payload.motivo || '').trim();
 
-    if (identity.pinNeedsReset) {
+    const opList = await databases.listDocuments(ids.databaseId, ids.operadores, [
+      Query.equal('userId', requesterId),
+      Query.limit(1),
+    ]);
+    const op = opList.documents[0] as unknown as Record<string, unknown> | undefined;
+    if (!op) {
+      throw Object.assign(new Error('Sin perfil operador'), { code: 'FORBIDDEN', status: 403 });
+    }
+    if (await isDefaultPinHash(op.cancelPinHash as string, salt)) {
       throw Object.assign(
         new Error('Debes establecer un PIN personal antes de cancelar (ahora es 0000).'),
         { code: 'PIN_RESET_REQUIRED', status: 403 },
       );
     }
-    if (!identity.operadorDocId) {
-      throw Object.assign(new Error('Sin perfil operador'), { code: 'FORBIDDEN', status: 403 });
-    }
-    const op = (await databases.getDocument(
-      ids.databaseId,
-      ids.operadores,
-      identity.operadorDocId,
-    )) as unknown as Record<string, unknown>;
     if (!(await verifyPin(pin, op.cancelPinHash as string, salt))) {
       throw Object.assign(new Error('PIN de cancelación incorrecto'), {
         code: 'FORBIDDEN',
-        status: 403,
-      });
-    }
-    if (await isDefaultPinHash(op.cancelPinHash as string, salt)) {
-      throw Object.assign(new Error('PIN reseteado; establece uno nuevo'), {
-        code: 'PIN_RESET_REQUIRED',
         status: 403,
       });
     }
@@ -92,21 +133,23 @@ export async function handleSecrets(
       estado: 'cancelada',
       motivoCierre: motivo || 'Cancelada por operador',
     });
-    return {
-      id: updated.$id,
-      estado: updated.estado,
-      motivoCierre: updated.motivoCierre,
-    };
+    return { id: updated.$id, estado: updated.estado, motivoCierre: updated.motivoCierre };
   }
 
-  // Didit session (API key)
   if (action === 'didit.createSession') {
-    assertOperador(identity);
+    await requireOperador(req, payload, env);
     const apiKey = env.DIDIT_API_KEY;
     const workflowId = env.DIDIT_WORKFLOW_ID;
     if (!apiKey || !workflowId) {
       throw Object.assign(new Error('Didit no configurado'), { code: 'CONFIG', status: 500 });
     }
+    const config = getAppwriteConfig(env);
+    const client = new Client()
+      .setEndpoint(config.endpoint)
+      .setProject(config.projectId)
+      .setKey(config.apiKey);
+    const databases = new Databases(client);
+
     const solicitudId = String(payload.solicitudId || '');
     const callback =
       String(payload.callbackUrl || '') ||
@@ -146,9 +189,8 @@ export async function handleSecrets(
     return { sessionId, verificationUrl, diditSessionId: sessionId };
   }
 
-  // Email genérico (Resend)
   if (action === 'email.send') {
-    assertOperador(identity);
+    await requireOperador(req, payload, env);
     const to = String(payload.to || '');
     const subject = String(payload.subject || 'Huella');
     const html = String(payload.html || payload.body || '');
@@ -173,34 +215,6 @@ export async function handleSecrets(
       throw Object.assign(new Error(t || 'Error enviando email'), { code: 'EMAIL', status: 502 });
     }
     return { sent: true };
-  }
-
-  // Listado de solicitudes (backoffice)
-  if (action === 'solicitudes.list') {
-    assertOperador(identity);
-    const estado = String(payload.estado || '').trim() || undefined;
-    const limit = Number(payload.limit ?? 25) || 25;
-    const offset = Number(payload.offset ?? 0) || 0;
-    const filters = [];
-    if (estado) filters.push(Query.equal('estado', estado));
-    filters.push(Query.orderDesc('$createdAt'));
-    filters.push(Query.limit(limit));
-    filters.push(Query.offset(offset));
-    const res = await databases.listDocuments(ids.databaseId, ids.solicitudes, filters);
-    const solicitudes = (res.documents || []).map((doc) => ({
-      id: doc.$id,
-      codigoSeguimiento: doc.codigoSeguimiento,
-      nombreFamiliar: doc.nombreFamiliar,
-      email: doc.email,
-      nombrePersona: doc.nombrePersona,
-      relacion: doc.relacion,
-      estado: doc.estado,
-      mensajePublico: doc.mensajePublico || null,
-      diditSessionId: doc.diditSessionId || null,
-      fechaCreacion: doc.$createdAt,
-      fechaActualizacion: doc.$updatedAt,
-    }));
-    return { solicitudes, total: res.total || 0, limit, offset };
   }
 
   throw Object.assign(new Error(`Acción desconocida: ${action}`), {

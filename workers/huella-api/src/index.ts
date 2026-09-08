@@ -1,17 +1,11 @@
 /**
  * Cloudflare Worker — huella-api
- * Solo secretos + admin usuarios + tracking público + cancelar+PIN + Didit + email.
- * CRUD solicitudes del backoffice → SDK Appwrite en el frontend.
- *
- * Patrón alineado con dash_alejo_taller/workers + password_reset (Users admin).
+ * Gestión de usuarios: patrón list_users (JWT + labels + Users API key).
  */
 import type { Env } from './env';
 import { json, ok, withCors } from './http';
-import { resolveIdentity } from './auth';
 import { handleOperadores } from './handlers/operadores';
 import { handleSecrets } from './handlers/secrets';
-
-const WORKER_VERSION = '3.0.0';
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
@@ -28,8 +22,9 @@ export default {
           data: {
             service: 'huella-api',
             runtime: 'cloudflare-workers',
-            version: WORKER_VERSION,
-            commit: env.WORKERS_CI_COMMIT_SHA || null,
+            version: '3.1.0',
+            auth: 'JWT (x-appwrite-user-jwt | Authorization Bearer)',
+            pattern: 'list_users (Account.get + labels + Users API)',
             scope: [
               'operadores.*',
               'solicitudes.getByCode',
@@ -37,7 +32,6 @@ export default {
               'didit.createSession',
               'email.send',
             ],
-            clientSdk: ['solicitudes.create', 'list', 'getById', 'transitions sin PIN'],
           },
         }),
       );
@@ -47,7 +41,10 @@ export default {
       return withCors(
         req,
         env,
-        json(405, { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST' } }),
+        json(405, {
+          success: false,
+          error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST' },
+        }),
       );
     }
 
@@ -63,17 +60,19 @@ export default {
         return withCors(
           req,
           env,
-          json(400, { success: false, error: { code: 'INVALID_ACTION', message: 'Falta action' } }),
+          json(400, {
+            success: false,
+            error: { code: 'INVALID_ACTION', message: 'Falta action' },
+          }),
         );
       }
 
-      const identity = await resolveIdentity(req, env);
-
       let data: unknown;
       if (action.startsWith('operadores.')) {
-        data = await handleOperadores(action, payload, identity, env);
+        // Operadores recibe Request completo (JWT en headers o body)
+        data = await handleOperadores(action, payload, req, env);
       } else {
-        data = await handleSecrets(action, payload, identity, env);
+        data = await handleSecrets(action, payload, req, env);
       }
 
       return withCors(req, env, json(200, ok(data)));

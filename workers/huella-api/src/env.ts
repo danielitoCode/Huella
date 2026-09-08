@@ -2,11 +2,12 @@ export type Env = {
   APPWRITE_ENDPOINT: string;
   APPWRITE_PROJECT_ID: string;
   APPWRITE_API_KEY: string;
-  WORKERS_CI_COMMIT_SHA?: string;
   APPWRITE_DATABASE_ID?: string;
   APPWRITE_COLLECTION_SOLICITUDES?: string;
   APPWRITE_COLLECTION_OPERADORES?: string;
   APPWRITE_COLLECTION_KYC?: string;
+  /** Labels que cuentan como admin (default: admin). Como list_users ADMIN_LABELS */
+  ADMIN_LABELS?: string;
   PIN_SALT?: string;
   CORS_ORIGINS?: string;
   PUBLIC_APP_URL?: string;

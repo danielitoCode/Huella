@@ -1,8 +1,18 @@
+/**
+ * Gestión de operadores adaptada de list_users:
+ * 1) JWT → Account.get (identidad real)
+ * 2) Admin por labels Appwrite Auth
+ * 3) CRUD Users con API key
+ * 4) Perfil extendido en colección `operadores` (PIN, mustChangePassword)
+ */
+import { Databases, Query, ID } from 'node-appwrite';
 import type { Env } from '../env';
-import type { Identity } from '../auth';
-import { assertAdmin, assertOperador } from '../auth';
-import { adminClient } from '../appwrite';
-import { Query } from 'node-appwrite';
+import { dbIds } from '../env';
+import {
+  createAppwriteUsersGateway,
+  getAppwriteConfig,
+} from '../infrastructure/usersGateway';
+import { isAdminByLabels, isOperadorByLabels, allowedAdminLabels } from '../domain/adminPolicy';
 import {
   defaultPassword,
   defaultPin,
@@ -10,6 +20,17 @@ import {
   isDefaultPinHash,
   verifyPin,
 } from '../pin';
+
+function extractJwt(req: Request, payload: Record<string, unknown>): string | null {
+  const h =
+    req.headers.get('x-appwrite-user-jwt') ||
+    req.headers.get('x-appwrite-jwt') ||
+    (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (h) return h;
+  const fromBody =
+    payload.requesterJwt || payload.jwt || payload.appwriteJwt || null;
+  return fromBody ? String(fromBody) : null;
+}
 
 function parseActivo(v: unknown) {
   if (v === true || v === 1) return true;
@@ -19,7 +40,11 @@ function parseActivo(v: unknown) {
   return ['true', '1', 'si', 'sí', 'activo'].includes(s);
 }
 
-function publicOp(doc: Record<string, unknown>, salt: string, pinNeedsReset: boolean) {
+async function publicOp(
+  doc: Record<string, unknown>,
+  salt: string,
+) {
+  const pinNeedsReset = await isDefaultPinHash(doc.cancelPinHash as string, salt);
   return {
     id: doc.$id,
     userId: doc.userId,
@@ -36,74 +61,131 @@ function publicOp(doc: Record<string, unknown>, salt: string, pinNeedsReset: boo
   };
 }
 
+function databasesFromEnv(env: Env) {
+  const config = getAppwriteConfig(env);
+  const { Client } = require('node-appwrite') as typeof import('node-appwrite');
+  // Prefer static import style - fix below without require
+  return null as unknown as Databases;
+}
+
 export async function handleOperadores(
   action: string,
   payload: Record<string, unknown>,
-  identity: Identity,
+  req: Request,
   env: Env,
 ) {
-  const { databases, users, ID, ids } = adminClient(env);
+  const config = getAppwriteConfig(env);
+  const gateway = createAppwriteUsersGateway(config);
+  const adminLabels = allowedAdminLabels(env);
   const salt = env.PIN_SALT || 'huella';
+  const ids = dbIds(env);
 
-  if (action === 'operadores.me') {
-    assertOperador(identity);
-    if (!identity.userId) throw Object.assign(new Error('Sin sesión'), { code: 'UNAUTHORIZED', status: 401 });
+  // Databases client (mismo patrón admin key)
+  const { Client } = await import('node-appwrite');
+  const adminClient = new Client()
+    .setEndpoint(config.endpoint)
+    .setProject(config.projectId)
+    .setKey(config.apiKey);
+  const databases = new Databases(adminClient);
 
-    let list = await databases.listDocuments(ids.databaseId, ids.operadores, [
-      Query.equal('userId', identity.userId),
-      Query.limit(1),
-    ]);
-    let doc = list.documents[0] as Record<string, unknown> | undefined;
+  const jwt = extractJwt(req, payload);
+  const { requesterId, requester } = await gateway.getRequester({ requesterJwt: jwt });
 
-    if (!doc) {
-      // auto-provision desde labels (como password_reset admin pattern)
-      const user = await users.get(identity.userId);
-      const labels = (user.labels || []).map((l) => String(l).toLowerCase());
-      const isAdmin = labels.includes('admin');
-      if (!isAdmin && !labels.includes('operador')) {
-        throw Object.assign(new Error('Sin registro de operador'), { code: 'FORBIDDEN', status: 403 });
-      }
-      const pinHash = await hashPin(defaultPin(), salt);
-      doc = (await databases.createDocument(ids.databaseId, ids.operadores, ID.unique(), {
-        userId: identity.userId,
-        email: user.email,
-        nombre: user.name || user.email,
-        rol: isAdmin ? 'admin' : 'operador',
-        activo: 'true',
-        cancelPinHash: pinHash,
-        mustChangePassword: false,
-      })) as unknown as Record<string, unknown>;
-    }
-
-    const pinNeedsReset = await isDefaultPinHash(doc.cancelPinHash as string, salt);
-    return publicOp(doc, salt, pinNeedsReset);
+  if (!requesterId || !requester) {
+    throw Object.assign(new Error('No autorizado. Inicie sesión (JWT requerido).'), {
+      code: 'UNAUTHORIZED',
+      status: 401,
+    });
   }
 
+  const labels = requester.labels || [];
+  const isAdmin = isAdminByLabels(labels, adminLabels);
+  const isOp = isOperadorByLabels(labels);
+
+  if (!isOp) {
+    throw Object.assign(new Error('Acceso denegado: se requiere label admin u operador.'), {
+      code: 'FORBIDDEN',
+      status: 403,
+    });
+  }
+
+  const ensureAdmin = () => {
+    if (!isAdmin) {
+      throw Object.assign(new Error('Acceso denegado: se requiere rol Admin.'), {
+        code: 'FORBIDDEN',
+        status: 403,
+      });
+    }
+  };
+
+  async function findOperadorByUserId(userId: string) {
+    const list = await databases.listDocuments(ids.databaseId, ids.operadores, [
+      Query.equal('userId', userId),
+      Query.limit(1),
+    ]);
+    return list.documents[0] as unknown as Record<string, unknown> | undefined;
+  }
+
+  async function ensurePerfilDoc() {
+    let doc = await findOperadorByUserId(requesterId);
+    if (doc) return doc;
+
+    // Auto-provision perfil (PIN 0000) — como me() anterior
+    const pinHash = await hashPin(defaultPin(), salt);
+    doc = (await databases.createDocument(ids.databaseId, ids.operadores, ID.unique(), {
+      userId: requesterId,
+      email: requester.email,
+      nombre: requester.name || requester.email,
+      rol: isAdmin ? 'admin' : 'operador',
+      activo: 'true',
+      cancelPinHash: pinHash,
+      mustChangePassword: false,
+    })) as unknown as Record<string, unknown>;
+    return doc;
+  }
+
+  // ── me ──────────────────────────────────────────────
+  if (action === 'operadores.me') {
+    const doc = await ensurePerfilDoc();
+    return publicOp(doc, salt);
+  }
+
+  // ── list (admin) ────────────────────────────────────
   if (action === 'operadores.list') {
-    assertAdmin(identity);
-    const limit = Math.min(Number(payload.limit) || 50, 100);
-    const res = await databases.listDocuments(ids.databaseId, ids.operadores, [Query.limit(limit)]);
-    const operadores = await Promise.all(
-      res.documents.map(async (d) => {
-        const doc = d as unknown as Record<string, unknown>;
-        const pinNeedsReset = await isDefaultPinHash(doc.cancelPinHash as string, salt);
-        return publicOp(doc, salt, pinNeedsReset);
-      }),
-    );
+    ensureAdmin();
+    const res = await databases.listDocuments(ids.databaseId, ids.operadores, [
+      Query.limit(Math.min(Number(payload.limit) || 50, 100)),
+    ]);
+    const operadores = [];
+    for (const d of res.documents) {
+      operadores.push(await publicOp(d as unknown as Record<string, unknown>, salt));
+    }
     return { operadores, total: res.total };
   }
 
+  // ── create (admin) — Users.create + labels + perfil ─
   if (action === 'operadores.create') {
-    assertAdmin(identity);
+    ensureAdmin();
     const email = String(payload.email || '').trim().toLowerCase();
     const nombre = String(payload.nombre || '').trim();
     const rol = payload.rol === 'admin' ? 'admin' : 'operador';
     if (!email || !nombre) {
-      throw Object.assign(new Error('nombre y email requeridos'), { code: 'VALIDATION', status: 400 });
+      throw Object.assign(new Error('nombre y email requeridos'), {
+        code: 'VALIDATION',
+        status: 400,
+      });
     }
 
-    const user = await users.create(ID.unique(), email, undefined, defaultPassword(), nombre);
-    await users.updateLabels(user.$id, rol === 'admin' ? ['admin', 'operador'] : ['operador']);
+    const labelsForUser =
+      rol === 'admin' ? ['admin', 'operador'] : ['operador'];
+
+    const user = await gateway.create({
+      email,
+      password: defaultPassword(),
+      name: nombre,
+      labels: labelsForUser,
+    });
+
     const pinHash = await hashPin(defaultPin(), salt);
     const doc = (await databases.createDocument(ids.databaseId, ids.operadores, ID.unique(), {
       userId: user.$id,
@@ -116,14 +198,15 @@ export async function handleOperadores(
     })) as unknown as Record<string, unknown>;
 
     return {
-      ...publicOp(doc, salt, true),
+      ...(await publicOp(doc, salt)),
       passwordTemporal: defaultPassword(),
       mensaje: 'Cuenta creada. Password 12345678 · PIN 0000 (debe cambiarlos).',
     };
   }
 
+  // ── setRole (admin) ─────────────────────────────────
   if (action === 'operadores.setRole') {
-    assertAdmin(identity);
+    ensureAdmin();
     const operadorId = String(payload.operadorId || '');
     const rol = payload.rol === 'admin' ? 'admin' : 'operador';
     const doc = (await databases.getDocument(
@@ -131,63 +214,72 @@ export async function handleOperadores(
       ids.operadores,
       operadorId,
     )) as unknown as Record<string, unknown>;
-    const updated = (await databases.updateDocument(ids.databaseId, ids.operadores, operadorId, {
-      rol,
-    })) as unknown as Record<string, unknown>;
-    await users.updateLabels(
+
+    await gateway.updateLabels(
       String(doc.userId),
       rol === 'admin' ? ['admin', 'operador'] : ['operador'],
     );
-    const pinNeedsReset = await isDefaultPinHash(updated.cancelPinHash as string, salt);
-    return publicOp(updated, salt, pinNeedsReset);
+    const updated = (await databases.updateDocument(ids.databaseId, ids.operadores, operadorId, {
+      rol,
+    })) as unknown as Record<string, unknown>;
+    return publicOp(updated, salt);
   }
 
+  // ── setActive (admin) → Auth status + activo text ───
   if (action === 'operadores.setActive') {
-    assertAdmin(identity);
+    ensureAdmin();
     const operadorId = String(payload.operadorId || '');
     const activo = Boolean(payload.activo);
+    const doc = (await databases.getDocument(
+      ids.databaseId,
+      ids.operadores,
+      operadorId,
+    )) as unknown as Record<string, unknown>;
+
+    await gateway.updateStatus(String(doc.userId), activo);
     const updated = (await databases.updateDocument(ids.databaseId, ids.operadores, operadorId, {
       activo: activo ? 'true' : 'false',
     })) as unknown as Record<string, unknown>;
-    const pinNeedsReset = await isDefaultPinHash(updated.cancelPinHash as string, salt);
-    return publicOp(updated, salt, pinNeedsReset);
+    return publicOp(updated, salt);
   }
 
+  // ── resetCancelPin (admin) ──────────────────────────
   if (action === 'operadores.resetCancelPin') {
-    assertAdmin(identity);
+    ensureAdmin();
     const operadorId = String(payload.operadorId || '');
     const pinHash = await hashPin(defaultPin(), salt);
     const updated = (await databases.updateDocument(ids.databaseId, ids.operadores, operadorId, {
       cancelPinHash: pinHash,
     })) as unknown as Record<string, unknown>;
     return {
-      ...publicOp(updated, salt, true),
+      ...(await publicOp(updated, salt)),
       mensaje: 'PIN reseteado a 0000',
     };
   }
 
+  // ── resetPassword (admin) — como list_users setUserPassword ─
   if (action === 'operadores.resetPassword') {
-    assertAdmin(identity);
+    ensureAdmin();
     const operadorId = String(payload.operadorId || '');
     const doc = (await databases.getDocument(
       ids.databaseId,
       ids.operadores,
       operadorId,
     )) as unknown as Record<string, unknown>;
-    await users.updatePassword(String(doc.userId), defaultPassword());
+
+    await gateway.updatePassword(String(doc.userId), defaultPassword());
     const updated = (await databases.updateDocument(ids.databaseId, ids.operadores, operadorId, {
       mustChangePassword: true,
     })) as unknown as Record<string, unknown>;
-    const pinNeedsReset = await isDefaultPinHash(updated.cancelPinHash as string, salt);
     return {
-      ...publicOp(updated, salt, pinNeedsReset),
+      ...(await publicOp(updated, salt)),
       passwordTemporal: defaultPassword(),
       mensaje: 'Contraseña reseteada a 12345678',
     };
   }
 
+  // ── setOwnCancelPin (titular) ───────────────────────
   if (action === 'operadores.setOwnCancelPin') {
-    assertOperador(identity);
     const pin = String(payload.pin || '').trim();
     const pinActual = String(payload.pinActual || '').trim();
     if (!/^\d{4}$/.test(pin) || pin === defaultPin()) {
@@ -196,14 +288,7 @@ export async function handleOperadores(
         status: 400,
       });
     }
-    if (!identity.operadorDocId) {
-      throw Object.assign(new Error('Sin perfil'), { code: 'NOT_FOUND', status: 404 });
-    }
-    const doc = (await databases.getDocument(
-      ids.databaseId,
-      ids.operadores,
-      identity.operadorDocId,
-    )) as unknown as Record<string, unknown>;
+    const doc = await ensurePerfilDoc();
     const needsReset = await isDefaultPinHash(doc.cancelPinHash as string, salt);
     if (needsReset) {
       if (pinActual && pinActual !== defaultPin()) {
@@ -213,27 +298,33 @@ export async function handleOperadores(
         });
       }
     } else if (!(await verifyPin(pinActual, doc.cancelPinHash as string, salt))) {
-      throw Object.assign(new Error('PIN actual incorrecto'), { code: 'FORBIDDEN', status: 403 });
+      throw Object.assign(new Error('PIN actual incorrecto'), {
+        code: 'FORBIDDEN',
+        status: 403,
+      });
     }
     const updated = (await databases.updateDocument(
       ids.databaseId,
       ids.operadores,
-      identity.operadorDocId,
+      String(doc.$id),
       { cancelPinHash: await hashPin(pin, salt) },
     )) as unknown as Record<string, unknown>;
-    return { ...publicOp(updated, salt, false), mensaje: 'PIN actualizado' };
+    return { ...(await publicOp(updated, salt)), mensaje: 'PIN actualizado' };
   }
 
+  // ── changeOwnPassword (titular) ─────────────────────
   if (action === 'operadores.changeOwnPassword') {
-    assertOperador(identity);
-    if (!identity.userId) throw Object.assign(new Error('Sin sesión'), { code: 'UNAUTHORIZED', status: 401 });
     const passwordNueva = String(payload.passwordNueva || '').trim();
     if (passwordNueva.length < 8 || passwordNueva === defaultPassword()) {
-      throw Object.assign(new Error('Password inválida'), { code: 'VALIDATION', status: 400 });
+      throw Object.assign(new Error('Password inválida'), {
+        code: 'VALIDATION',
+        status: 400,
+      });
     }
-    await users.updatePassword(identity.userId, passwordNueva);
-    if (identity.operadorDocId) {
-      await databases.updateDocument(ids.databaseId, ids.operadores, identity.operadorDocId, {
+    await gateway.updatePassword(requesterId, passwordNueva);
+    const doc = await findOperadorByUserId(requesterId);
+    if (doc) {
+      await databases.updateDocument(ids.databaseId, ids.operadores, String(doc.$id), {
         mustChangePassword: false,
       });
     }
