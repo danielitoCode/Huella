@@ -22,6 +22,16 @@ function parseActivo(v: unknown) {
   return s === 'true' || s === '1' || s === 'si' || s === 'sí' || s === 'activo';
 }
 
+function roleFromLabels(labels: unknown): 'admin' | 'operador' | null {
+  const normalized = Array.isArray(labels)
+    ? labels.map((label) => String(label).trim().toLowerCase())
+    : [];
+
+  if (normalized.includes('admin')) return 'admin';
+  if (normalized.includes('operador')) return 'operador';
+  return null;
+}
+
 export async function resolveIdentity(req: Request, env: Env): Promise<Identity> {
   const base: Identity = {
     userId: null,
@@ -34,7 +44,7 @@ export async function resolveIdentity(req: Request, env: Env): Promise<Identity>
     mustChangePassword: false,
   };
 
-  let jwt =
+  const jwt =
     req.headers.get('x-appwrite-user-jwt') ||
     (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (!jwt) return base;
@@ -53,42 +63,45 @@ export async function resolveIdentity(req: Request, env: Env): Promise<Identity>
   const { databases, users, ids } = adminClient(env);
   const salt = env.PIN_SALT || 'huella';
 
+  // Appwrite user labels are the authoritative source of role.
+  // The operadores document is profile/operational metadata only.
+  let role: 'admin' | 'operador' | null = null;
+  try {
+    const user = await users.get(userId);
+    role = roleFromLabels(user.labels);
+  } catch {
+    // Without the Appwrite user/labels, no privileged role is granted.
+  }
+
+  if (role) {
+    base.rol = role;
+    base.isAdmin = role === 'admin';
+    base.isOperador = true;
+    base.pinNeedsReset = true;
+  }
+
   try {
     const list = await databases.listDocuments(ids.databaseId, ids.operadores, [
       Query.equal('userId', userId),
       Query.limit(1),
     ]);
     const doc = list.documents[0] as Record<string, unknown> | undefined;
+
     if (doc) {
-      const rol = String(doc.rol || 'operador').toLowerCase();
       const activo = parseActivo(doc.activo);
       base.operadorDocId = String(doc.$id);
-      base.rol = rol;
       base.pinNeedsReset = await isDefaultPinHash(doc.cancelPinHash as string, salt);
       base.mustChangePassword = doc.mustChangePassword === true;
-      base.isAdmin = activo && rol === 'admin';
-      base.isOperador = activo && (rol === 'admin' || rol === 'operador');
-      return base;
-    }
-  } catch {
-    // sin colección
-  }
 
-  try {
-    const user = await users.get(userId);
-    const labels = (user.labels || []).map((l) => String(l).toLowerCase());
-    if (labels.includes('admin')) {
-      base.rol = 'admin';
-      base.isAdmin = true;
-      base.isOperador = true;
-      base.pinNeedsReset = true;
-    } else if (labels.includes('operador')) {
-      base.rol = 'operador';
-      base.isOperador = true;
-      base.pinNeedsReset = true;
+      // A profile may disable an already-labelled operator, but it cannot grant
+      // or change a role that is absent from Appwrite user labels.
+      if (!activo) {
+        base.isAdmin = false;
+        base.isOperador = false;
+      }
     }
   } catch {
-    // ignore
+    // Profile collection/document is optional for label-based authentication.
   }
 
   return base;
