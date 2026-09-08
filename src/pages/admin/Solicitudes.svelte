@@ -19,12 +19,6 @@
     fechaActualizacion: string;
   };
 
-  type ListResult = {
-    solicitudes: SolicitudItem[];
-    total: number;
-    limit: number;
-    offset: number;
-  };
 
   const ESTADOS: { value: string; label: string }[] = [
     { value: '', label: 'Todos los estados' },
@@ -47,12 +41,10 @@
     cargando = true;
     errorMsg = '';
     try {
-      const payload: Record<string, unknown> = { limit, offset: nuevoOffset };
-      if (filtroEstado) payload.estado = filtroEstado;
       const res = await getSolicitudRepository().list({
         limit,
         offset: nuevoOffset,
-        estado: (payload.estado as EstadoSolicitud | undefined),
+        estado: (filtroEstado || undefined) as EstadoSolicitud | undefined,
       });
       solicitudes = res.solicitudes;
       total = res.total;
