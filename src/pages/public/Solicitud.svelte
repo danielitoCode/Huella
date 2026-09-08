@@ -1,6 +1,7 @@
 <script lang="ts">
   import { irAPublica } from '../../lib/stores/router';
-  import { executeApi, ApiError } from '../../lib/appwrite';
+  import { ApiError } from '../../lib/appwrite';
+  import { getHuellaRepository } from '../../lib/data/repositories';
   import type { CreateSolicitudResult } from '../../lib/types';
 
   let nombreFamiliar = $state('');
@@ -20,7 +21,7 @@
     errorMsg = '';
     enviando = true;
     try {
-      const data = await executeApi<CreateSolicitudResult>('solicitudes.create', {
+      const data = await getHuellaRepository().request<CreateSolicitudResult>('solicitudes.create', {
         nombreFamiliar: nombreFamiliar.trim(),
         email: email.trim(),
         telefono: telefono.trim() || undefined,
