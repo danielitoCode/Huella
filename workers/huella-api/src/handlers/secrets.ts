@@ -175,6 +175,34 @@ export async function handleSecrets(
     return { sent: true };
   }
 
+  // Listado de solicitudes (backoffice)
+  if (action === 'solicitudes.list') {
+    assertOperador(identity);
+    const estado = String(payload.estado || '').trim() || undefined;
+    const limit = Number(payload.limit ?? 25) || 25;
+    const offset = Number(payload.offset ?? 0) || 0;
+    const filters = [];
+    if (estado) filters.push(Query.equal('estado', estado));
+    filters.push(Query.orderDesc('$createdAt'));
+    filters.push(Query.limit(limit));
+    filters.push(Query.offset(offset));
+    const res = await databases.listDocuments(ids.databaseId, ids.solicitudes, filters);
+    const solicitudes = (res.documents || []).map((doc) => ({
+      id: doc.$id,
+      codigoSeguimiento: doc.codigoSeguimiento,
+      nombreFamiliar: doc.nombreFamiliar,
+      email: doc.email,
+      nombrePersona: doc.nombrePersona,
+      relacion: doc.relacion,
+      estado: doc.estado,
+      mensajePublico: doc.mensajePublico || null,
+      diditSessionId: doc.diditSessionId || null,
+      fechaCreacion: doc.$createdAt,
+      fechaActualizacion: doc.$updatedAt,
+    }));
+    return { solicitudes, total: res.total || 0, limit, offset };
+  }
+
   throw Object.assign(new Error(`Acción desconocida: ${action}`), {
     code: 'INVALID_ACTION',
     status: 400,
