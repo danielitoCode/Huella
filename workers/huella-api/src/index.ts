@@ -2,16 +2,27 @@
  * Cloudflare Worker — huella-api
  * Solo secretos + admin usuarios + tracking público + cancelar+PIN + Didit + email.
  * CRUD solicitudes del backoffice → SDK Appwrite en el frontend.
- *
- * Patrón alineado con dash_alejo_taller/workers + password_reset (Users admin).
  */
 import type { Env } from './env';
 import { json, ok, withCors } from './http';
-import { resolveIdentity } from './auth';
+import { resolveIdentity, type Identity } from './auth';
 import { handleOperadores } from './handlers/operadores';
 import { handleSecrets } from './handlers/secrets';
 
-const WORKER_VERSION = '3.0.0';
+const WORKER_VERSION = '3.0.1';
+
+const PUBLIC_ACTIONS = new Set(['solicitudes.getByCode']);
+
+const guestIdentity = (): Identity => ({
+  userId: null,
+  isAuthenticated: false,
+  isAdmin: false,
+  isOperador: false,
+  rol: null,
+  operadorDocId: null,
+  pinNeedsReset: false,
+  mustChangePassword: false,
+});
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
@@ -67,7 +78,10 @@ export default {
         );
       }
 
-      const identity = await resolveIdentity(req, env);
+      // Tracking público: no requiere JWT ni resolveIdentity
+      const identity = PUBLIC_ACTIONS.has(action)
+        ? guestIdentity()
+        : await resolveIdentity(req, env);
 
       let data: unknown;
       if (action.startsWith('operadores.')) {
