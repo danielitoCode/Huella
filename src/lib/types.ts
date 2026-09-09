@@ -9,7 +9,7 @@ export type EstadoSolicitud =
 
 export type Zona = 'public' | 'admin';
 
-export type RutaPublica = 'home' | 'solicitud' | 'seguimiento';
+export type RutaPublica = 'home' | 'solicitud' | 'seguimiento' | 'terminos';
 export type RutaAdmin = 'login' | 'dashboard' | 'solicitudes' | 'detalle' | 'equipo';
 
 export type OperatorContact = {
@@ -95,3 +95,6 @@ export const ESTADO_DESCRIPCION_OPERADOR: Record<EstadoSolicitud, string> = {
   cerrado: 'Proceso finalizado correctamente (averiguación y gestiones asociadas).',
   cancelada: 'Solicitud anulada; no continúa el proceso.',
 };
+
+/** Versión de los términos (actualizar al revisar el texto legal). */
+export const TERMINOS_VERSION = '2026-09-09';
