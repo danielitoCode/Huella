@@ -12,15 +12,19 @@
     mobileMenuOpen = !mobileMenuOpen;
   }
 
-  function accesoOperadores() {
+  function closeMobile() {
     mobileMenuOpen = false;
+  }
+
+  function accesoOperadores() {
+    closeMobile();
     if (isOperator) irAAdmin('dashboard');
     else irAAdmin('login');
   }
 
   async function handleLogout() {
     loggingOut = true;
-    mobileMenuOpen = false;
+    closeMobile();
     try {
       await logout();
       irAAdmin('login');
@@ -32,7 +36,7 @@
 
 <header class="header">
   <div class="header-inner">
-    <button type="button" class="brand" onclick={() => irAPublica('home')}>
+    <button type="button" class="brand" onclick={() => { irAPublica('home'); closeMobile(); }}>
       <div class="logo-wrapper">
         <img src="/icon_huellas.svg" alt="" class="logo" width="30" height="30" />
       </div>
@@ -47,10 +51,10 @@
         <button type="button" class="nav-link" onclick={() => irAPublica('home')}>Inicio</button>
         <button type="button" class="nav-link" onclick={() => irAPublica('seguimiento')}>Seguimiento</button>
         <button type="button" class="btn btn-gold nav-btn" onclick={() => irAPublica('solicitud')}>
-          Comenzar una búsqueda
+          Comenzar búsqueda
         </button>
         <button type="button" class="nav-link subtle" onclick={accesoOperadores}>
-          {isOperator ? 'Panel operadores' : 'Acceso operadores'}
+          {isOperator ? 'Panel' : 'Operadores'}
         </button>
       {:else if isOperator}
         <button
@@ -81,7 +85,7 @@
           Sitio público
         </button>
         <button type="button" class="nav-link subtle" disabled={loggingOut} onclick={handleLogout}>
-          {loggingOut ? 'Saliendo…' : 'Cerrar sesión'}
+          {loggingOut ? 'Saliendo…' : 'Salir'}
         </button>
       {:else}
         <button type="button" class="nav-link subtle" onclick={() => irAPublica('home')}>
@@ -90,25 +94,39 @@
       {/if}
     </nav>
 
-    <button type="button" class="mobile-toggle" onclick={toggleMobileMenu} aria-label="Menú">
-      ☰
+    <button
+      type="button"
+      class="mobile-toggle"
+      onclick={toggleMobileMenu}
+      aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+      aria-expanded={mobileMenuOpen}
+    >
+      {mobileMenuOpen ? '✕' : '☰'}
     </button>
   </div>
 
   {#if mobileMenuOpen}
-    <div class="mobile-drawer">
+    <div class="mobile-drawer" role="navigation" aria-label="Menú móvil">
       {#if zona === 'public'}
-        <button type="button" class="mobile-link" onclick={() => { irAPublica('home'); mobileMenuOpen = false; }}>Inicio</button>
-        <button type="button" class="mobile-link" onclick={() => { irAPublica('seguimiento'); mobileMenuOpen = false; }}>Seguimiento</button>
-        <button type="button" class="btn btn-gold mobile-btn" onclick={() => { irAPublica('solicitud'); mobileMenuOpen = false; }}>Comenzar búsqueda</button>
-        <button type="button" class="mobile-link" onclick={accesoOperadores}>{isOperator ? 'Panel' : 'Operadores'}</button>
+        <button type="button" class="mobile-link" onclick={() => { irAPublica('home'); closeMobile(); }}>Inicio</button>
+        <button type="button" class="mobile-link" onclick={() => { irAPublica('seguimiento'); closeMobile(); }}>Seguimiento</button>
+        <button type="button" class="mobile-link" onclick={() => { irAPublica('terminos'); closeMobile(); }}>Términos</button>
+        <button type="button" class="btn btn-gold mobile-btn" onclick={() => { irAPublica('solicitud'); closeMobile(); }}>
+          Comenzar búsqueda
+        </button>
+        <button type="button" class="mobile-link" onclick={accesoOperadores}>
+          {isOperator ? 'Panel operadores' : 'Acceso operadores'}
+        </button>
       {:else if isOperator}
-        <button type="button" class="mobile-link" onclick={() => { irAAdmin('dashboard'); mobileMenuOpen = false; }}>Dashboard</button>
-        <button type="button" class="mobile-link" onclick={() => { irAAdmin('solicitudes'); mobileMenuOpen = false; }}>Solicitudes</button>
-        <button type="button" class="mobile-link" onclick={() => { irAAdmin('equipo'); mobileMenuOpen = false; }}>Equipo</button>
-        <button type="button" class="mobile-link" onclick={handleLogout}>Cerrar sesión</button>
+        <button type="button" class="mobile-link" onclick={() => { irAAdmin('dashboard'); closeMobile(); }}>Dashboard</button>
+        <button type="button" class="mobile-link" onclick={() => { irAAdmin('solicitudes'); closeMobile(); }}>Solicitudes</button>
+        <button type="button" class="mobile-link" onclick={() => { irAAdmin('equipo'); closeMobile(); }}>Equipo</button>
+        <button type="button" class="mobile-link" onclick={() => { irAPublica('home'); closeMobile(); }}>Sitio público</button>
+        <button type="button" class="mobile-link" onclick={handleLogout} disabled={loggingOut}>
+          {loggingOut ? 'Saliendo…' : 'Cerrar sesión'}
+        </button>
       {:else}
-        <button type="button" class="mobile-link" onclick={() => { irAPublica('home'); mobileMenuOpen = false; }}>Sitio público</button>
+        <button type="button" class="mobile-link" onclick={() => { irAPublica('home'); closeMobile(); }}>Sitio público</button>
       {/if}
     </div>
   {/if}
@@ -122,6 +140,7 @@
     position: sticky;
     top: 0;
     z-index: 50;
+    padding-top: env(safe-area-inset-top, 0);
   }
   .header-inner {
     max-width: 1240px;
@@ -129,43 +148,65 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1.5rem;
+    gap: 0.75rem;
+    padding: 0.65rem var(--page-pad-x, 1rem);
+    min-height: 56px;
   }
   .brand {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.65rem;
     border: none;
     background: none;
     cursor: pointer;
     color: var(--header-text);
+    min-width: 0;
+    padding: 0;
+  }
+  .logo-wrapper {
+    flex-shrink: 0;
+  }
+  .logo {
+    display: block;
+  }
+  .brand-text {
+    min-width: 0;
+    text-align: left;
   }
   .name {
     font-family: var(--font-serif, var(--font-display));
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: #fff;
+    display: block;
+    line-height: 1.15;
   }
   .subname {
     display: block;
-    font-size: 0.68rem;
-    letter-spacing: 0.12em;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--gold);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .desktop-nav {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   .nav-link {
     background: transparent;
     border: 1px solid transparent;
     color: var(--header-text);
-    padding: 0.5rem 0.85rem;
+    padding: 0.45rem 0.7rem;
     border-radius: var(--radius);
     cursor: pointer;
-    font-size: 0.88rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
   }
   .nav-link.active {
     color: var(--gold);
@@ -173,42 +214,66 @@
     border-color: rgba(212, 175, 55, 0.3);
   }
   .nav-link.subtle {
-    opacity: 0.8;
+    opacity: 0.85;
     font-size: 0.8rem;
   }
   .nav-btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.82rem;
+    min-height: 40px;
+    width: auto;
   }
   .mobile-toggle {
     display: none;
-    background: none;
-    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: #fff;
-    font-size: 1.4rem;
+    font-size: 1.15rem;
     cursor: pointer;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius);
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
   }
   .mobile-drawer {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 1rem 1.5rem 1.5rem;
+    padding: 0.75rem var(--page-pad-x, 1rem) 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    max-height: min(70vh, 420px);
+    overflow-y: auto;
   }
   .mobile-link {
     background: transparent;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     color: var(--header-text);
-    padding: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
     border-radius: var(--radius);
     text-align: left;
     cursor: pointer;
+    font-size: 0.95rem;
+    min-height: 48px;
   }
-  @media (max-width: 860px) {
+  .mobile-btn {
+    width: 100%;
+  }
+  @media (max-width: 920px) {
     .desktop-nav {
       display: none;
     }
     .mobile-toggle {
-      display: block;
+      display: inline-flex;
+    }
+  }
+  @media (max-width: 380px) {
+    .subname {
+      display: none;
+    }
+    .name {
+      font-size: 1.15rem;
     }
   }
 </style>
