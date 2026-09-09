@@ -3,7 +3,7 @@
   import { get } from 'svelte/store';
   import { router, irAPublica } from '../../lib/stores/router';
   import { ApiError } from '../../lib/appwrite';
-  import { getHuellaRepository } from '../../lib/data/repositories';
+  import { getSolicitudRepository } from '../../lib/data/repositories';
   import type { EstadoSolicitud, SeguimientoPublico } from '../../lib/types';
 
   let codigoInput = $state('');
@@ -58,25 +58,6 @@
     return d.toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' });
   }
 
-  /** Normaliza respuesta del Worker (aliases createdAt / verificationUrl). */
-  function normalizeSeguimiento(raw: Record<string, unknown>): SeguimientoPublico {
-    const estado = (raw.estado as EstadoSolicitud) || 'pendiente';
-    const verificationUrl =
-      (raw.verificationUrl as string) ||
-      (raw.diditVerificationUrl as string) ||
-      null;
-    return {
-      codigoSeguimiento: String(raw.codigoSeguimiento || ''),
-      estado,
-      mensajePublico: (raw.mensajePublico as string) || null,
-      fechaCreacion: String(raw.fechaCreacion || raw.createdAt || ''),
-      fechaActualizacion: String(raw.fechaActualizacion || raw.updatedAt || ''),
-      kycCompletado: Boolean(raw.kycCompletado) || estado === 'verificado' || estado === 'cerrado',
-      verificationUrl,
-      operatorContact: (raw.operatorContact as SeguimientoPublico['operatorContact']) || undefined,
-    };
-  }
-
   async function consultar(codigo: string, syncUrl = false) {
     const c = codigo.trim().toUpperCase();
     if (!c) {
@@ -88,11 +69,7 @@
     data = null;
     cargando = true;
     try {
-      const res = await getHuellaRepository().request<Record<string, unknown>>(
-        'solicitudes.getByCode',
-        { codigoSeguimiento: c, codigo: c },
-      );
-      const normalized = normalizeSeguimiento(res);
+      const normalized = await getSolicitudRepository().getByCode(c);
       data = normalized;
       ultimoConsultado = normalized.codigoSeguimiento;
       codigoInput = normalized.codigoSeguimiento;
@@ -160,7 +137,7 @@
         <input
           type="text"
           bind:value={codigoInput}
-          placeholder="Ej. HU-XXXX…"
+          placeholder="Ej. HUE-2026-…"
           autocomplete="off"
           spellcheck="false"
           disabled={cargando}
@@ -191,7 +168,7 @@
       </div>
       <div class="sk-line sk-w90"></div>
       <div class="sk-line sk-w60"></div>
-      <p class="sk-hint">Consultando en los servidores…</p>
+      <p class="sk-hint">Consultando en Appwrite…</p>
     </div>
   {/if}
 
