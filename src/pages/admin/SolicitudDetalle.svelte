@@ -4,17 +4,33 @@
   import { router, irAAdmin } from '../../lib/stores/router';
   import { ApiError } from '../../lib/appwrite';
   import { getSolicitudRepository } from '../../lib/data/repositories';
-  import { ESTADO_LABEL, type EstadoSolicitud, type Solicitud } from '../../lib/types';
+  import {
+    ESTADO_DESCRIPCION_OPERADOR,
+    ESTADO_LABEL,
+    type EstadoSolicitud,
+    type Solicitud,
+  } from '../../lib/types';
   import Skeleton from '../../components/ui/Skeleton.svelte';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
+
+  /** Orden del flujo feliz (cancelada es rama aparte). */
+  const PIPELINE: EstadoSolicitud[] = [
+    'pendiente',
+    'sin_verificar',
+    'verificado',
+    'cerrado',
+  ];
 
   let solicitud = $state<Solicitud | null>(null);
   let cargando = $state(true);
   let errorMsg = $state('');
   let actionError = $state('');
   let actionLoading = $state(false);
+  let notasGuardadasOk = $state(false);
 
+  /** Notas del operador: detalles importantes del expediente (solo backoffice). */
   let notas = $state('');
+  /** Mensaje visible en seguimiento público. */
   let mensajePublico = $state('');
 
   let modal: 'none' | 'verificar' | 'cerrar' | 'cancelar' = $state('none');
@@ -25,6 +41,11 @@
   const esTerminal = $derived(
     solicitud?.estado === 'cerrado' || solicitud?.estado === 'cancelada',
   );
+
+  function pipelineIndex(estado: EstadoSolicitud): number {
+    if (estado === 'cancelada') return -1;
+    return PIPELINE.indexOf(estado);
+  }
 
   onMount(async () => {
     if (!solicitudId) {
@@ -46,8 +67,8 @@
 
   function badgeFor(estado: EstadoSolicitud): string {
     if (estado === 'verificado') return 'badge badge-positive';
+    if (estado === 'cerrado') return 'badge badge-positive';
     if (estado === 'cancelada') return 'badge badge-error';
-    if (estado === 'cerrado') return 'badge';
     return 'badge badge-progress';
   }
 
@@ -69,21 +90,28 @@
     if (!solicitud) return;
     await runAction(async () => {
       const updated = await getSolicitudRepository().update(solicitud!.id, {
-        notasInternas: notas || null,
-        mensajePublico: mensajePublico || null,
+        notasInternas: notas.trim() || null,
+        mensajePublico: mensajePublico.trim() || null,
       });
       solicitud = updated;
+      notas = updated.notasInternas ?? '';
+      mensajePublico = updated.mensajePublico ?? '';
+      notasGuardadasOk = true;
+      setTimeout(() => {
+        notasGuardadasOk = false;
+      }, 2500);
     });
   }
 
+  /** pendiente → atendido · no verificado */
   async function marcarAtendido() {
-    if (!solicitud) return;
+    if (!solicitud || solicitud.estado !== 'pendiente') return;
     await runAction(async () => {
       const updated = await getSolicitudRepository().update(solicitud!.id, {
         estado: 'sin_verificar',
-        notasInternas: notas || solicitud!.notasInternas,
+        notasInternas: notas.trim() || solicitud!.notasInternas,
         mensajePublico:
-          mensajePublico ||
+          mensajePublico.trim() ||
           'Tu caso está siendo atendido. Pronto te indicaremos cómo verificar identidad.',
       });
       solicitud = updated;
@@ -91,54 +119,67 @@
     });
   }
 
+  /** sin_verificar → verificado */
   async function confirmarVerificado() {
-    if (!solicitud || !motivo.trim()) {
-      actionError = 'El motivo de verificación manual es obligatorio.';
+    if (!solicitud || solicitud.estado !== 'sin_verificar') return;
+    if (!motivo.trim()) {
+      actionError = 'Indica cómo se verificó la identidad (Didit, asistida, etc.).';
       return;
     }
     await runAction(async () => {
-      const note = [notas, `Verificado manual: ${motivo.trim()}`].filter(Boolean).join('\n');
+      const note = [notas.trim(), `Verificación: ${motivo.trim()}`].filter(Boolean).join('\n');
       const updated = await getSolicitudRepository().update(solicitud!.id, {
         estado: 'verificado',
         kycResultado: 'manual',
-        notasInternas: note,
+        notasInternas: note || null,
         mensajePublico:
-          mensajePublico ||
+          mensajePublico.trim() ||
           'Identidad confirmada. El equipo continúa con la investigación del familiar.',
       });
       solicitud = updated;
+      notas = updated.notasInternas ?? '';
     });
   }
 
+  /** verificado → cerrado (proceso completado correctamente) */
   async function confirmarCierre() {
-    if (!solicitud || !motivo.trim()) {
-      actionError = 'El motivo de cierre es obligatorio.';
+    if (!solicitud || solicitud.estado !== 'verificado') return;
+    if (!motivo.trim()) {
+      actionError = 'Describe el resultado final del expediente (cierre exitoso).';
       return;
     }
     await runAction(async () => {
+      const note = [notas.trim(), `Cierre completado: ${motivo.trim()}`].filter(Boolean).join('\n');
       const updated = await getSolicitudRepository().update(solicitud!.id, {
         estado: 'cerrado',
         motivoCierre: motivo.trim(),
-        notasInternas: [notas, `Cierre: ${motivo.trim()}`].filter(Boolean).join('\n'),
-        mensajePublico: mensajePublico || 'Expediente cerrado.',
+        notasInternas: note || null,
+        mensajePublico:
+          mensajePublico.trim() ||
+          'Expediente cerrado: el proceso se completó correctamente.',
       });
       solicitud = updated;
+      notas = updated.notasInternas ?? '';
     });
   }
 
+  /** → cancelada (no es un cierre exitoso) */
   async function confirmarCancelacion() {
-    if (!solicitud || !motivo.trim()) {
+    if (!solicitud || esTerminal) return;
+    if (!motivo.trim()) {
       actionError = 'El motivo de cancelación es obligatorio.';
       return;
     }
     await runAction(async () => {
+      const note = [notas.trim(), `Cancelada: ${motivo.trim()}`].filter(Boolean).join('\n');
       const updated = await getSolicitudRepository().update(solicitud!.id, {
         estado: 'cancelada',
         motivoCierre: motivo.trim(),
-        notasInternas: [notas, `Cancelada: ${motivo.trim()}`].filter(Boolean).join('\n'),
-        mensajePublico: mensajePublico || 'Esta solicitud fue cancelada.',
+        notasInternas: note || null,
+        mensajePublico: mensajePublico.trim() || 'Esta solicitud fue cancelada.',
       });
       solicitud = updated;
+      notas = updated.notasInternas ?? '';
     });
   }
 
@@ -165,16 +206,39 @@
   {:else if errorMsg}
     <div class="error-banner" role="alert">{errorMsg}</div>
   {:else if solicitud}
+    {@const step = pipelineIndex(solicitud.estado)}
+
     <div class="detalle-header glass-panel">
       <div>
         <span class="eyebrow">Expediente</span>
         <h1 class="serif-title">
           <code class="codigo-h">{solicitud.codigoSeguimiento}</code>
         </h1>
+        <p class="estado-desc">{ESTADO_DESCRIPCION_OPERADOR[solicitud.estado]}</p>
       </div>
       <span class={badgeFor(solicitud.estado)}>
-        {ESTADO_LABEL[solicitud.estado] ?? solicitud.estado}
+        {ESTADO_LABEL[solicitud.estado]}
       </span>
+    </div>
+
+    <!-- Pipeline visual de estados -->
+    <div class="pipeline card" aria-label="Flujo de estados">
+      {#if solicitud.estado === 'cancelada'}
+        <p class="pipeline-cancel">Solicitud <strong>cancelada</strong> (fuera del flujo de cierre exitoso).</p>
+      {:else}
+        <ol class="pipeline-steps">
+          {#each PIPELINE as est, i}
+            <li
+              class="pipe-step"
+              class:done={step > i}
+              class:current={step === i}
+            >
+              <span class="pipe-dot">{step > i ? '✓' : i + 1}</span>
+              <span class="pipe-label">{ESTADO_LABEL[est]}</span>
+            </li>
+          {/each}
+        </ol>
+      {/if}
     </div>
 
     <div class="info-grid">
@@ -203,55 +267,72 @@
     </div>
 
     <div class="card block-card">
-      <h3>Contexto</h3>
-      <p class="descripcion">{solicitud.descripcion}</p>
+      <h3>Contexto de la solicitud</h3>
+      <p class="descripcion">{solicitud.descripcion || '—'}</p>
+    </div>
+
+    <!-- Notas del operador: siempre visibles -->
+    <div class="card notes-card">
+      <h3>Notas del operador</h3>
+      <p class="hint-text">
+        Detalles internos del caso (hallazgos, contactos, incidencias). <strong>No se muestran</strong> en el
+        seguimiento público del familiar.
+      </p>
+      <textarea
+        id="notas-op"
+        bind:value={notas}
+        rows="5"
+        placeholder="Ej.: Contactado por WhatsApp el 09/09; familiar en Matanzas; documentación pendiente…"
+        disabled={actionLoading}
+      ></textarea>
+
+      <label for="msg-pub" class="msg-label">Mensaje público (opcional, visible en seguimiento)</label>
+      <textarea
+        id="msg-pub"
+        bind:value={mensajePublico}
+        rows="2"
+        placeholder="Nota breve que verá el familiar al consultar su código…"
+        disabled={actionLoading}
+      ></textarea>
+
+      <div class="notes-actions">
+        <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => guardarNotas()}>
+          {notasGuardadasOk ? '✓ Guardado' : 'Guardar notas'}
+        </button>
+        {#if actionError && modal === 'none'}
+          <span class="inline-err">{actionError}</span>
+        {/if}
+      </div>
     </div>
 
     {#if !esTerminal}
       <div class="card action-card">
-        <h3>Gestión de estado (SDK Appwrite)</h3>
+        <h3>Cambiar estado</h3>
         <p class="hint-text">
-          Flujo: pendiente → atendido (sin verificar) → verificado → cerrado. Sin Worker: Didit y PIN
-          quedan fuera de esta pantalla por ahora.
+          <strong>Pendiente</strong> → <strong>Atendido · no verificado</strong> → <strong>Verificado</strong> →
+          <strong>Cerrado</strong> (todo completado correctamente). <strong>Cancelada</strong> interrumpe el proceso.
         </p>
-
-        {#if actionError && modal === 'none'}
-          <div class="error-banner" role="alert">{actionError}</div>
-        {/if}
 
         {#if actionLoading}
           <LoadingHint message="Guardando en Appwrite…" compact />
         {/if}
 
-        <label for="notas-op">Notas internas</label>
-        <textarea id="notas-op" bind:value={notas} rows="2" disabled={actionLoading}></textarea>
-
-        <label for="msg-pub">Mensaje público (visible en seguimiento)</label>
-        <textarea id="msg-pub" bind:value={mensajePublico} rows="2" disabled={actionLoading}></textarea>
-
         <div class="actions-row">
-          <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => guardarNotas()}>
-            Guardar notas / mensaje
-          </button>
-
           {#if solicitud.estado === 'pendiente'}
             <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={() => marcarAtendido()}>
-              Marcar atendido (sin verificar)
+              Pasar a: Atendido · no verificado
             </button>
           {/if}
 
           {#if solicitud.estado === 'sin_verificar'}
             <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={() => openModal('verificar')}>
-              Marcar verificado (manual)
-            </button>
-            <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => openModal('cerrar')}>
-              Cerrar expediente
+              Pasar a: Verificado
             </button>
           {/if}
 
           {#if solicitud.estado === 'verificado'}
             <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={() => openModal('cerrar')}>
-              Cerrar expediente
+              Cerrar (proceso completado)
             </button>
           {/if}
 
@@ -261,18 +342,17 @@
             </button>
           {/if}
         </div>
-
-        {#if solicitud.diditVerificationUrl}
-          <p class="hint-text" style="margin-top: 1rem">
-            Enlace Didit guardado:
-            <a href={solicitud.diditVerificationUrl} target="_blank" rel="noopener">{solicitud.diditVerificationUrl}</a>
-          </p>
-        {/if}
       </div>
     {:else}
-      <div class="card block-card">
+      <div class="card block-card terminal-card">
         <span class={badgeFor(solicitud.estado)}>{ESTADO_LABEL[solicitud.estado]}</span>
-        <p class="hint-text">Estado terminal: no admite más cambios desde la app.</p>
+        <p class="hint-text">
+          {#if solicitud.estado === 'cerrado'}
+            Estado terminal de <strong>éxito</strong>: el proceso se completó. Puedes seguir editando notas si hace falta.
+          {:else}
+            Estado terminal: la solicitud fue <strong>cancelada</strong>. Puedes conservar las notas para auditoría.
+          {/if}
+        </p>
       </div>
     {/if}
   {/if}
@@ -296,25 +376,29 @@
       onkeydown={(e) => e.stopPropagation()}
     >
       {#if modal === 'verificar'}
-        <h2>Verificación manual</h2>
-        <label>Motivo<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
+        <h2>Marcar como verificado</h2>
+        <p class="hint-text">Confirma la identidad del solicitante (Didit, llamada, documentos, etc.).</p>
+        <label>Cómo se verificó<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
       {:else if modal === 'cerrar'}
-        <h2>Cerrar expediente</h2>
-        <label>Motivo<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
+        <h2>Cerrar expediente (completado)</h2>
+        <p class="hint-text">
+          Usa este estado solo cuando el proceso terminó <strong>correctamente</strong> (averiguación y gestiones asociadas).
+        </p>
+        <label>Resultado final<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
       {:else if modal === 'cancelar'}
         <h2>Cancelar solicitud</h2>
-        <p class="hint-text">PIN de cancelación: gestión temporal vía consola Appwrite (congelado en app).</p>
-        <label>Motivo<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
+        <p class="hint-text">No es un cierre exitoso: el expediente no continúa.</p>
+        <label>Motivo de cancelación<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
       {/if}
       {#if actionError}<div class="error-banner">{actionError}</div>{/if}
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => (modal = 'none')}>Volver</button>
         {#if modal === 'verificar'}
-          <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={confirmarVerificado}>Confirmar</button>
+          <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={confirmarVerificado}>Confirmar verificado</button>
         {:else if modal === 'cerrar'}
-          <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={confirmarCierre}>Cerrar</button>
+          <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={confirmarCierre}>Cerrar completado</button>
         {:else if modal === 'cancelar'}
-          <button type="button" class="btn btn-danger" disabled={actionLoading} onclick={confirmarCancelacion}>Cancelar</button>
+          <button type="button" class="btn btn-danger" disabled={actionLoading} onclick={confirmarCancelacion}>Confirmar cancelación</button>
         {/if}
       </div>
     </div>
@@ -343,10 +427,10 @@
   .detalle-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 1rem;
     padding: 1.5rem 2rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     background: var(--color-obsidian-navy);
     color: #fff;
     border: 1px solid var(--color-border-gold);
@@ -361,6 +445,64 @@
     font-family: var(--font-mono);
     font-size: 1.5rem;
     color: #fff;
+  }
+  .estado-desc {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+    color: #a4b4c0;
+    max-width: 36rem;
+  }
+  .pipeline {
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .pipeline-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  .pipe-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.35rem;
+    opacity: 0.45;
+  }
+  .pipe-step.done,
+  .pipe-step.current {
+    opacity: 1;
+  }
+  .pipe-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: grid;
+    place-items: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .pipe-step.done .pipe-dot {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #071927;
+  }
+  .pipe-step.current .pipe-dot {
+    border-color: var(--positive);
+    color: var(--positive);
+  }
+  .pipe-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.25;
+  }
+  .pipeline-cancel {
+    margin: 0;
+    color: var(--color-alert, #b84c4c);
   }
   .info-grid {
     display: grid;
@@ -389,6 +531,33 @@
   .hint-text {
     font-size: 0.9rem;
     color: var(--text-muted);
+    line-height: 1.45;
+  }
+  .notes-card {
+    margin-bottom: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--color-border-gold);
+    background: rgba(198, 164, 106, 0.05);
+  }
+  .notes-card textarea {
+    width: 100%;
+    margin-top: 0.5rem;
+    font-family: inherit;
+  }
+  .msg-label {
+    display: block;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+  }
+  .notes-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.85rem;
+  }
+  .inline-err {
+    color: var(--color-alert, #b84c4c);
+    font-size: 0.85rem;
   }
   .actions-row {
     display: flex;
@@ -396,14 +565,9 @@
     gap: 0.75rem;
     margin-top: 1rem;
   }
-  .action-card textarea,
-  .block-card {
-    margin-bottom: 1rem;
-  }
-  .action-card label {
-    display: block;
-    margin-top: 0.75rem;
-    font-size: 0.85rem;
+  .block-card,
+  .action-card {
+    margin-bottom: 1.25rem;
   }
   .error-banner {
     padding: 0.85rem 1rem;
@@ -426,10 +590,24 @@
     width: min(480px, 100%);
     padding: 1.5rem;
   }
+  .modal label {
+    display: block;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  .modal textarea {
+    width: 100%;
+    margin-top: 0.35rem;
+  }
   .modal-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
     margin-top: 1rem;
+  }
+  @media (max-width: 640px) {
+    .pipeline-steps {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 </style>
