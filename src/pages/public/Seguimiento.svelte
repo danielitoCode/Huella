@@ -11,24 +11,27 @@
   let errorMsg = $state('');
   let data = $state<SeguimientoPublico | null>(null);
   let ultimoConsultado = $state('');
+  let copiado = $state(false);
 
   const etiquetasEstado: Record<EstadoSolicitud, string> = {
     pendiente: 'Solicitud recibida',
-    sin_verificar: 'Atendido · sin verificar',
-    verificado: 'Identidad verificada — en investigación',
+    sin_verificar: 'Atendido · pendiente de verificación',
+    verificado: 'Identidad verificada — investigación en curso',
     cerrado: 'Expediente cerrado',
     cancelada: 'Solicitud cancelada',
   };
 
   const descripcionesEstado: Record<EstadoSolicitud, string> = {
     pendiente:
-      'El expediente ha sido registrado y está pendiente de atención.',
+      'Tu solicitud de averiguación sobre el familiar ya está registrada. Un operador la revisará en breve.',
     sin_verificar:
-      'Un operador está atendiendo el caso. Completa la verificación digital o contacta al equipo para una vía asistida.',
+      'El equipo ya está atendiendo el caso. Para continuar, confirma tu identidad (verificación digital o asistida). Así protegemos el expediente y a la familia.',
     verificado:
-      'La identidad del solicitante ha sido confirmada. El equipo continúa con la investigación documental.',
-    cerrado: 'El expediente ha sido archivado o finalizado.',
-    cancelada: 'Esta solicitud fue cancelada. Si crees que es un error, contacta al equipo.',
+      'Tu identidad quedó confirmada. El equipo avanza con la investigación documental sobre el familiar. Si corresponde, también se orientará sobre la gestión de la prima ante un eventual fallecimiento.',
+    cerrado:
+      'Este expediente fue cerrado. Si el equipo dejó una nota, la verás abajo. Puedes guardar el código por si necesitas consultarlo más adelante.',
+    cancelada:
+      'Esta solicitud fue cancelada. Si crees que es un error, contacta al equipo con tu código de seguimiento.',
   };
 
   function getStepIndex(estado: EstadoSolicitud): number {
@@ -48,34 +51,63 @@
     }
   }
 
+  function formatFecha(iso: string | undefined | null): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  /** Normaliza respuesta del Worker (aliases createdAt / verificationUrl). */
+  function normalizeSeguimiento(raw: Record<string, unknown>): SeguimientoPublico {
+    const estado = (raw.estado as EstadoSolicitud) || 'pendiente';
+    const verificationUrl =
+      (raw.verificationUrl as string) ||
+      (raw.diditVerificationUrl as string) ||
+      null;
+    return {
+      codigoSeguimiento: String(raw.codigoSeguimiento || ''),
+      estado,
+      mensajePublico: (raw.mensajePublico as string) || null,
+      fechaCreacion: String(raw.fechaCreacion || raw.createdAt || ''),
+      fechaActualizacion: String(raw.fechaActualizacion || raw.updatedAt || ''),
+      kycCompletado: Boolean(raw.kycCompletado) || estado === 'verificado' || estado === 'cerrado',
+      verificationUrl,
+      operatorContact: (raw.operatorContact as SeguimientoPublico['operatorContact']) || undefined,
+    };
+  }
+
   async function consultar(codigo: string, syncUrl = false) {
     const c = codigo.trim().toUpperCase();
     if (!c) {
-      errorMsg = 'Por favor, introduce un código de seguimiento válido.';
+      errorMsg = 'Introduce el código de seguimiento que recibiste al registrar la solicitud.';
       return;
     }
-    if (c === ultimoConsultado && data) return;
 
     errorMsg = '';
     data = null;
     cargando = true;
     try {
-      const res = await getHuellaRepository().request<SeguimientoPublico>('solicitudes.getByCode', { codigo: c });
-      data = res;
-      ultimoConsultado = res.codigoSeguimiento;
-      codigoInput = res.codigoSeguimiento;
-      if (syncUrl && get(router).codigoSeguimiento !== res.codigoSeguimiento) {
-        irAPublica('seguimiento', res.codigoSeguimiento);
+      const res = await getHuellaRepository().request<Record<string, unknown>>(
+        'solicitudes.getByCode',
+        { codigoSeguimiento: c, codigo: c },
+      );
+      const normalized = normalizeSeguimiento(res);
+      data = normalized;
+      ultimoConsultado = normalized.codigoSeguimiento;
+      codigoInput = normalized.codigoSeguimiento;
+      if (syncUrl && get(router).codigoSeguimiento !== normalized.codigoSeguimiento) {
+        irAPublica('seguimiento', normalized.codigoSeguimiento);
       }
     } catch (err) {
       ultimoConsultado = '';
       if (err instanceof ApiError) {
         errorMsg =
           err.code === 'NOT_FOUND'
-            ? 'No se encontró ningún expediente registrado con ese código.'
+            ? 'No encontramos ningún expediente con ese código. Revisa que esté completo (sin espacios).'
             : err.message;
       } else {
-        errorMsg = 'No pudimos consultar el seguimiento en este momento. Inténtalo más tarde.';
+        errorMsg = 'No pudimos consultar el seguimiento ahora. Inténtalo de nuevo en unos minutos.';
       }
     } finally {
       cargando = false;
@@ -85,6 +117,24 @@
   function onSubmit(e: Event) {
     e.preventDefault();
     void consultar(codigoInput, true);
+  }
+
+  function refrescar() {
+    if (ultimoConsultado) void consultar(ultimoConsultado, false);
+    else if (codigoInput.trim()) void consultar(codigoInput, true);
+  }
+
+  async function copiarCodigo() {
+    if (!data?.codigoSeguimiento) return;
+    try {
+      await navigator.clipboard.writeText(data.codigoSeguimiento);
+      copiado = true;
+      setTimeout(() => {
+        copiado = false;
+      }, 2000);
+    } catch {
+      /* ignore */
+    }
   }
 
   onMount(() => {
@@ -101,7 +151,8 @@
     <span class="eyebrow">Consulta de expediente</span>
     <h1 class="serif-title">Seguimiento confidencial</h1>
     <p class="header-desc">
-      Introduce el código de seguimiento que recibiste al registrar tu solicitud.
+      Averiguación sobre familiares y orientación sobre la prima cuando corresponde. Introduce el
+      código que recibiste al registrar tu solicitud — no necesitas crear una cuenta.
     </p>
 
     <form class="search-card card animate-fade-in" onsubmit={onSubmit}>
@@ -109,14 +160,15 @@
         <input
           type="text"
           bind:value={codigoInput}
-          placeholder="Código ej. HUE-2026-XXXXXX"
+          placeholder="Ej. HU-XXXX…"
           autocomplete="off"
           spellcheck="false"
           disabled={cargando}
+          aria-label="Código de seguimiento"
         />
       </div>
       <button type="submit" class="btn btn-gold" disabled={cargando}>
-        {cargando ? 'Consultando...' : 'Consultar estado'}
+        {cargando ? 'Consultando…' : 'Consultar'}
       </button>
     </form>
   </div>
@@ -127,6 +179,22 @@
     <div class="error-banner card" role="alert">{errorMsg}</div>
   {/if}
 
+  {#if cargando && !data}
+    <div class="skeleton-card card" aria-busy="true" aria-label="Cargando expediente">
+      <div class="sk-line sk-w40"></div>
+      <div class="sk-line sk-w70"></div>
+      <div class="sk-steps">
+        <div class="sk-circle"></div>
+        <div class="sk-circle"></div>
+        <div class="sk-circle"></div>
+        <div class="sk-circle"></div>
+      </div>
+      <div class="sk-line sk-w90"></div>
+      <div class="sk-line sk-w60"></div>
+      <p class="sk-hint">Consultando en los servidores…</p>
+    </div>
+  {/if}
+
   {#if data}
     {@const currentStep = getStepIndex(data.estado)}
 
@@ -134,9 +202,17 @@
       <div class="expediente-header">
         <div>
           <span class="expediente-label">Expediente</span>
-          <h2 class="codigo-title">{data.codigoSeguimiento}</h2>
+          <div class="codigo-row">
+            <h2 class="codigo-title">{data.codigoSeguimiento}</h2>
+            <button type="button" class="btn-ghost-sm" onclick={copiarCodigo}>
+              {copiado ? 'Copiado' : 'Copiar'}
+            </button>
+          </div>
         </div>
-        <div>
+        <div class="header-actions">
+          <button type="button" class="btn-ghost-sm" onclick={refrescar} disabled={cargando}>
+            {cargando ? 'Actualizando…' : 'Actualizar'}
+          </button>
           {#if data.estado === 'verificado'}
             <span class="badge badge-positive">Verificado</span>
           {:else if data.estado === 'sin_verificar'}
@@ -155,19 +231,19 @@
         <div class="timeline-wrapper">
           <div class="timeline-track">
             <div class="step-item" class:completed={currentStep >= 1} class:active={currentStep === 1}>
-              <div class="step-circle">1</div>
+              <div class="step-circle">{currentStep > 1 ? '✓' : '1'}</div>
               <span class="step-name">Recibida</span>
             </div>
             <div class="step-item" class:completed={currentStep >= 2} class:active={currentStep === 2}>
-              <div class="step-circle">2</div>
+              <div class="step-circle">{currentStep > 2 ? '✓' : '2'}</div>
               <span class="step-name">Atención</span>
             </div>
             <div class="step-item" class:completed={currentStep >= 3} class:active={currentStep === 3}>
-              <div class="step-circle">3</div>
+              <div class="step-circle">{currentStep > 3 ? '✓' : '3'}</div>
               <span class="step-name">Investigación</span>
             </div>
             <div class="step-item" class:completed={currentStep === 4} class:active={currentStep === 4}>
-              <div class="step-circle">4</div>
+              <div class="step-circle">{currentStep === 4 ? '✓' : '4'}</div>
               <span class="step-name">Cierre</span>
             </div>
           </div>
@@ -189,8 +265,8 @@
         <div class="verify-panel">
           <h3>Verificación de identidad</h3>
           <p class="verify-intro">
-            Para avanzar con tu expediente puedes usar la verificación digital (Didit) o, si no tienes
-            buena conectividad, contactar al operador para una verificación asistida.
+            Es un paso de seguridad antes de profundizar en la investigación. Puedes hacerlo en línea
+            o, si tienes poca conectividad, pedir verificación asistida al operador.
           </p>
 
           {#if data.verificationUrl}
@@ -200,54 +276,63 @@
               target="_blank"
               rel="noopener noreferrer"
             >
-              Verificar identidad con Didit
+              Verificar identidad ahora
             </a>
+            <p class="verify-hint">Se abre en una ventana segura. Al terminar, pulsa «Actualizar» aquí.</p>
           {:else}
-            <p class="verify-pending">
-              El enlace Didit aún no está disponible. Usa el contacto del operador o espera el correo
-              de verificación.
-            </p>
+            <div class="verify-pending-box">
+              <p class="verify-pending">
+                El enlace de verificación digital aún no está disponible. El equipo puede enviártelo
+                por correo o atenderte de forma asistida.
+              </p>
+            </div>
           {/if}
 
           {#if data.operatorContact}
             <div class="operator-card">
-              <span class="box-title">Verificación asistida (fuera de Didit)</span>
-              <p>{data.operatorContact.note}</p>
+              <span class="box-title">Verificación asistida</span>
+              {#if data.operatorContact.note}
+                <p>{data.operatorContact.note}</p>
+              {/if}
               {#if data.operatorContact.name}
-                <p><strong>Operador:</strong> {data.operatorContact.name}</p>
+                <p><strong>Contacto:</strong> {data.operatorContact.name}</p>
               {/if}
               {#if data.operatorContact.email}
                 <p>
                   <strong>Email:</strong>
-                  <a href="mailto:{data.operatorContact.email}">{data.operatorContact.email}</a>
+                  <a href="mailto:{data.operatorContact.email}?subject=Verificación%20{data.codigoSeguimiento}"
+                    >{data.operatorContact.email}</a
+                  >
                 </p>
               {/if}
               {#if data.operatorContact.phone}
-                <p><strong>Teléfono:</strong> {data.operatorContact.phone}</p>
+                <p>
+                  <strong>Teléfono:</strong>
+                  <a href="tel:{data.operatorContact.phone}">{data.operatorContact.phone}</a>
+                </p>
               {/if}
             </div>
           {/if}
         </div>
       {/if}
 
+      {#if data.estado === 'verificado'}
+        <div class="info-panel positive">
+          <p>
+            Gracias por completar la verificación. El equipo continúa con la averiguación del familiar.
+            Vuelve a consultar este código cuando quieras ver actualizaciones.
+          </p>
+        </div>
+      {/if}
+
       <div class="expediente-footer">
         <div class="date-item">
           <span class="date-label">Apertura</span>
-          <span class="date-val">
-            {new Date(data.fechaCreacion).toLocaleString('es', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            })}
-          </span>
+          <span class="date-val">{formatFecha(data.fechaCreacion)}</span>
         </div>
         <div class="date-item">
           <span class="date-label">Última actualización</span>
-          <span class="date-val">
-            {new Date(data.fechaActualizacion).toLocaleString('es', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            })}
-          </span>
+          <span class="date-val">{formatFecha(data.fechaActualizacion)}</span>
         </div>
       </div>
     </article>
@@ -277,6 +362,7 @@
   .header-desc {
     color: #a4b4c0;
     margin: 0.5rem 0 2rem;
+    line-height: 1.55;
   }
   .search-card {
     display: flex;
@@ -311,6 +397,55 @@
     color: var(--color-alert);
     margin-bottom: 1rem;
   }
+  .skeleton-card {
+    padding: 2rem;
+    background: var(--surface);
+  }
+  .sk-line {
+    height: 0.85rem;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--border), var(--surface-muted), var(--border));
+    background-size: 200% 100%;
+    animation: shimmer 1.2s ease-in-out infinite;
+    margin-bottom: 0.75rem;
+  }
+  .sk-w40 {
+    width: 40%;
+  }
+  .sk-w60 {
+    width: 60%;
+  }
+  .sk-w70 {
+    width: 70%;
+  }
+  .sk-w90 {
+    width: 90%;
+  }
+  .sk-steps {
+    display: flex;
+    justify-content: space-between;
+    margin: 1.5rem 0;
+  }
+  .sk-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: shimmer 1.2s ease-in-out infinite;
+  }
+  .sk-hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: 100% 0;
+    }
+    100% {
+      background-position: -100% 0;
+    }
+  }
   .expediente-card {
     padding: 2.5rem;
     background: var(--surface);
@@ -319,6 +454,7 @@
     display: flex;
     justify-content: space-between;
     gap: 1rem;
+    flex-wrap: wrap;
     margin-bottom: 2rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid var(--border);
@@ -329,10 +465,39 @@
     text-transform: uppercase;
     color: var(--gold);
   }
+  .codigo-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
   .codigo-title {
     font-family: var(--font-mono);
     font-size: 1.6rem;
     margin: 0.25rem 0 0;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .btn-ghost-sm {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .btn-ghost-sm:hover:not(:disabled) {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  .btn-ghost-sm:disabled {
+    opacity: 0.6;
+    cursor: wait;
   }
   .timeline-track {
     display: grid;
@@ -355,6 +520,7 @@
     place-items: center;
     margin-bottom: 0.4rem;
     font-weight: 700;
+    font-size: 0.9rem;
   }
   .step-name {
     font-size: 0.8rem;
@@ -378,6 +544,7 @@
   .status-desc {
     margin: 0;
     color: var(--text);
+    line-height: 1.55;
   }
   .mensaje-publico-box {
     margin-top: 1rem;
@@ -407,14 +574,25 @@
     margin: 0 0 1rem;
     color: var(--text);
     font-size: 0.95rem;
+    line-height: 1.5;
   }
   .verify-btn {
     display: inline-flex;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .verify-hint {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .verify-pending-box {
+    margin-bottom: 0.75rem;
   }
   .verify-pending {
+    margin: 0;
     color: var(--text-muted);
     font-size: 0.9rem;
+    line-height: 1.45;
   }
   .operator-card {
     margin-top: 0.75rem;
@@ -425,10 +603,25 @@
     margin: 0.35rem 0 0;
     font-size: 0.92rem;
   }
+  .info-panel {
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .info-panel.positive {
+    background: rgba(46, 160, 120, 0.1);
+    border: 1px solid rgba(46, 160, 120, 0.35);
+  }
+  .info-panel p {
+    margin: 0;
+  }
   .expediente-footer {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
+    flex-wrap: wrap;
     padding-top: 1.25rem;
     border-top: 1px solid var(--border);
   }
@@ -442,5 +635,16 @@
   .date-val {
     font-weight: 600;
     color: var(--text-h);
+  }
+  @media (max-width: 560px) {
+    .timeline-track {
+      gap: 0.35rem;
+    }
+    .step-name {
+      font-size: 0.7rem;
+    }
+    .expediente-card {
+      padding: 1.5rem;
+    }
   }
 </style>
