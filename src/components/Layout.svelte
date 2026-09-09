@@ -4,7 +4,7 @@
   import DevLoggerPanel from './DevLoggerPanel.svelte';
   import LightRays from './effects/LightRays.svelte';
   import type { Snippet } from 'svelte';
-  import { router } from '../lib/stores/router';
+  import { router, irAPublica } from '../lib/stores/router';
   import { loadSession } from '../lib/stores/session';
 
   interface Props {
@@ -52,9 +52,17 @@
       <p class="footer-brand">Huella</p>
       <p class="footer-tag">Verdad · Memoria · Dignidad</p>
       <p class="footer-note">
-        Espacio digital de memoria e investigación documental. No procesamos pagos ni garantizamos
-        resultados.
+        Plataforma de averiguación sobre familiares y orientación sobre prima cuando corresponda.
+        No procesamos pagos en esta aplicación ni garantizamos un resultado concreto.
       </p>
+      <nav class="footer-nav" aria-label="Legal">
+        <button type="button" class="footer-link" onclick={() => irAPublica('terminos')}>
+          Términos y condiciones
+        </button>
+        <button type="button" class="footer-link" onclick={() => irAPublica('seguimiento')}>
+          Seguimiento
+        </button>
+      </nav>
     </footer>
   </div>
 
@@ -82,7 +90,6 @@
     overflow: hidden;
   }
 
-  /* Amplifica el canvas sin tocar el shader */
   .rays-boost {
     position: absolute;
     inset: 0;
@@ -90,7 +97,6 @@
     opacity: 0.95;
   }
 
-  /* Velo más abierto arriba (donde se ven los rayos); más denso abajo para texto */
   .public-bg-veil {
     position: absolute;
     inset: 0;
@@ -150,11 +156,33 @@
   }
 
   .footer-note {
-    margin: 0 auto;
+    margin: 0 auto 1rem;
     max-width: 32rem;
     font-size: 0.82rem;
     opacity: 0.7;
     line-height: 1.5;
+  }
+
+  .footer-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .footer-link {
+    background: none;
+    border: none;
+    color: var(--gold);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    opacity: 0.95;
+  }
+
+  .footer-link:hover {
+    opacity: 1;
   }
 
   @media (prefers-reduced-motion: reduce) {
