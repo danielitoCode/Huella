@@ -10,6 +10,7 @@
   let nombrePersona = $state('');
   let relacion = $state('');
   let descripcion = $state('');
+  let aceptaTerminos = $state(false);
 
   let enviando = $state(false);
   let errorMsg = $state('');
@@ -19,6 +20,13 @@
   async function enviar(e: Event) {
     e.preventDefault();
     errorMsg = '';
+
+    if (!aceptaTerminos) {
+      errorMsg =
+        'Debes leer y aceptar los Términos y condiciones para registrar la solicitud.';
+      return;
+    }
+
     enviando = true;
     try {
       const solicitud = await getSolicitudRepository().create({
@@ -60,14 +68,14 @@
     <span class="eyebrow">Apertura de Expediente</span>
     <h1 class="serif-title">Iniciar una Solicitud de Búsqueda</h1>
     <p class="header-desc">
-      Por favor, proporciona los datos con la mayor precisión posible. Tu solicitud se asignará a un operador con estricta confidencialidad.
+      Averiguación sobre el estado de un familiar. Si el caso lo permite, el equipo podrá orientarte
+      también sobre la prima de compensación. No se procesan pagos en esta plataforma.
     </p>
   </div>
 </div>
 
 <section class="form-container">
   {#if resultado}
-    <!-- TARJETA DE ÉXITO Y CONFIRMACIÓN -->
     <div class="success-card glass-panel animate-fade-in" role="status">
       <div class="success-header">
         <div class="success-icon">✓</div>
@@ -78,7 +86,8 @@
       </div>
 
       <p class="success-intro">
-        Hemos asignado un expediente confidencial a tu búsqueda. Guarda tu código de seguimiento personal para consultar el estado en todo momento.
+        Hemos asignado un expediente confidencial a tu búsqueda. Guarda tu código de seguimiento
+        personal para consultar el estado en todo momento.
       </p>
 
       <div class="codigo-box">
@@ -94,11 +103,14 @@
       <div class="success-info-grid">
         <div class="info-item">
           <dt>Próximo paso</dt>
-          <dd>Un operador revisará tu caso y se comunicará por correo si se requiere verificación KYC (Didit).</dd>
+          <dd>
+            Un operador revisará tu caso. Puede solicitarse verificación de identidad antes de
+            avanzar.
+          </dd>
         </div>
         <div class="info-item">
           <dt>Privacidad</dt>
-          <dd>Tu información solo se empleará con fines de localización humanitaria.</dd>
+          <dd>Tu información se usa para la averiguación y la gestión del expediente.</dd>
         </div>
       </div>
 
@@ -116,18 +128,13 @@
       </div>
     </div>
   {:else}
-    <!-- FORMULARIO DE ALTA -->
     <form onsubmit={enviar} class="form-card card animate-fade-in">
       {#if errorMsg}
         <div class="error-banner" role="alert">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-          </svg>
           <span>{errorMsg}</span>
         </div>
       {/if}
 
-      <!-- SECCIÓN 1: DATOS DEL FAMILIAR -->
       <fieldset class="form-section">
         <legend class="section-legend">
           <span class="legend-num">1</span>
@@ -172,7 +179,6 @@
         </label>
       </fieldset>
 
-      <!-- SECCIÓN 2: PERSONA BUSCADA -->
       <fieldset class="form-section">
         <legend class="section-legend">
           <span class="legend-num">2</span>
@@ -210,20 +216,43 @@
             rows="5"
             required
             disabled={enviando}
-            placeholder="Menciona última ubicación conocida, fechas aproximadas, unidad, ciudad o cualquier referencia útil para el operador..."
+            placeholder="Última ubicación conocida, fechas, referencias útiles para el operador…"
           ></textarea>
         </label>
       </fieldset>
 
-      <!-- COMPROMISO Y CONFIDENCIALIDAD -->
       <div class="disclaimer-box">
         <div class="disclaimer-icon">🔒</div>
         <p>
-          Al enviar esta solicitud, declaras que los datos brindados son fidedignos. El proceso abarca la averiguación de estado del familiar y, si resulta en fallecimiento verificado, la orientación para la acreditación como beneficiario y reclamación de la prima de compensación correspondiente.
+          Al enviar, declaras que los datos son fidedignos en la medida de tu conocimiento. El
+          servicio principal es la <strong>averiguación</strong> del estado del familiar; si
+          resulta en fallecimiento verificado, el equipo podrá orientarte sobre la
+          <strong>prima de compensación</strong>. Los pagos no se realizan en esta aplicación.
         </p>
       </div>
 
-      <!-- BOTONES DE ACCIÓN -->
+      <div class="terms-accept">
+        <label class="terms-label">
+          <input
+            type="checkbox"
+            bind:checked={aceptaTerminos}
+            disabled={enviando}
+            required
+          />
+          <span>
+            He leído y acepto los
+            <button
+              type="button"
+              class="terms-link"
+              onclick={() => irAPublica('terminos')}
+            >
+              Términos y condiciones
+            </button>
+            de Huella. Entiendo el alcance del servicio y que no se garantizan resultados ni cobros.
+          </span>
+        </label>
+      </div>
+
       <div class="form-actions">
         <button
           type="button"
@@ -233,14 +262,11 @@
         >
           Cancelar
         </button>
-        <button type="submit" class="btn btn-gold" disabled={enviando}>
+        <button type="submit" class="btn btn-gold" disabled={enviando || !aceptaTerminos}>
           {#if enviando}
             <span>Registrando...</span>
           {:else}
             <span>Enviar Solicitud de Búsqueda</span>
-            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
-              <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
-            </svg>
           {/if}
         </button>
       </div>
@@ -277,6 +303,7 @@
     color: #a4b4c0;
     font-size: 1.05rem;
     margin: 0.5rem 0 0;
+    line-height: 1.5;
   }
 
   .form-container {
@@ -359,6 +386,41 @@
     margin: 0;
   }
 
+  .terms-accept {
+    padding: 1rem 1.15rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+  }
+
+  .terms-label {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    cursor: pointer;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    color: var(--text);
+  }
+
+  .terms-label input {
+    margin-top: 0.2rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .terms-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--gold);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    font: inherit;
+  }
+
   .error-banner {
     display: flex;
     align-items: center;
@@ -380,7 +442,6 @@
     border-top: 1px solid var(--border);
   }
 
-  /* ÉXITO */
   .success-card {
     padding: 2.5rem;
     background: var(--color-obsidian-navy);
@@ -483,7 +544,8 @@
   }
 
   @media (max-width: 640px) {
-    .actions-group, .form-actions {
+    .actions-group,
+    .form-actions {
       flex-direction: column;
     }
     .codigo-display {
