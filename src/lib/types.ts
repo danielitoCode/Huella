@@ -51,6 +51,7 @@ export type Solicitud = {
   descripcion: string;
   estado: EstadoSolicitud;
   mensajePublico?: string | null;
+  /** Notas internas del operador (no visibles en seguimiento público). */
   notasInternas?: string | null;
   diditSessionId?: string | null;
   diditVerificationUrl?: string | null;
@@ -78,10 +79,19 @@ export type CreateSolicitudResult = {
   id: string;
 };
 
+/** Etiquetas de UI — dominio: pendiente → atendido-sin verificar → verificado → cerrado | cancelada */
 export const ESTADO_LABEL: Record<EstadoSolicitud, string> = {
   pendiente: 'Pendiente',
-  sin_verificar: 'Atendido · sin verificar',
+  sin_verificar: 'Atendido · no verificado',
   verificado: 'Verificado',
-  cerrado: 'Cerrado',
+  cerrado: 'Cerrado (completado)',
   cancelada: 'Cancelada',
+};
+
+export const ESTADO_DESCRIPCION_OPERADOR: Record<EstadoSolicitud, string> = {
+  pendiente: 'Solicitud recién registrada; aún no ha sido tomada por un operador.',
+  sin_verificar: 'El caso está en atención; falta confirmar identidad del solicitante.',
+  verificado: 'Identidad confirmada; investigación / gestión en curso.',
+  cerrado: 'Proceso finalizado correctamente (averiguación y gestiones asociadas).',
+  cancelada: 'Solicitud anulada; no continúa el proceso.',
 };
