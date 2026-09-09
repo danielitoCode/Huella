@@ -18,9 +18,11 @@ export async function handleSecrets(
   const { databases, ids } = adminClient(env);
   const salt = env.PIN_SALT || 'huella';
 
-  // Seguimiento público por código (permisos Appwrite no modelan bien “quien conoce el código”)
+  // Seguimiento público por código
   if (action === 'solicitudes.getByCode') {
-    const code = String(payload.codigoSeguimiento || payload.code || '')
+    const code = String(
+      payload.codigoSeguimiento || payload.codigo || payload.code || '',
+    )
       .trim()
       .toUpperCase();
     if (!code) {
@@ -30,26 +32,40 @@ export async function handleSecrets(
       Query.equal('codigoSeguimiento', code),
       Query.limit(1),
     ]);
-    const doc = res.documents[0];
+    const doc = res.documents[0] as Record<string, unknown> | undefined;
     if (!doc) {
       throw Object.assign(new Error('Solicitud no encontrada'), { code: 'NOT_FOUND', status: 404 });
     }
+
+    const estado = String(doc.estado || 'pendiente');
+    const verificationUrl =
+      (doc.verificationUrl as string) ||
+      (doc.diditVerificationUrl as string) ||
+      null;
+    const kycResultado = (doc.kycResultado as string) || null;
+
     return {
       id: doc.$id,
-      codigoSeguimiento: doc.codigoSeguimiento,
-      estado: doc.estado,
-      nombreFamiliar: doc.nombreFamiliar,
-      nombrePersona: doc.nombrePersona,
-      mensajePublico: doc.mensajePublico || null,
-      diditSessionId: doc.diditSessionId || null,
-      verificationUrl: doc.verificationUrl || null,
-      createdAt: doc.$createdAt,
-      updatedAt: doc.$updatedAt,
+      codigoSeguimiento: String(doc.codigoSeguimiento || code),
+      estado,
+      mensajePublico: (doc.mensajePublico as string) || null,
+      fechaCreacion: String(doc.$createdAt || ''),
+      fechaActualizacion: String(doc.$updatedAt || ''),
+      // aliases por compatibilidad con clientes antiguos
+      createdAt: String(doc.$createdAt || ''),
+      updatedAt: String(doc.$updatedAt || ''),
+      verificationUrl,
+      diditVerificationUrl: verificationUrl,
+      diditSessionId: (doc.diditSessionId as string) || null,
+      kycResultado,
+      kycCompletado: estado === 'verificado' || estado === 'cerrado' || Boolean(kycResultado),
       operatorContact: {
         name: env.OPERATOR_CONTACT_NAME || 'Equipo Huella',
         email: env.OPERATOR_CONTACT_EMAIL || null,
         phone: env.OPERATOR_CONTACT_PHONE || null,
-        note: env.OPERATOR_CONTACT_NOTE || null,
+        note:
+          env.OPERATOR_CONTACT_NOTE ||
+          'Si no puedes completar la verificación digital, escribe o llama al equipo para una vía asistida (útil con baja conectividad).',
       },
     };
   }
