@@ -3,54 +3,22 @@
   import { get } from 'svelte/store';
   import { router, irAAdmin } from '../../lib/stores/router';
   import { ApiError } from '../../lib/appwrite';
-  import { getHuellaRepository, getSolicitudRepository } from '../../lib/data/repositories';
-  import { ESTADO_LABEL, type EstadoSolicitud, type OperatorContact } from '../../lib/types';
+  import { getSolicitudRepository } from '../../lib/data/repositories';
+  import { ESTADO_LABEL, type EstadoSolicitud, type Solicitud } from '../../lib/types';
   import Skeleton from '../../components/ui/Skeleton.svelte';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
 
-  type SolicitudDetalle = {
-    id: string;
-    codigoSeguimiento: string;
-    nombreFamiliar: string;
-    email: string;
-    telefono: string | null;
-    nombrePersona: string;
-    relacion: string;
-    descripcion: string;
-    estado: EstadoSolicitud;
-    mensajePublico: string | null;
-    notasInternas: string | null;
-    diditSessionId: string | null;
-    diditVerificationUrl?: string | null;
-    kycResultado: string | null;
-    fechaCreacion: string;
-    fechaActualizacion: string;
-    operatorContact?: OperatorContact;
-  };
-
-  type KycTemplateResult = {
-    to: string;
-    subject: string;
-    verificationUrl: string;
-    emailHtml: string;
-  };
-
-  let solicitud = $state<SolicitudDetalle | null>(null);
+  let solicitud = $state<Solicitud | null>(null);
   let cargando = $state(true);
   let errorMsg = $state('');
   let actionError = $state('');
   let actionLoading = $state(false);
 
   let notas = $state('');
-  let kycUrl = $state('');
-  let emailHtml = $state('');
-  let emailSubject = $state('');
-  let copyOk = $state(false);
-  let templateLoading = $state(false);
+  let mensajePublico = $state('');
 
   let modal: 'none' | 'verificar' | 'cerrar' | 'cancelar' = $state('none');
   let motivo = $state('');
-  let cancelPin = $state('');
 
   const solicitudId = $derived(get(router).solicitudId ?? '');
 
@@ -66,12 +34,9 @@
     }
     try {
       const res = await getSolicitudRepository().getById(solicitudId);
-      solicitud = res as SolicitudDetalle;
-      notas = solicitud.notasInternas ?? '';
-      if (solicitud.diditVerificationUrl) kycUrl = solicitud.diditVerificationUrl;
-      if (solicitud.estado === 'sin_verificar' && solicitud.diditVerificationUrl) {
-        void cargarPlantilla();
-      }
+      solicitud = res;
+      notas = res.notasInternas ?? '';
+      mensajePublico = res.mensajePublico ?? '';
     } catch (err) {
       errorMsg = err instanceof ApiError ? err.message : 'No se pudo cargar la solicitud.';
     } finally {
@@ -93,7 +58,6 @@
       await fn();
       modal = 'none';
       motivo = '';
-      cancelPin = '';
     } catch (err) {
       actionError = err instanceof ApiError ? err.message : 'No se pudo completar la acción.';
     } finally {
@@ -101,92 +65,29 @@
     }
   }
 
-  async function cargarPlantilla() {
-    if (!solicitud) return;
-    templateLoading = true;
-    try {
-      const res = await getHuellaRepository().request<KycTemplateResult>('solicitudes.getKycEmailTemplate', {
-        solicitudId: solicitud.id,
-      });
-      emailHtml = res.emailHtml;
-      emailSubject = res.subject;
-      kycUrl = res.verificationUrl;
-    } catch {
-      // sin plantilla si aún no hay URL
-    } finally {
-      templateLoading = false;
-    }
-  }
-
-  async function copiarHtml() {
-    if (!emailHtml) return;
-    try {
-      await navigator.clipboard.writeText(emailHtml);
-      copyOk = true;
-      setTimeout(() => (copyOk = false), 2000);
-    } catch {
-      actionError = 'No se pudo copiar al portapapeles.';
-    }
-  }
-
-  async function marcarAtendido(conKyc: boolean) {
+  async function guardarNotas() {
     if (!solicitud) return;
     await runAction(async () => {
-      const res = await getHuellaRepository().request<{
-        estado: EstadoSolicitud;
-        verificationUrl?: string;
-        sessionId?: string;
-        emailHtml?: string;
-      }>(conKyc ? 'solicitudes.marcarSinVerificar' : 'solicitudes.marcarAtendido', {
-        solicitudId: solicitud!.id,
-        notasInternas: notas || undefined,
-        iniciarKyc: conKyc,
+      const updated = await getSolicitudRepository().update(solicitud!.id, {
+        notasInternas: notas || null,
+        mensajePublico: mensajePublico || null,
       });
-      solicitud = {
-        ...solicitud!,
-        estado: res.estado,
-        diditSessionId: res.sessionId ?? solicitud!.diditSessionId,
-        diditVerificationUrl: res.verificationUrl ?? solicitud!.diditVerificationUrl,
-      };
-      if (res.verificationUrl) kycUrl = res.verificationUrl;
-      if (res.emailHtml) emailHtml = res.emailHtml;
-      else if (conKyc) await cargarPlantilla();
+      solicitud = updated;
     });
   }
 
-  async function iniciarKyc() {
+  async function marcarAtendido() {
     if (!solicitud) return;
     await runAction(async () => {
-      const res = await getHuellaRepository().request<{
-        estado: EstadoSolicitud;
-        verificationUrl?: string;
-        sessionId?: string;
-        emailHtml?: string;
-      }>('solicitudes.iniciarKyc', {
-        solicitudId: solicitud!.id,
-        notasInternas: notas || undefined,
+      const updated = await getSolicitudRepository().update(solicitud!.id, {
+        estado: 'sin_verificar',
+        notasInternas: notas || solicitud!.notasInternas,
+        mensajePublico:
+          mensajePublico ||
+          'Tu caso está siendo atendido. Pronto te indicaremos cómo verificar identidad.',
       });
-      solicitud = {
-        ...solicitud!,
-        estado: res.estado,
-        diditSessionId: res.sessionId ?? solicitud!.diditSessionId,
-        diditVerificationUrl: res.verificationUrl ?? solicitud!.diditVerificationUrl,
-      };
-      if (res.verificationUrl) kycUrl = res.verificationUrl;
-      if (res.emailHtml) emailHtml = res.emailHtml;
-      else await cargarPlantilla();
-    });
-  }
-
-  async function reenviarEmail() {
-    if (!solicitud) return;
-    await runAction(async () => {
-      const res = await getHuellaRepository().request<{ emailHtml?: string; verificationUrl?: string }>(
-        'solicitudes.reenviarKycEmail',
-        { solicitudId: solicitud!.id },
-      );
-      if (res.emailHtml) emailHtml = res.emailHtml;
-      if (res.verificationUrl) kycUrl = res.verificationUrl;
+      solicitud = updated;
+      mensajePublico = updated.mensajePublico ?? '';
     });
   }
 
@@ -196,11 +97,16 @@
       return;
     }
     await runAction(async () => {
-      const res = await getHuellaRepository().request<{ estado: EstadoSolicitud }>('solicitudes.marcarVerificado', {
-        solicitudId: solicitud!.id,
-        motivo: motivo.trim(),
+      const note = [notas, `Verificado manual: ${motivo.trim()}`].filter(Boolean).join('\n');
+      const updated = await getSolicitudRepository().update(solicitud!.id, {
+        estado: 'verificado',
+        kycResultado: 'manual',
+        notasInternas: note,
+        mensajePublico:
+          mensajePublico ||
+          'Identidad confirmada. El equipo continúa con la investigación del familiar.',
       });
-      solicitud = { ...solicitud!, estado: res.estado, kycResultado: 'manual' };
+      solicitud = updated;
     });
   }
 
@@ -210,11 +116,13 @@
       return;
     }
     await runAction(async () => {
-      const res = await getHuellaRepository().request<{ estado: EstadoSolicitud }>('solicitudes.cerrar', {
-        solicitudId: solicitud!.id,
-        motivoInterno: motivo.trim(),
+      const updated = await getSolicitudRepository().update(solicitud!.id, {
+        estado: 'cerrado',
+        motivoCierre: motivo.trim(),
+        notasInternas: [notas, `Cierre: ${motivo.trim()}`].filter(Boolean).join('\n'),
+        mensajePublico: mensajePublico || 'Expediente cerrado.',
       });
-      solicitud = { ...solicitud!, estado: res.estado };
+      solicitud = updated;
     });
   }
 
@@ -223,24 +131,20 @@
       actionError = 'El motivo de cancelación es obligatorio.';
       return;
     }
-    if (!/^\d{4}$/.test(cancelPin)) {
-      actionError = 'Introduce el PIN de cancelación (4 dígitos).';
-      return;
-    }
     await runAction(async () => {
-      const res = await getHuellaRepository().request<{ estado: EstadoSolicitud }>('solicitudes.cancelar', {
-        solicitudId: solicitud!.id,
-        motivoInterno: motivo.trim(),
-        pin: cancelPin,
+      const updated = await getSolicitudRepository().update(solicitud!.id, {
+        estado: 'cancelada',
+        motivoCierre: motivo.trim(),
+        notasInternas: [notas, `Cancelada: ${motivo.trim()}`].filter(Boolean).join('\n'),
+        mensajePublico: mensajePublico || 'Esta solicitud fue cancelada.',
       });
-      solicitud = { ...solicitud!, estado: res.estado };
+      solicitud = updated;
     });
   }
 
   function openModal(m: typeof modal) {
     actionError = '';
     motivo = '';
-    cancelPin = '';
     modal = m;
   }
 </script>
@@ -303,18 +207,12 @@
       <p class="descripcion">{solicitud.descripcion}</p>
     </div>
 
-    {#if solicitud.notasInternas}
-      <div class="card block-card">
-        <h3>Notas internas</h3>
-        <pre class="notas-pre">{solicitud.notasInternas}</pre>
-      </div>
-    {/if}
-
     {#if !esTerminal}
       <div class="card action-card">
-        <h3>Gestión de estado</h3>
+        <h3>Gestión de estado (SDK Appwrite)</h3>
         <p class="hint-text">
-          Flujo: pendiente → atendido (sin verificar) → verificado → cerrado. Cancelar exige PIN.
+          Flujo: pendiente → atendido (sin verificar) → verificado → cerrado. Sin Worker: Didit y PIN
+          quedan fuera de esta pantalla por ahora.
         </p>
 
         {#if actionError && modal === 'none'}
@@ -322,26 +220,27 @@
         {/if}
 
         {#if actionLoading}
-          <LoadingHint message="Aplicando cambio en el servidor…" compact />
+          <LoadingHint message="Guardando en Appwrite…" compact />
         {/if}
 
-        <label for="notas-op">Notas (se anexan en la siguiente acción)</label>
+        <label for="notas-op">Notas internas</label>
         <textarea id="notas-op" bind:value={notas} rows="2" disabled={actionLoading}></textarea>
 
+        <label for="msg-pub">Mensaje público (visible en seguimiento)</label>
+        <textarea id="msg-pub" bind:value={mensajePublico} rows="2" disabled={actionLoading}></textarea>
+
         <div class="actions-row">
+          <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => guardarNotas()}>
+            Guardar notas / mensaje
+          </button>
+
           {#if solicitud.estado === 'pendiente'}
-            <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={() => marcarAtendido(false)}>
-              Marcar atendido
-            </button>
-            <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => marcarAtendido(true)}>
-              Atender + iniciar KYC Didit
+            <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={() => marcarAtendido()}>
+              Marcar atendido (sin verificar)
             </button>
           {/if}
 
           {#if solicitud.estado === 'sin_verificar'}
-            <button type="button" class="btn btn-secondary" disabled={actionLoading} onclick={() => iniciarKyc()}>
-              Iniciar / regenerar KYC Didit
-            </button>
             <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={() => openModal('verificar')}>
               Marcar verificado (manual)
             </button>
@@ -362,84 +261,18 @@
             </button>
           {/if}
         </div>
-      </div>
 
-      {#if solicitud.estado === 'sin_verificar'}
-        <div class="card template-card">
-          <h3>Verificación — enlace y correo</h3>
-          <p class="hint-text">
-            1) Enlace Didit para el familiar · 2) Email automático (Resend) · 3) Plantilla HTML para
-            copiar y pegar en tu cliente de correo si el envío automático no está disponible.
+        {#if solicitud.diditVerificationUrl}
+          <p class="hint-text" style="margin-top: 1rem">
+            Enlace Didit guardado:
+            <a href={solicitud.diditVerificationUrl} target="_blank" rel="noopener">{solicitud.diditVerificationUrl}</a>
           </p>
-
-          {#if kycUrl || solicitud.diditVerificationUrl}
-            <p>
-              <strong>Enlace Didit:</strong>
-              <a href={kycUrl || solicitud.diditVerificationUrl || '#'} target="_blank" rel="noopener">
-                {kycUrl || solicitud.diditVerificationUrl}
-              </a>
-            </p>
-          {:else}
-            <p class="hint-text">Aún no hay enlace. Usa «Iniciar / regenerar KYC Didit».</p>
-          {/if}
-
-          <div class="actions-row">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              disabled={actionLoading || !solicitud.diditVerificationUrl && !kycUrl}
-              onclick={() => reenviarEmail()}
-            >
-              Reenviar email KYC
-            </button>
-            <button
-              type="button"
-              class="btn btn-secondary"
-              disabled={templateLoading}
-              onclick={() => cargarPlantilla()}
-            >
-              {templateLoading ? 'Cargando plantilla…' : 'Cargar plantilla HTML'}
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              disabled={!emailHtml}
-              onclick={() => copiarHtml()}
-            >
-              {copyOk ? '✓ Copiado' : 'Copiar HTML al portapapeles'}
-            </button>
-          </div>
-
-          {#if emailSubject}
-            <p class="subject-line"><strong>Asunto:</strong> {emailSubject}</p>
-          {/if}
-
-          {#if emailHtml}
-            <label for="html-tpl">Plantilla HTML (copiar y pegar en el correo)</label>
-            <textarea id="html-tpl" readonly rows="12" value={emailHtml}></textarea>
-          {/if}
-
-          {#if solicitud.operatorContact}
-            <div class="operator-box">
-              <span class="eyebrow-sm">Contacto verificación asistida</span>
-              <p>{solicitud.operatorContact.note}</p>
-              {#if solicitud.operatorContact.name}
-                <p><strong>{solicitud.operatorContact.name}</strong></p>
-              {/if}
-              {#if solicitud.operatorContact.email}
-                <p>{solicitud.operatorContact.email}</p>
-              {/if}
-              {#if solicitud.operatorContact.phone}
-                <p>{solicitud.operatorContact.phone}</p>
-              {/if}
-            </div>
-          {/if}
-        </div>
-      {/if}
+        {/if}
+      </div>
     {:else}
       <div class="card block-card">
         <span class={badgeFor(solicitud.estado)}>{ESTADO_LABEL[solicitud.estado]}</span>
-        <p class="hint-text">Estado terminal: no admite más cambios.</p>
+        <p class="hint-text">Estado terminal: no admite más cambios desde la app.</p>
       </div>
     {/if}
   {/if}
@@ -469,9 +302,9 @@
         <h2>Cerrar expediente</h2>
         <label>Motivo<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
       {:else if modal === 'cancelar'}
-        <h2>Cancelar</h2>
+        <h2>Cancelar solicitud</h2>
+        <p class="hint-text">PIN de cancelación: gestión temporal vía consola Appwrite (congelado en app).</p>
         <label>Motivo<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
-        <label>PIN<input type="password" inputmode="numeric" maxlength="4" bind:value={cancelPin} disabled={actionLoading} /></label>
       {/if}
       {#if actionError}<div class="error-banner">{actionError}</div>{/if}
       <div class="modal-actions">
@@ -524,14 +357,6 @@
     text-transform: uppercase;
     color: var(--gold);
   }
-  .eyebrow-sm {
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--gold);
-    display: block;
-    margin-bottom: 0.35rem;
-  }
   .codigo-h {
     font-family: var(--font-mono);
     font-size: 1.5rem;
@@ -557,14 +382,9 @@
   dd {
     margin: 0;
   }
-  .descripcion,
-  .notas-pre {
+  .descripcion {
     white-space: pre-wrap;
     margin: 0;
-  }
-  .notas-pre {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
   }
   .hint-text {
     font-size: 0.9rem;
@@ -576,51 +396,40 @@
     gap: 0.75rem;
     margin-top: 1rem;
   }
-  .template-card {
-    margin-top: 1.25rem;
+  .action-card textarea,
+  .block-card {
+    margin-bottom: 1rem;
   }
-  .template-card textarea {
-    width: 100%;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    margin-top: 0.5rem;
-  }
-  .subject-line {
-    margin: 1rem 0 0.5rem;
-    font-size: 0.9rem;
-  }
-  .operator-box {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-    font-size: 0.9rem;
+  .action-card label {
+    display: block;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
   }
   .error-banner {
     padding: 0.85rem 1rem;
+    margin: 0.75rem 0;
     border-radius: var(--radius);
     background: rgba(217, 56, 58, 0.12);
     border: 1px solid rgba(217, 56, 58, 0.4);
     color: var(--color-alert, #b84c4c);
-    margin: 0.75rem 0;
   }
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(7, 25, 35, 0.55);
+    background: rgba(0, 0, 0, 0.55);
     display: grid;
     place-items: center;
     z-index: 50;
     padding: 1rem;
   }
   .modal {
-    max-width: 480px;
-    width: 100%;
-    padding: 1.75rem;
+    width: min(480px, 100%);
+    padding: 1.5rem;
   }
   .modal-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
-    margin-top: 1.25rem;
+    margin-top: 1rem;
   }
 </style>
