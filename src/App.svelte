@@ -7,6 +7,7 @@
   import Home from './pages/public/Home.svelte';
   import Solicitud from './pages/public/Solicitud.svelte';
   import Seguimiento from './pages/public/Seguimiento.svelte';
+  import Terminos from './pages/public/Terminos.svelte';
 
   import Login from './pages/admin/Login.svelte';
   import Dashboard from './pages/admin/Dashboard.svelte';
@@ -48,6 +49,8 @@
       <Solicitud />
     {:else if $router.rutaPublica === 'seguimiento'}
       <Seguimiento />
+    {:else if $router.rutaPublica === 'terminos'}
+      <Terminos />
     {/if}
   {:else if $sessionLoading && $router.rutaAdmin !== 'login'}
     <div class="session-check">
