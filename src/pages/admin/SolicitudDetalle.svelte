@@ -13,7 +13,10 @@
   import {
     ESTADO_DESCRIPCION_OPERADOR,
     ESTADO_LABEL,
+    KYC_RESULTADO_OPTIONS,
+    KYC_RESULTADO_LABEL,
     type EstadoSolicitud,
+    type KycResultado,
     type Solicitud,
   } from '../../lib/types';
   import Skeleton from '../../components/ui/Skeleton.svelte';
@@ -38,6 +41,10 @@
 
   let modal: 'none' | 'verificar' | 'cerrar' | 'cancelar' = $state('none');
   let motivo = $state('');
+  /** Resultado KYC permitido por el enum de Appwrite */
+  let kycResultado = $state<KycResultado>('approved');
+  /** Canal de verificación (solo notas/auditoría) */
+  let canalVerificacion = $state<'didit' | 'asistida' | 'documentos' | 'otro'>('asistida');
 
   let auditoria = $state<EventoAuditoria[]>([]);
   let auditoriaLoading = $state(false);
@@ -204,16 +211,38 @@
 
   async function confirmarVerificado() {
     if (!solicitud || solicitud.estado !== 'sin_verificar') return;
-    if (!motivo.trim()) {
-      actionError = 'Indica cómo se verificó la identidad (Didit, asistida, etc.).';
+    if (!kycResultado) {
+      actionError = 'Selecciona el resultado de la verificación KYC.';
+      return;
+    }
+    if (kycResultado !== 'approved') {
+      actionError =
+        'Para marcar como Verificado el resultado KYC debe ser «Aprobada». Si no aprobó, anota el resultado y cancela o deja el estado actual.';
       return;
     }
     const prev = solicitud.estado;
+    const canalLabel =
+      canalVerificacion === 'didit'
+        ? 'Didit (digital)'
+        : canalVerificacion === 'asistida'
+          ? 'Asistida (operador)'
+          : canalVerificacion === 'documentos'
+            ? 'Documentos'
+            : 'Otro';
+    const detalle = motivo.trim();
+    const motivoAudit = [
+      `KYC: ${KYC_RESULTADO_LABEL[kycResultado]}`,
+      `Canal: ${canalLabel}`,
+      detalle ? `Detalle: ${detalle}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
     await runAction(async () => {
-      const note = [notas.trim(), `Verificación: ${motivo.trim()}`].filter(Boolean).join('\n');
+      const note = [notas.trim(), `Verificación — ${motivoAudit}`].filter(Boolean).join('\n');
       const updated = await getSolicitudRepository().update(solicitud!.id, {
         estado: 'verificado',
-        kycResultado: 'manual',
+        kycResultado: 'approved',
         notasInternas: note || null,
         mensajePublico:
           mensajePublico.trim() ||
@@ -225,7 +254,7 @@
         accion: 'verificar',
         estadoAnterior: prev,
         estadoNuevo: 'verificado',
-        motivo: motivo.trim(),
+        motivo: motivoAudit,
       });
     });
   }
@@ -287,6 +316,8 @@
   function openModal(m: typeof modal) {
     actionError = '';
     motivo = '';
+    kycResultado = 'approved';
+    canalVerificacion = 'asistida';
     modal = m;
   }
 </script>
@@ -365,6 +396,12 @@
     <div class="card block-card">
       <h3>Contexto de la solicitud</h3>
       <p class="descripcion">{solicitud.descripcion || '—'}</p>
+      {#if solicitud.kycResultado}
+        <p class="kyc-line">
+          KYC registrado:
+          <strong>{KYC_RESULTADO_LABEL[solicitud.kycResultado as KycResultado] ?? solicitud.kycResultado}</strong>
+        </p>
+      {/if}
     </div>
 
     <div class="card notes-card">
@@ -526,16 +563,44 @@
     >
       {#if modal === 'verificar'}
         <h2>Marcar como verificado</h2>
-        <p class="hint-text">Confirma la identidad del solicitante (Didit, llamada, documentos, etc.).</p>
-        <label>Cómo se verificó<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
+        <p class="hint-text">
+          El resultado KYC debe ser uno de los valores del enum de Appwrite. Solo con
+          <strong>Aprobada</strong> se cambia el estado a Verificado.
+        </p>
+        <label class="field-label">
+          Resultado KYC
+          <select bind:value={kycResultado} disabled={actionLoading}>
+            {#each KYC_RESULTADO_OPTIONS as opt}
+              <option value={opt.value}>{opt.label}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="field-label">
+          Canal de verificación
+          <select bind:value={canalVerificacion} disabled={actionLoading}>
+            <option value="didit">Didit (digital)</option>
+            <option value="asistida">Asistida (operador / baja conectividad)</option>
+            <option value="documentos">Documentos revisados</option>
+            <option value="otro">Otro</option>
+          </select>
+        </label>
+        <label class="field-label">
+          Detalle opcional (notas / auditoría)
+          <textarea
+            bind:value={motivo}
+            rows="2"
+            placeholder="Ej.: videollamada el 9/9, carnet revisado…"
+            disabled={actionLoading}
+          ></textarea>
+        </label>
       {:else if modal === 'cerrar'}
         <h2>Cerrar expediente (completado)</h2>
         <p class="hint-text">Solo cuando el proceso terminó <strong>correctamente</strong>.</p>
-        <label>Resultado final<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
+        <label class="field-label">Resultado final<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
       {:else if modal === 'cancelar'}
         <h2>Cancelar solicitud</h2>
         <p class="hint-text">No es un cierre exitoso.</p>
-        <label>Motivo de cancelación<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
+        <label class="field-label">Motivo de cancelación<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
       {/if}
       {#if actionError}<div class="error-banner">{actionError}</div>{/if}
       <div class="modal-actions">
@@ -543,7 +608,7 @@
         {#if modal === 'verificar'}
           <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={confirmarVerificado}>Confirmar verificado</button>
         {:else if modal === 'cerrar'}
-          <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={confirmarCierre}>Cerrar completado</button>
+          <button type="button" class="btn btn-primary" disabled={actionLoading} onclick={confirmarCierre}>Confirmar cierre</button>
         {:else if modal === 'cancelar'}
           <button type="button" class="btn btn-danger" disabled={actionLoading} onclick={confirmarCancelacion}>Confirmar cancelación</button>
         {/if}
@@ -555,53 +620,46 @@
 <style>
   .detalle-wrap {
     max-width: 960px;
-    margin: 2rem auto 5rem;
-    padding: 0 var(--page-pad-x, 1rem);
+    margin: 0 auto;
+    padding: 1.5rem var(--page-pad-x, 1rem) 3rem;
   }
   .back-btn {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
   .load-panel {
     padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
   }
   .skel-header {
     display: flex;
-    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
   }
   .detalle-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
-    padding: 1.5rem 2rem;
-    margin-bottom: 1rem;
-    background: var(--color-obsidian-navy);
-    color: #fff;
-    border: 1px solid var(--color-border-gold);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
   }
   .eyebrow {
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--gold);
   }
   .codigo-h {
     font-family: var(--font-mono);
-    font-size: 1.5rem;
-    color: #fff;
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
   }
   .estado-desc {
-    margin: 0.5rem 0 0;
-    font-size: 0.9rem;
-    color: #a4b4c0;
-    max-width: 36rem;
+    margin: 0.35rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.92rem;
   }
   .pipeline {
-    padding: 1rem 1.25rem;
     margin-bottom: 1.25rem;
+    padding: 1rem 1.25rem;
   }
   .pipeline-steps {
     list-style: none;
@@ -617,20 +675,20 @@
     align-items: center;
     text-align: center;
     gap: 0.35rem;
-    opacity: 0.45;
+    opacity: 0.55;
   }
   .pipe-step.done,
   .pipe-step.current {
     opacity: 1;
   }
   .pipe-dot {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     border: 2px solid var(--border);
     display: grid;
     place-items: center;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
   }
   .pipe-step.done .pipe-dot {
@@ -643,20 +701,19 @@
     color: var(--positive);
   }
   .pipe-label {
-    font-size: 0.72rem;
-    color: var(--text-muted);
+    font-size: 0.75rem;
   }
   .pipeline-cancel {
     margin: 0;
-    color: var(--color-alert, #b84c4c);
+    color: var(--color-alert);
   }
   .info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
     margin-bottom: 1.25rem;
   }
-  dl {
+  .info-card dl {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 0.5rem 1rem;
@@ -673,6 +730,10 @@
   .descripcion {
     white-space: pre-wrap;
     margin: 0;
+  }
+  .kyc-line {
+    margin: 0.75rem 0 0;
+    font-size: 0.9rem;
   }
   .hint-text {
     font-size: 0.9rem;
@@ -812,14 +873,16 @@
     width: min(480px, 100%);
     padding: 1.5rem;
   }
-  .modal label {
+  .field-label {
     display: block;
     margin-top: 0.75rem;
     font-size: 0.9rem;
+    font-weight: 600;
   }
-  .modal textarea {
-    width: 100%;
+  .field-label select,
+  .field-label textarea {
     margin-top: 0.35rem;
+    width: 100%;
   }
   .modal-actions {
     display: flex;
