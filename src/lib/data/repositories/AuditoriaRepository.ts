@@ -65,11 +65,6 @@ const DESC_ESTADO: Record<EstadoSolicitud, string> = {
   cancelada: 'El expediente no continúa.',
 };
 
-function collectionId(): string {
-  const fromEnv = (import.meta.env.VITE_APPWRITE_COLLECTION_AUDITORIA_ID ?? '').trim();
-  return fromEnv || 'auditoria';
-}
-
 function asString(v: unknown, fb = ''): string {
   return typeof v === 'string' ? v : fb;
 }
@@ -182,7 +177,10 @@ export function hitosSinteticos(opts: {
 export class AppwriteAuditoriaRepository {
   private readonly databases = getDatabases();
   private readonly databaseId = getPublicConfig().databaseId;
-  private readonly col = collectionId();
+  /** Siempre desde config (VITE_APPWRITE_COLLECTION_AUDITORIA o _ID). */
+  private get col(): string {
+    return getPublicConfig().collectionAuditoriaId;
+  }
 
   async registrar(input: RegistrarAuditoriaInput): Promise<EventoAuditoria | null> {
     const metadata =
@@ -256,7 +254,12 @@ export class AppwriteAuditoriaRepository {
       );
     } catch (err) {
       const e = err as { message?: string; code?: number };
-      throw new ApiError('APPWRITE', e?.message || 'No se pudo cargar auditoría', e?.code);
+      throw new ApiError(
+        'APPWRITE',
+        e?.message ||
+          `No se pudo cargar auditoría (colección "${this.col}"). Revisa VITE_APPWRITE_COLLECTION_AUDITORIA.`,
+        e?.code,
+      );
     }
   }
 
@@ -284,4 +287,9 @@ let repo: AppwriteAuditoriaRepository | null = null;
 export function getAuditoriaRepository(): AppwriteAuditoriaRepository {
   if (!repo) repo = new AppwriteAuditoriaRepository();
   return repo;
+}
+
+/** Tests / hot-reload de env: fuerza nuevo singleton. */
+export function __resetAuditoriaRepositoryForTests(): void {
+  repo = null;
 }
