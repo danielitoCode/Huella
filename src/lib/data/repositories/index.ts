@@ -15,6 +15,17 @@ export type {
   SolicitudListOptions,
   SolicitudListResult,
 } from './SolicitudRepository';
+export {
+  AppwriteAuditoriaRepository,
+  getAuditoriaRepository,
+  hitosSinteticos,
+} from './AuditoriaRepository';
+export type {
+  EventoAuditoria,
+  HitoPublico,
+  AccionAuditoria,
+  RegistrarAuditoriaInput,
+} from './AuditoriaRepository';
 
 let repository: HuellaRepository | null = null;
 
