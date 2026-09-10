@@ -62,7 +62,7 @@
   }
 
   function actorId(): string {
-    return $sessionUser?.id || $sessionUser?.email || 'operador';
+    return $sessionUser?.$id || $sessionUser?.operadorId || $sessionUser?.email || 'operador';
   }
 
   function actorTipo(): 'operador' | 'admin' {
@@ -494,7 +494,9 @@
           type="button"
           class="btn-ghost-sm"
           disabled={auditoriaLoading}
-          onclick={() => cargarAuditoria(solicitud.id)}
+          onclick={() => {
+            if (solicitud) void cargarAuditoria(solicitud.id);
+          }}
         >
           {auditoriaLoading ? 'Cargando…' : 'Actualizar'}
         </button>
