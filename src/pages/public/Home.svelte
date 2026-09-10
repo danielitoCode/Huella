@@ -19,7 +19,7 @@
 
   <div class="hero-container">
     <div class="cuban-tribute-tag animate-fade-in">
-      <svg class="flag-mini" viewBox="0 0 300 200" width="16" height="11">
+      <svg class="flag-mini" viewBox="0 0 300 200" width="16" height="11" aria-hidden="true">
         <rect width="300" height="40" fill="#002a8f"/>
         <rect y="40" width="300" height="40" fill="#ffffff"/>
         <rect y="80" width="300" height="40" fill="#002a8f"/>
@@ -28,7 +28,7 @@
         <polygon points="0,0 173.2,100 0,200" fill="#cf2e2e"/>
         <polygon points="57.7,65 65.5,89 90.7,89 70.3,103.8 78.1,127.8 57.7,113 37.3,127.8 45.1,103.8 24.7,89 49.9,89" fill="#ffffff"/>
       </svg>
-      <span>Localización, Verificación e Indemnizaciones a Familias Cubanas</span>
+      <span>Localización, verificación e indemnizaciones a familias cubanas</span>
     </div>
 
     <h1 class="hero-title serif-title animate-fade-in">
@@ -37,13 +37,14 @@
     </h1>
 
     <p class="hero-subtitle animate-fade-in">
-      Huella es la plataforma de acompañamiento a familias cubanas con allegados en el conflicto Rusia-Ucrania. Verificamos documentalmente el estado de su familiar y orientamos en la reclamación de primas o indemnizaciones por fallecimiento.
+      Huella acompaña a familias cubanas con allegados en el conflicto Rusia-Ucrania: averiguación
+      documental del estado del familiar y, cuando corresponde, orientación sobre primas o indemnizaciones.
     </p>
 
     <div class="hero-actions animate-fade-in">
       <button type="button" class="btn btn-gold btn-hero" onclick={() => irAPublica('solicitud')}>
         <span>Iniciar una solicitud de búsqueda</span>
-        <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
           <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
         </svg>
       </button>
@@ -52,115 +53,97 @@
         <input
           type="text"
           bind:value={quickCode}
-          placeholder="Código de seguimiento (ej. HUE-2026-...)"
+          placeholder="Código HUE-2026-…"
           aria-label="Código de seguimiento rápido"
+          autocomplete="off"
         />
-        <button type="submit" class="btn btn-secondary btn-search-quick">
-          Consultar
-        </button>
+        <button type="submit" class="btn btn-secondary btn-search-quick">Consultar</button>
       </form>
     </div>
 
     <div class="trust-bar animate-fade-in">
       <div class="trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        </svg>
-        <span>Identidad Verificada Didit KYC</span>
+        <span>Identidad verificada (KYC)</span>
       </div>
       <div class="trust-divider"></div>
       <div class="trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-        <span>Averiguación Documental</span>
+        <span>Averiguación documental</span>
       </div>
       <div class="trust-divider"></div>
       <div class="trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-        </svg>
-        <span>Gestión de Primas e Indemnizaciones</span>
+        <span>Orientación sobre primas</span>
       </div>
     </div>
   </div>
 
-  <a href="#proceso" class="scroll-indicator animate-fade-in" aria-label="Desplazarse hacia el proceso">
-    <span>Conoce más</span>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-      <path d="M12 5v14M19 12l-7 7-7-7"/>
-    </svg>
-  </a>
+  <a href="#proceso" class="scroll-indicator animate-fade-in">Conoce más ↓</a>
 </section>
 
 <section class="process-section" id="proceso">
   <div class="section-header">
-    <span class="section-tag">Rigor e Investigación</span>
-    <h2 class="serif-title">Proceso de Averiguación y Gestión de Derechos</h2>
+    <span class="section-tag">Rigor e investigación</span>
+    <h2 class="serif-title">Proceso de averiguación y gestión de derechos</h2>
     <p class="section-desc">
-      Acompañamos a la familia cubana desde la verificación inicial del estado del familiar hasta la eventual orientación en el cobro de la prima o indemnización de ley.
+      Desde la verificación inicial hasta la orientación en primas, cuando el caso lo permite.
     </p>
   </div>
 
   <div class="process-grid">
     <div class="process-card card">
       <div class="process-num">01</div>
-      <h3>Averiguación Documental</h3>
+      <h3>Averiguación documental</h3>
       <p>
-        Registramos los antecedentes conocidos. Investigamos si la persona se encuentra en servicio activo, no localizada o si existe reporte oficial de fallecimiento.
+        Registramos antecedentes e investigamos si la persona está activa, no localizada o con reporte de
+        fallecimiento.
       </p>
-      <div class="card-footer-badge">
-        <span class="badge">Apertura Expediente</span>
-      </div>
+      <div class="card-footer-badge"><span class="badge">Apertura</span></div>
     </div>
 
     <div class="process-card card highlight">
       <div class="process-num gold">02</div>
-      <h3>Verificación Didit KYC</h3>
+      <h3>Verificación de identidad</h3>
       <p>
-        Confirmamos la identidad del familiar solicitante mediante Didit KYC para validar la legitimidad de su representación como beneficiario directo en la isla.
+        Confirmamos la identidad del solicitante (Didit o vía asistida) para proteger el expediente y a la
+        familia.
       </p>
-      <div class="card-footer-badge">
-        <span class="badge badge-progress">Acreditación Beneficiario</span>
-      </div>
+      <div class="card-footer-badge"><span class="badge badge-progress">Acreditación</span></div>
     </div>
 
     <div class="process-card card">
       <div class="process-num">03</div>
-      <h3>Orientación sobre Primas</h3>
+      <h3>Orientación sobre primas</h3>
       <p>
-        Si se confirma el deceso, orientamos y acompañamos los trámites para que la familia pueda reclamar la prima o indemnización correspondiente sin barreras geográficas.
+        Si se confirma el deceso, orientamos los trámites de prima o indemnización. Los pagos no se hacen
+        en esta web.
       </p>
-      <div class="card-footer-badge">
-        <span class="badge badge-positive">Derechos e Indemnización</span>
-      </div>
+      <div class="card-footer-badge"><span class="badge badge-positive">Derechos</span></div>
     </div>
   </div>
 </section>
 
 <section class="manifesto-section">
   <div class="manifesto-card glass-panel">
-    <div class="manifesto-content">
-      <span class="manifesto-tag">Principios Rectores</span>
-      <h2 class="serif-title">"Detrás de cada expediente hay un ser humano, una familia y el derecho inalienable a la verdad."</h2>
-      <p class="manifesto-body">
-        Huella nace para dar respuesta a las familias de ciudadanos cubanos en situaciones de vulnerabilidad o conflicto internacional, proporcionando una herramienta institucional libre de desinformación.
-      </p>
-      <div class="manifesto-bullets">
-        <div class="bullet-item">
-          <div class="bullet-icon">✓</div>
-          <div>
-            <strong>Confidencialidad absoluta</strong>
-            <p>Los datos sensibles solo son accesibles por operadores autorizados.</p>
-          </div>
+    <span class="manifesto-tag">Principios</span>
+    <h2 class="serif-title">
+      "Detrás de cada expediente hay un ser humano, una familia y el derecho a la verdad."
+    </h2>
+    <p class="manifesto-body">
+      Huella ordena la búsqueda de información para familias en situaciones de vulnerabilidad o conflicto
+      internacional, con rigor y sin promesas vacías.
+    </p>
+    <div class="manifesto-bullets">
+      <div class="bullet-item">
+        <div class="bullet-icon">✓</div>
+        <div>
+          <strong>Confidencialidad</strong>
+          <p>Datos sensibles solo para operadores autorizados.</p>
         </div>
-        <div class="bullet-item">
-          <div class="bullet-icon">✓</div>
-          <div>
-            <strong>Sin intermediarios ni costo</strong>
-            <p>Servicio directo orientado al interés humanitario del familiar.</p>
-          </div>
+      </div>
+      <div class="bullet-item">
+        <div class="bullet-icon">✓</div>
+        <div>
+          <strong>Sin pagos en la app</strong>
+          <p>La plataforma no procesa ni retiene primas.</p>
         </div>
       </div>
     </div>
@@ -170,30 +153,25 @@
 <section class="cta-banner">
   <div class="cta-inner">
     <h2 class="serif-title text-gradient-gold">¿Necesitas iniciar una búsqueda?</h2>
-    <p>
-      El proceso toma menos de 3 minutos. Recibirás inmediatamente tu código único de seguimiento confidencial.
-    </p>
+    <p>El registro toma pocos minutos. Recibirás un código de seguimiento confidencial.</p>
     <button type="button" class="btn btn-gold btn-hero" onclick={() => irAPublica('solicitud')}>
-      Comenzar Solicitud de Búsqueda
+      Comenzar solicitud
     </button>
   </div>
 </section>
 
 <style>
-  /* Fondo transparente: los rayos del Layout se ven a través del hero */
   .hero-section {
     position: relative;
     background: transparent;
     color: var(--color-stone);
-    min-height: calc(100vh - 65px);
     min-height: calc(100svh - 65px);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: clamp(1.5rem, 3vh, 3.5rem) 1.5rem clamp(1.5rem, 2.5vh, 2.5rem);
+    padding: clamp(1.25rem, 3vh, 3rem) var(--page-pad-x, 1rem) 1.5rem;
     overflow: hidden;
-    box-sizing: border-box;
   }
 
   .hero-backdrop {
@@ -207,10 +185,8 @@
     top: -20%;
     left: 50%;
     transform: translateX(-50%);
-    width: 60vw;
-    height: 60vw;
-    max-width: 800px;
-    max-height: 800px;
+    width: min(60vw, 800px);
+    height: min(60vw, 800px);
     background: radial-gradient(circle, rgba(232, 201, 122, 0.12) 0%, transparent 65%);
     filter: blur(40px);
   }
@@ -229,40 +205,44 @@
   .hero-container {
     position: relative;
     z-index: 10;
+    width: 100%;
     max-width: 960px;
     margin: 0 auto;
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
   }
 
   .cuban-tribute-tag {
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.35rem 1rem;
+    justify-content: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    padding: 0.4rem 0.9rem;
     border-radius: var(--radius-pill);
-    background: rgba(7, 25, 35, 0.45);
+    background: rgba(7, 25, 35, 0.5);
     border: 1px solid rgba(212, 175, 55, 0.35);
     backdrop-filter: blur(12px);
-    font-size: 0.78rem;
+    font-size: clamp(0.68rem, 2.4vw, 0.78rem);
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
     color: var(--color-stone);
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.15rem;
+    text-align: left;
+  }
+
+  .cuban-tribute-tag span {
+    line-height: 1.35;
   }
 
   .flag-mini {
+    flex-shrink: 0;
     border-radius: 2px;
-    box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
   }
 
   .hero-title {
-    font-size: clamp(2.2rem, 5vw, 3.8rem);
-    line-height: 1.12;
-    margin-bottom: 1rem;
+    font-size: clamp(1.75rem, 5.5vw, 3.6rem);
+    line-height: 1.15;
+    margin-bottom: 0.85rem;
     color: #ffffff;
     text-shadow: 0 2px 24px rgba(7, 25, 35, 0.55);
   }
@@ -275,7 +255,7 @@
   .highlight-dignity::after {
     content: '';
     position: absolute;
-    bottom: 4px;
+    bottom: 2px;
     left: 0;
     right: 0;
     height: 3px;
@@ -284,26 +264,26 @@
   }
 
   .hero-subtitle {
-    font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+    font-size: clamp(0.92rem, 2.2vw, 1.12rem);
     color: #c5d0d8;
-    max-width: 700px;
-    margin: 0 auto 1.75rem;
+    max-width: 38rem;
+    margin: 0 auto 1.5rem;
     line-height: 1.55;
-    text-shadow: 0 1px 12px rgba(7, 25, 35, 0.5);
   }
 
   .hero-actions {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
-    gap: 1rem;
-    margin-bottom: 2.25rem;
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+    width: 100%;
   }
 
   .btn-hero {
-    padding: 0.85rem 1.8rem;
-    font-size: 0.98rem;
+    padding: 0.85rem 1.5rem;
+    font-size: 0.95rem;
   }
 
   .quick-search-box {
@@ -313,7 +293,8 @@
     background: rgba(7, 25, 35, 0.55);
     border: 1px solid rgba(255, 255, 255, 0.18);
     backdrop-filter: blur(12px);
-    padding: 0.35rem 0.35rem 0.35rem 0.9rem;
+    padding: 0.35rem;
+    padding-left: 0.85rem;
     border-radius: var(--radius);
     width: 100%;
     max-width: 420px;
@@ -323,8 +304,10 @@
     background: transparent;
     border: none;
     color: #ffffff;
-    font-size: 0.9rem;
-    padding: 0.4rem 0;
+    font-size: 16px;
+    padding: 0.45rem 0;
+    min-width: 0;
+    flex: 1;
     box-shadow: none !important;
   }
 
@@ -333,10 +316,12 @@
   }
 
   .btn-search-quick {
-    min-height: 38px;
-    padding: 0.5rem 1rem;
+    min-height: 40px;
+    padding: 0.45rem 0.9rem;
     font-size: 0.85rem;
     white-space: nowrap;
+    width: auto;
+    flex-shrink: 0;
   }
 
   .trust-bar {
@@ -344,55 +329,41 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 1.25rem;
-    padding: 0.75rem 1.5rem;
+    gap: 0.75rem 1.25rem;
+    padding: 0.7rem 1.15rem;
     background: rgba(7, 25, 35, 0.55);
     border: 1px solid rgba(212, 175, 55, 0.25);
     border-radius: var(--radius-pill);
     backdrop-filter: blur(12px);
+    max-width: 100%;
   }
 
   .trust-item {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 500;
     color: var(--color-stone);
   }
 
-  .trust-item svg {
-    color: var(--gold);
-  }
-
   .trust-divider {
     width: 1px;
-    height: 16px;
+    height: 14px;
     background: rgba(255, 255, 255, 0.2);
   }
 
   .scroll-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: 1.5rem;
+    margin-top: 1.25rem;
     font-size: 0.75rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--gold);
-    opacity: 0.85;
+    opacity: 0.9;
     text-decoration: none;
   }
 
-  .scroll-indicator:hover {
-    opacity: 1;
-    transform: translateY(3px);
-  }
-
   .process-section {
-    max-width: 1140px;
+    max-width: var(--content-max, 1140px);
     margin: 0 auto;
-    padding: 5rem 1.5rem;
+    padding: clamp(2.5rem, 6vw, 5rem) var(--page-pad-x, 1rem);
     position: relative;
     z-index: 2;
   }
@@ -400,7 +371,7 @@
   .section-header {
     text-align: center;
     max-width: 640px;
-    margin: 0 auto 3.5rem;
+    margin: 0 auto 2.5rem;
   }
 
   .section-tag {
@@ -414,15 +385,15 @@
   }
 
   .section-desc {
-    font-size: 1.05rem;
+    font-size: 1rem;
     color: var(--text-muted);
     margin-top: 0.5rem;
   }
 
   .process-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 1.25rem;
   }
 
   .process-card {
@@ -433,17 +404,16 @@
 
   .process-card.highlight {
     border-color: var(--color-border-gold);
-    background: linear-gradient(180deg, var(--surface) 0%, rgba(212, 175, 55, 0.04) 100%);
   }
 
   .process-num {
     font-family: var(--font-serif);
-    font-size: 2.8rem;
+    font-size: 2.4rem;
     font-weight: 700;
     line-height: 1;
     color: var(--text-muted);
     opacity: 0.4;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   .process-num.gold {
@@ -451,33 +421,22 @@
     opacity: 1;
   }
 
-  .process-card h3 {
-    font-size: 1.2rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .process-card p {
-    font-size: 0.95rem;
-    color: var(--text);
-    flex-grow: 1;
-  }
-
   .card-footer-badge {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
+    margin-top: 1.25rem;
+    padding-top: 0.85rem;
     border-top: 1px solid var(--border);
   }
 
   .manifesto-section {
-    max-width: 1140px;
-    margin: 0 auto 5rem;
-    padding: 0 1.5rem;
+    max-width: var(--content-max, 1140px);
+    margin: 0 auto clamp(2.5rem, 6vw, 5rem);
+    padding: 0 var(--page-pad-x, 1rem);
     position: relative;
     z-index: 2;
   }
 
   .manifesto-card {
-    padding: clamp(2.5rem, 5vw, 4rem);
+    padding: clamp(1.5rem, 4vw, 3.5rem);
     background: linear-gradient(135deg, var(--color-obsidian-navy) 0%, #0d2a3c 100%);
     color: #ffffff;
     border: 1px solid var(--color-border-gold);
@@ -494,28 +453,28 @@
 
   .manifesto-card h2 {
     color: #ffffff;
-    font-size: clamp(1.6rem, 3.2vw, 2.4rem);
-    margin-bottom: 1.25rem;
+    font-size: clamp(1.35rem, 3.2vw, 2.2rem);
+    margin-bottom: 1rem;
   }
 
   .manifesto-body {
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--color-stone);
     max-width: 780px;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
   }
 
   .manifesto-bullets {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    padding-top: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 1.25rem;
+    padding-top: 1.25rem;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   .bullet-item {
     display: flex;
-    gap: 1rem;
+    gap: 0.85rem;
     align-items: flex-start;
   }
 
@@ -547,7 +506,7 @@
 
   .cta-banner {
     background: radial-gradient(circle at 50% 30%, rgba(212, 175, 55, 0.12) 0%, rgba(7, 25, 35, 0.92) 80%);
-    padding: 5rem 1.5rem;
+    padding: clamp(2.5rem, 6vw, 5rem) var(--page-pad-x, 1rem);
     text-align: center;
     border-top: 1px solid var(--color-border-gold);
     position: relative;
@@ -560,30 +519,49 @@
   }
 
   .cta-banner h2 {
-    font-size: clamp(2rem, 4vw, 3rem);
-    margin-bottom: 1rem;
+    font-size: clamp(1.6rem, 4vw, 2.75rem);
+    margin-bottom: 0.85rem;
   }
 
   .cta-banner p {
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--color-stone);
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
   }
 
   @media (max-width: 640px) {
-    .trust-bar {
-      flex-direction: column;
-      border-radius: var(--radius);
-    }
-    .trust-divider {
-      display: none;
-    }
-    .quick-search-box {
+    .hero-actions {
       flex-direction: column;
       align-items: stretch;
     }
+
+    .btn-hero {
+      width: 100%;
+    }
+
+    .quick-search-box {
+      max-width: none;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 0.65rem;
+    }
+
     .btn-search-quick {
       width: 100%;
+    }
+
+    .trust-bar {
+      flex-direction: column;
+      border-radius: var(--radius);
+      gap: 0.5rem;
+    }
+
+    .trust-divider {
+      display: none;
+    }
+
+    .cuban-tribute-tag {
+      border-radius: var(--radius);
     }
   }
 </style>

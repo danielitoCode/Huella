@@ -4,7 +4,7 @@
   import DevLoggerPanel from './DevLoggerPanel.svelte';
   import LightRays from './effects/LightRays.svelte';
   import type { Snippet } from 'svelte';
-  import { router } from '../lib/stores/router';
+  import { router, irAPublica } from '../lib/stores/router';
   import { loadSession } from '../lib/stores/session';
 
   interface Props {
@@ -52,9 +52,17 @@
       <p class="footer-brand">Huella</p>
       <p class="footer-tag">Verdad · Memoria · Dignidad</p>
       <p class="footer-note">
-        Espacio digital de memoria e investigación documental. No procesamos pagos ni garantizamos
-        resultados.
+        Plataforma de averiguación sobre familiares y orientación sobre prima cuando corresponda.
+        No procesamos pagos en esta aplicación ni garantizamos un resultado concreto.
       </p>
+      <nav class="footer-nav" aria-label="Legal">
+        <button type="button" class="footer-link" onclick={() => irAPublica('terminos')}>
+          Términos y condiciones
+        </button>
+        <button type="button" class="footer-link" onclick={() => irAPublica('seguimiento')}>
+          Seguimiento
+        </button>
+      </nav>
     </footer>
   </div>
 
@@ -68,6 +76,8 @@
     flex-direction: column;
     background: var(--bg);
     position: relative;
+    width: 100%;
+    overflow-x: hidden;
   }
 
   .layout.public-zone {
@@ -82,7 +92,6 @@
     overflow: hidden;
   }
 
-  /* Amplifica el canvas sin tocar el shader */
   .rays-boost {
     position: absolute;
     inset: 0;
@@ -90,7 +99,6 @@
     opacity: 0.95;
   }
 
-  /* Velo más abierto arriba (donde se ven los rayos); más denso abajo para texto */
   .public-bg-veil {
     position: absolute;
     inset: 0;
@@ -116,6 +124,7 @@
     min-height: 100svh;
     display: flex;
     flex-direction: column;
+    width: 100%;
   }
 
   .main {
@@ -123,20 +132,21 @@
     width: 100%;
     display: flex;
     flex-direction: column;
+    min-width: 0;
   }
 
   .footer {
     background: var(--header-bg);
     color: var(--header-text);
     border-top: 1px solid var(--header-border);
-    padding: 2.5rem 1.5rem;
+    padding: 2rem var(--page-pad-x, 1rem) max(2rem, env(safe-area-inset-bottom));
     text-align: center;
     margin-top: auto;
   }
 
   .footer-brand {
     font-family: var(--font-display);
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     margin: 0 0 0.25rem;
     color: var(--gold);
   }
@@ -150,11 +160,36 @@
   }
 
   .footer-note {
-    margin: 0 auto;
+    margin: 0 auto 1rem;
     max-width: 32rem;
     font-size: 0.82rem;
     opacity: 0.7;
     line-height: 1.5;
+  }
+
+  .footer-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+  }
+
+  .footer-link {
+    background: none;
+    border: none;
+    color: var(--gold);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    padding: 0.35rem;
+    min-height: 44px;
+  }
+
+  @media (max-width: 480px) {
+    .footer-note {
+      font-size: 0.78rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

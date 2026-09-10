@@ -1,6 +1,8 @@
-import { ID, Query } from 'appwrite';
+import { ID, Permission, Query, Role } from 'appwrite';
 import { getDatabases, getPublicConfig } from '../../appwrite/client';
-import type { EstadoSolicitud, Solicitud } from '../../types';
+import { ApiError } from '../../appwrite/types';
+import type { EstadoSolicitud, OperatorContact, SeguimientoPublico, Solicitud } from '../../types';
+import { getAuditoriaRepository } from './AuditoriaRepository';
 
 export type CreateSolicitudInput = {
   nombreFamiliar: string;
@@ -11,7 +13,12 @@ export type CreateSolicitudInput = {
   descripcion: string;
 };
 
-export type UpdateSolicitudInput = Partial<Omit<Solicitud, 'id' | 'codigoSeguimiento' | 'fechaCreacion' | 'fechaActualizacion'>>;
+export type UpdateSolicitudInput = Partial<
+  Omit<Solicitud, 'id' | 'codigoSeguimiento' | 'fechaCreacion' | 'fechaActualizacion'>
+> & {
+  motivoCierre?: string | null;
+  verificationUrl?: string | null;
+};
 
 export type SolicitudListOptions = {
   estado?: EstadoSolicitud | '';
@@ -29,6 +36,7 @@ export type SolicitudListResult = {
 export interface SolicitudRepository {
   create(input: CreateSolicitudInput): Promise<Solicitud>;
   getById(id: string): Promise<Solicitud>;
+  getByCode(codigo: string): Promise<SeguimientoPublico>;
   list(options?: SolicitudListOptions): Promise<SolicitudListResult>;
   update(id: string, input: UpdateSolicitudInput): Promise<Solicitud>;
   delete(id: string): Promise<void>;
@@ -48,6 +56,27 @@ function asNullableString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
+function mapAppwriteError(err: unknown): never {
+  const e = err as { code?: number | string; type?: string; message?: string };
+  const message = e?.message || 'Error de Appwrite';
+  const codeNum = typeof e?.code === 'number' ? e.code : undefined;
+  if (codeNum === 404 || e?.type === 'document_not_found') {
+    throw new ApiError('NOT_FOUND', 'Solicitud no encontrada', 404);
+  }
+  if (codeNum === 401 || codeNum === 403) {
+    throw new ApiError('FORBIDDEN', message, codeNum);
+  }
+  throw new ApiError('APPWRITE', message, codeNum);
+}
+
+function verificationUrlFrom(doc: Record<string, unknown>): string | null {
+  return (
+    asNullableString(doc.verificationUrl) ||
+    asNullableString(doc.diditVerificationUrl) ||
+    null
+  );
+}
+
 function toSolicitud(document: AppwriteSolicitudDocument): Solicitud {
   return {
     id: document.$id,
@@ -62,10 +91,35 @@ function toSolicitud(document: AppwriteSolicitudDocument): Solicitud {
     mensajePublico: asNullableString(document.mensajePublico),
     notasInternas: asNullableString(document.notasInternas),
     diditSessionId: asNullableString(document.diditSessionId),
-    diditVerificationUrl: asNullableString(document.diditVerificationUrl),
+    diditVerificationUrl: verificationUrlFrom(document),
     kycResultado: asNullableString(document.kycResultado),
     fechaCreacion: document.$createdAt,
     fechaActualizacion: document.$updatedAt,
+  };
+}
+
+function operatorContactFromConfig(): OperatorContact {
+  const c = getPublicConfig();
+  return {
+    name: c.operatorContactName || 'Equipo Huella',
+    email: c.operatorContactEmail || null,
+    phone: c.operatorContactPhone || null,
+    note: c.operatorContactNote,
+  };
+}
+
+function toSeguimientoPublico(document: AppwriteSolicitudDocument): SeguimientoPublico {
+  const estado = asString(document.estado, 'pendiente') as EstadoSolicitud;
+  const verificationUrl = verificationUrlFrom(document);
+  return {
+    codigoSeguimiento: asString(document.codigoSeguimiento),
+    estado,
+    mensajePublico: asNullableString(document.mensajePublico),
+    fechaCreacion: document.$createdAt,
+    fechaActualizacion: document.$updatedAt,
+    kycCompletado: estado === 'verificado' || estado === 'cerrado',
+    verificationUrl,
+    operatorContact: operatorContactFromConfig(),
   };
 }
 
@@ -79,41 +133,86 @@ function generateTrackingCode(): string {
   return `HUE-${year}-${token}`;
 }
 
-/**
- * CRUD de solicitudes directamente contra Appwrite Client SDK.
- * La autorización real queda en los permisos/scopes de la tabla:
- * create público, read/update para operadores y control total para admin.
- */
 export class AppwriteSolicitudRepository implements SolicitudRepository {
   private readonly databases = getDatabases();
   private readonly config = getPublicConfig();
 
   async create(input: CreateSolicitudInput): Promise<Solicitud> {
-    const document = await this.databases.createDocument(
-      this.config.databaseId,
-      this.config.collectionSolicitudesId,
-      ID.unique(),
-      {
-        nombreFamiliar: input.nombreFamiliar,
-        email: input.email,
-        telefono: input.telefono ?? null,
-        nombrePersona: input.nombrePersona,
-        relacion: input.relacion,
-        descripcion: input.descripcion,
-        codigoSeguimiento: generateTrackingCode(),
-        estado: 'pendiente',
-      },
-    );
-    return toSolicitud(document as unknown as AppwriteSolicitudDocument);
+    try {
+      const document = await this.databases.createDocument(
+        this.config.databaseId,
+        this.config.collectionSolicitudesId,
+        ID.unique(),
+        {
+          nombreFamiliar: input.nombreFamiliar,
+          email: input.email,
+          telefono: input.telefono ?? null,
+          nombrePersona: input.nombrePersona,
+          relacion: input.relacion,
+          descripcion: input.descripcion,
+          codigoSeguimiento: generateTrackingCode(),
+          estado: 'pendiente',
+        },
+        [
+          Permission.read(Role.any()),
+          Permission.update(Role.users()),
+          Permission.delete(Role.users()),
+        ],
+      );
+      const solicitud = toSolicitud(document as unknown as AppwriteSolicitudDocument);
+
+      // Best-effort: hito público de apertura (no bloquea el alta si falla permisos)
+      void getAuditoriaRepository()
+        .registrar({
+          solicitudId: solicitud.id,
+          codigoSeguimiento: solicitud.codigoSeguimiento,
+          accion: 'crear_solicitud',
+          actorTipo: 'publico',
+          actorId: 'solicitante',
+          estadoAnterior: null,
+          estadoNuevo: 'pendiente',
+          motivo: 'Apertura de expediente desde el formulario público',
+        })
+        .catch(() => null);
+
+      return solicitud;
+    } catch (err) {
+      mapAppwriteError(err);
+    }
   }
 
   async getById(id: string): Promise<Solicitud> {
-    const document = await this.databases.getDocument(
-      this.config.databaseId,
-      this.config.collectionSolicitudesId,
-      id,
-    );
-    return toSolicitud(document as unknown as AppwriteSolicitudDocument);
+    try {
+      const document = await this.databases.getDocument(
+        this.config.databaseId,
+        this.config.collectionSolicitudesId,
+        id,
+      );
+      return toSolicitud(document as unknown as AppwriteSolicitudDocument);
+    } catch (err) {
+      mapAppwriteError(err);
+    }
+  }
+
+  async getByCode(codigo: string): Promise<SeguimientoPublico> {
+    const code = codigo.trim().toUpperCase();
+    if (!code) throw new ApiError('VALIDATION', 'Código requerido', 400);
+
+    try {
+      const result = await this.databases.listDocuments(
+        this.config.databaseId,
+        this.config.collectionSolicitudesId,
+        [Query.equal('codigoSeguimiento', code), Query.limit(1)],
+      );
+      const document = result.documents[0] as unknown as AppwriteSolicitudDocument | undefined;
+      if (!document) {
+        throw new ApiError('NOT_FOUND', 'Solicitud no encontrada', 404);
+      }
+      return toSeguimientoPublico(document);
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      mapAppwriteError(err);
+    }
   }
 
   async list(options: SolicitudListOptions = {}): Promise<SolicitudListResult> {
@@ -123,41 +222,74 @@ export class AppwriteSolicitudRepository implements SolicitudRepository {
 
     if (options.estado) queries.push(Query.equal('estado', options.estado));
 
-    const result = await this.databases.listDocuments(
-      this.config.databaseId,
-      this.config.collectionSolicitudesId,
-      queries,
-    );
+    try {
+      const result = await this.databases.listDocuments(
+        this.config.databaseId,
+        this.config.collectionSolicitudesId,
+        queries,
+      );
 
-    return {
-      solicitudes: result.documents.map((document) =>
-        toSolicitud(document as unknown as AppwriteSolicitudDocument),
-      ),
-      total: result.total,
-      limit,
-      offset,
-    };
+      return {
+        solicitudes: result.documents.map((document) =>
+          toSolicitud(document as unknown as AppwriteSolicitudDocument),
+        ),
+        total: result.total,
+        limit,
+        offset,
+      };
+    } catch (err) {
+      mapAppwriteError(err);
+    }
   }
 
   async update(id: string, input: UpdateSolicitudInput): Promise<Solicitud> {
-    const { id: _id, codigoSeguimiento: _codigo, fechaCreacion: _created, fechaActualizacion: _updated, ...data } =
-      input as UpdateSolicitudInput & Record<string, unknown>;
+    const data: Record<string, unknown> = {};
+    const keys: (keyof UpdateSolicitudInput)[] = [
+      'nombreFamiliar',
+      'email',
+      'telefono',
+      'nombrePersona',
+      'relacion',
+      'descripcion',
+      'estado',
+      'mensajePublico',
+      'notasInternas',
+      'diditSessionId',
+      'diditVerificationUrl',
+      'kycResultado',
+      'motivoCierre',
+      'verificationUrl',
+    ];
+    for (const k of keys) {
+      if (input[k] !== undefined) data[k as string] = input[k];
+    }
+    if (input.diditVerificationUrl !== undefined && data.verificationUrl === undefined) {
+      data.verificationUrl = input.diditVerificationUrl;
+    }
 
-    const document = await this.databases.updateDocument(
-      this.config.databaseId,
-      this.config.collectionSolicitudesId,
-      id,
-      data,
-    );
-    return toSolicitud(document as unknown as AppwriteSolicitudDocument);
+    try {
+      const document = await this.databases.updateDocument(
+        this.config.databaseId,
+        this.config.collectionSolicitudesId,
+        id,
+        data,
+      );
+      return toSolicitud(document as unknown as AppwriteSolicitudDocument);
+    } catch (err) {
+      mapAppwriteError(err);
+    }
   }
 
   async delete(id: string): Promise<void> {
-    await this.databases.deleteDocument(
-      this.config.databaseId,
-      this.config.collectionSolicitudesId,
-      id,
-    );
+    try {
+      await this.databases.deleteDocument(
+        this.config.databaseId,
+        this.config.collectionSolicitudesId,
+        id,
+      );
+    } catch (err) {
+      mapAppwriteError(err);
+    }
   }
 }
 

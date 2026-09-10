@@ -26,6 +26,7 @@ function pathFromState(s: RouterState): string {
     return '/admin/login';
   }
   if (s.rutaPublica === 'solicitud') return '/solicitud';
+  if (s.rutaPublica === 'terminos') return '/terminos';
   if (s.rutaPublica === 'seguimiento') {
     return s.codigoSeguimiento
       ? `/seguimiento/${encodeURIComponent(s.codigoSeguimiento)}`
@@ -66,6 +67,11 @@ function applyPath(pathname: string) {
 
   if (segs[0] === 'solicitud') {
     router.set({ zona: 'public', rutaPublica: 'solicitud', rutaAdmin: 'login' });
+    return;
+  }
+
+  if (segs[0] === 'terminos') {
+    router.set({ zona: 'public', rutaPublica: 'terminos', rutaAdmin: 'login' });
     return;
   }
 
