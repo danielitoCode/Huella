@@ -2,6 +2,7 @@ import { ID, Permission, Query, Role } from 'appwrite';
 import { getDatabases, getPublicConfig } from '../../appwrite/client';
 import { ApiError } from '../../appwrite/types';
 import type { EstadoSolicitud, OperatorContact, SeguimientoPublico, Solicitud } from '../../types';
+import { getAuditoriaRepository } from './AuditoriaRepository';
 
 export type CreateSolicitudInput = {
   nombreFamiliar: string;
@@ -35,7 +36,6 @@ export type SolicitudListResult = {
 export interface SolicitudRepository {
   create(input: CreateSolicitudInput): Promise<Solicitud>;
   getById(id: string): Promise<Solicitud>;
-  /** Seguimiento público por código (sin login). */
   getByCode(codigo: string): Promise<SeguimientoPublico>;
   list(options?: SolicitudListOptions): Promise<SolicitudListResult>;
   update(id: string, input: UpdateSolicitudInput): Promise<Solicitud>;
@@ -133,16 +133,6 @@ function generateTrackingCode(): string {
   return `HUE-${year}-${token}`;
 }
 
-/**
- * CRUD + seguimiento público vía Appwrite Client SDK (sin Worker).
- *
- * Permisos de colección recomendados en Appwrite:
- * - Create: any
- * - Read: any (para getByCode / list filtrado por código)
- * - Update / Delete: users (operadores autenticados)
- *
- * Documentos nuevos llevan read(any) + update/delete(users).
- */
 export class AppwriteSolicitudRepository implements SolicitudRepository {
   private readonly databases = getDatabases();
   private readonly config = getPublicConfig();
@@ -169,7 +159,23 @@ export class AppwriteSolicitudRepository implements SolicitudRepository {
           Permission.delete(Role.users()),
         ],
       );
-      return toSolicitud(document as unknown as AppwriteSolicitudDocument);
+      const solicitud = toSolicitud(document as unknown as AppwriteSolicitudDocument);
+
+      // Best-effort: hito público de apertura (no bloquea el alta si falla permisos)
+      void getAuditoriaRepository()
+        .registrar({
+          solicitudId: solicitud.id,
+          codigoSeguimiento: solicitud.codigoSeguimiento,
+          accion: 'crear_solicitud',
+          actorTipo: 'publico',
+          actorId: 'solicitante',
+          estadoAnterior: null,
+          estadoNuevo: 'pendiente',
+          motivo: 'Apertura de expediente desde el formulario público',
+        })
+        .catch(() => null);
+
+      return solicitud;
     } catch (err) {
       mapAppwriteError(err);
     }
@@ -257,7 +263,6 @@ export class AppwriteSolicitudRepository implements SolicitudRepository {
     for (const k of keys) {
       if (input[k] !== undefined) data[k as string] = input[k];
     }
-    // Alias de campo Didit en colección
     if (input.diditVerificationUrl !== undefined && data.verificationUrl === undefined) {
       data.verificationUrl = input.diditVerificationUrl;
     }
