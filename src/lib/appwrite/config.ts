@@ -28,19 +28,36 @@ function required(name: string, value: string | undefined): string {
   return v;
 }
 
+/** Primera variable VITE_* no vacía (soporta alias de nombres). */
+function firstEnv(...names: string[]): string {
+  for (const name of names) {
+    const v = (import.meta.env[name] as string | undefined)?.trim();
+    if (v) return v;
+  }
+  return '';
+}
+
 export function getAppwriteConfig(): AppwritePublicConfig {
   const endpoint = required('VITE_APPWRITE_ENDPOINT', import.meta.env.VITE_APPWRITE_ENDPOINT);
   const projectId = required('VITE_APPWRITE_PROJECT_ID', import.meta.env.VITE_APPWRITE_PROJECT_ID);
 
+  const collectionAuditoriaId =
+    firstEnv('VITE_APPWRITE_COLLECTION_AUDITORIA', 'VITE_APPWRITE_COLLECTION_AUDITORIA_ID') ||
+    'auditoria';
+
+  const collectionSolicitudesId =
+    firstEnv(
+      'VITE_APPWRITE_COLLECTION_SOLICITUDES',
+      'VITE_APPWRITE_COLLECTION_SOLICITUDES_ID',
+    ) || 'solicitudes';
+
   return {
     endpoint,
     projectId,
-    databaseId: (import.meta.env.VITE_APPWRITE_DATABASE_ID ?? 'huella').trim() || 'huella',
-    collectionSolicitudesId:
-      (import.meta.env.VITE_APPWRITE_COLLECTION_SOLICITUDES_ID ?? 'solicitudes').trim() ||
-      'solicitudes',
-    collectionAuditoriaId:
-      (import.meta.env.VITE_APPWRITE_COLLECTION_AUDITORIA_ID ?? 'auditoria').trim() || 'auditoria',
+    databaseId:
+      firstEnv('VITE_APPWRITE_DATABASE_ID', 'VITE_APPWRITE_DATABASE') || 'huella',
+    collectionSolicitudesId,
+    collectionAuditoriaId,
     apiBaseUrl: (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, ''),
     functionApiId: (import.meta.env.VITE_APPWRITE_FUNCTION_API_ID ?? '').trim(),
     publicAppUrl:
