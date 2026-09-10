@@ -2,8 +2,14 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { router, irAAdmin } from '../../lib/stores/router';
+  import { sessionUser } from '../../lib/stores/session';
   import { ApiError } from '../../lib/appwrite';
-  import { getSolicitudRepository } from '../../lib/data/repositories';
+  import {
+    getSolicitudRepository,
+    getAuditoriaRepository,
+    type EventoAuditoria,
+    type AccionAuditoria,
+  } from '../../lib/data/repositories';
   import {
     ESTADO_DESCRIPCION_OPERADOR,
     ESTADO_LABEL,
@@ -13,7 +19,6 @@
   import Skeleton from '../../components/ui/Skeleton.svelte';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
 
-  /** Orden del flujo feliz (cancelada es rama aparte). */
   const PIPELINE: EstadoSolicitud[] = [
     'pendiente',
     'sin_verificar',
@@ -28,13 +33,15 @@
   let actionLoading = $state(false);
   let notasGuardadasOk = $state(false);
 
-  /** Notas del operador: detalles importantes del expediente (solo backoffice). */
   let notas = $state('');
-  /** Mensaje visible en seguimiento público. */
   let mensajePublico = $state('');
 
   let modal: 'none' | 'verificar' | 'cerrar' | 'cancelar' = $state('none');
   let motivo = $state('');
+
+  let auditoria = $state<EventoAuditoria[]>([]);
+  let auditoriaLoading = $state(false);
+  let auditoriaError = $state('');
 
   const solicitudId = $derived(get(router).solicitudId ?? '');
 
@@ -45,6 +52,69 @@
   function pipelineIndex(estado: EstadoSolicitud): number {
     if (estado === 'cancelada') return -1;
     return PIPELINE.indexOf(estado);
+  }
+
+  function actorId(): string {
+    return $sessionUser?.id || $sessionUser?.email || 'operador';
+  }
+
+  function actorTipo(): 'operador' | 'admin' {
+    return $sessionUser?.rol === 'admin' ? 'admin' : 'operador';
+  }
+
+  async function cargarAuditoria(id: string) {
+    auditoriaLoading = true;
+    auditoriaError = '';
+    try {
+      auditoria = await getAuditoriaRepository().listBySolicitud(id);
+    } catch (err) {
+      auditoria = [];
+      auditoriaError =
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo cargar la auditoría (revisa permisos de la colección).';
+    } finally {
+      auditoriaLoading = false;
+    }
+  }
+
+  async function registrarAudit(opts: {
+    accion: AccionAuditoria;
+    estadoAnterior?: EstadoSolicitud | null;
+    estadoNuevo?: EstadoSolicitud | null;
+    motivo?: string | null;
+  }) {
+    if (!solicitud) return;
+    await getAuditoriaRepository().registrar({
+      solicitudId: solicitud.id,
+      codigoSeguimiento: solicitud.codigoSeguimiento,
+      accion: opts.accion,
+      actorTipo: actorTipo(),
+      actorId: actorId(),
+      estadoAnterior: opts.estadoAnterior ?? null,
+      estadoNuevo: opts.estadoNuevo ?? null,
+      motivo: opts.motivo ?? null,
+    });
+    await cargarAuditoria(solicitud.id);
+  }
+
+  function formatFecha(iso: string | undefined | null): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  function labelAccion(a: string): string {
+    const map: Record<string, string> = {
+      crear_solicitud: 'Creación',
+      cambio_estado: 'Cambio de estado',
+      actualizar_notas: 'Notas / mensaje',
+      verificar: 'Verificación',
+      cerrar: 'Cierre',
+      cancelar: 'Cancelación',
+    };
+    return map[a] || a;
   }
 
   onMount(async () => {
@@ -58,6 +128,7 @@
       solicitud = res;
       notas = res.notasInternas ?? '';
       mensajePublico = res.mensajePublico ?? '';
+      void cargarAuditoria(res.id);
     } catch (err) {
       errorMsg = err instanceof ApiError ? err.message : 'No se pudo cargar la solicitud.';
     } finally {
@@ -100,12 +171,18 @@
       setTimeout(() => {
         notasGuardadasOk = false;
       }, 2500);
+      void registrarAudit({
+        accion: 'actualizar_notas',
+        estadoAnterior: updated.estado,
+        estadoNuevo: updated.estado,
+        motivo: 'Actualización de notas internas y/o mensaje público',
+      });
     });
   }
 
-  /** pendiente → atendido · no verificado */
   async function marcarAtendido() {
     if (!solicitud || solicitud.estado !== 'pendiente') return;
+    const prev = solicitud.estado;
     await runAction(async () => {
       const updated = await getSolicitudRepository().update(solicitud!.id, {
         estado: 'sin_verificar',
@@ -116,16 +193,22 @@
       });
       solicitud = updated;
       mensajePublico = updated.mensajePublico ?? '';
+      void registrarAudit({
+        accion: 'cambio_estado',
+        estadoAnterior: prev,
+        estadoNuevo: 'sin_verificar',
+        motivo: 'Marcado como atendido · pendiente de verificación',
+      });
     });
   }
 
-  /** sin_verificar → verificado */
   async function confirmarVerificado() {
     if (!solicitud || solicitud.estado !== 'sin_verificar') return;
     if (!motivo.trim()) {
       actionError = 'Indica cómo se verificó la identidad (Didit, asistida, etc.).';
       return;
     }
+    const prev = solicitud.estado;
     await runAction(async () => {
       const note = [notas.trim(), `Verificación: ${motivo.trim()}`].filter(Boolean).join('\n');
       const updated = await getSolicitudRepository().update(solicitud!.id, {
@@ -138,16 +221,22 @@
       });
       solicitud = updated;
       notas = updated.notasInternas ?? '';
+      void registrarAudit({
+        accion: 'verificar',
+        estadoAnterior: prev,
+        estadoNuevo: 'verificado',
+        motivo: motivo.trim(),
+      });
     });
   }
 
-  /** verificado → cerrado (proceso completado correctamente) */
   async function confirmarCierre() {
     if (!solicitud || solicitud.estado !== 'verificado') return;
     if (!motivo.trim()) {
       actionError = 'Describe el resultado final del expediente (cierre exitoso).';
       return;
     }
+    const prev = solicitud.estado;
     await runAction(async () => {
       const note = [notas.trim(), `Cierre completado: ${motivo.trim()}`].filter(Boolean).join('\n');
       const updated = await getSolicitudRepository().update(solicitud!.id, {
@@ -160,16 +249,22 @@
       });
       solicitud = updated;
       notas = updated.notasInternas ?? '';
+      void registrarAudit({
+        accion: 'cerrar',
+        estadoAnterior: prev,
+        estadoNuevo: 'cerrado',
+        motivo: motivo.trim(),
+      });
     });
   }
 
-  /** → cancelada (no es un cierre exitoso) */
   async function confirmarCancelacion() {
     if (!solicitud || esTerminal) return;
     if (!motivo.trim()) {
       actionError = 'El motivo de cancelación es obligatorio.';
       return;
     }
+    const prev = solicitud.estado;
     await runAction(async () => {
       const note = [notas.trim(), `Cancelada: ${motivo.trim()}`].filter(Boolean).join('\n');
       const updated = await getSolicitudRepository().update(solicitud!.id, {
@@ -180,6 +275,12 @@
       });
       solicitud = updated;
       notas = updated.notasInternas ?? '';
+      void registrarAudit({
+        accion: 'cancelar',
+        estadoAnterior: prev,
+        estadoNuevo: 'cancelada',
+        motivo: motivo.trim(),
+      });
     });
   }
 
@@ -221,18 +322,13 @@
       </span>
     </div>
 
-    <!-- Pipeline visual de estados -->
     <div class="pipeline card" aria-label="Flujo de estados">
       {#if solicitud.estado === 'cancelada'}
         <p class="pipeline-cancel">Solicitud <strong>cancelada</strong> (fuera del flujo de cierre exitoso).</p>
       {:else}
         <ol class="pipeline-steps">
           {#each PIPELINE as est, i}
-            <li
-              class="pipe-step"
-              class:done={step > i}
-              class:current={step === i}
-            >
+            <li class="pipe-step" class:done={step > i} class:current={step === i}>
               <span class="pipe-dot">{step > i ? '✓' : i + 1}</span>
               <span class="pipe-label">{ESTADO_LABEL[est]}</span>
             </li>
@@ -271,27 +367,25 @@
       <p class="descripcion">{solicitud.descripcion || '—'}</p>
     </div>
 
-    <!-- Notas del operador: siempre visibles -->
     <div class="card notes-card">
       <h3>Notas del operador</h3>
       <p class="hint-text">
-        Detalles internos del caso (hallazgos, contactos, incidencias). <strong>No se muestran</strong> en el
-        seguimiento público del familiar.
+        Detalles internos del caso. <strong>No se muestran</strong> en el seguimiento público.
       </p>
       <textarea
         id="notas-op"
         bind:value={notas}
         rows="5"
-        placeholder="Ej.: Contactado por WhatsApp el 09/09; familiar en Matanzas; documentación pendiente…"
+        placeholder="Ej.: Contactado por WhatsApp; documentación pendiente…"
         disabled={actionLoading}
       ></textarea>
 
-      <label for="msg-pub" class="msg-label">Mensaje público (opcional, visible en seguimiento)</label>
+      <label for="msg-pub" class="msg-label">Mensaje público (opcional)</label>
       <textarea
         id="msg-pub"
         bind:value={mensajePublico}
         rows="2"
-        placeholder="Nota breve que verá el familiar al consultar su código…"
+        placeholder="Nota breve visible al consultar el código…"
         disabled={actionLoading}
       ></textarea>
 
@@ -310,7 +404,7 @@
         <h3>Cambiar estado</h3>
         <p class="hint-text">
           <strong>Pendiente</strong> → <strong>Atendido · no verificado</strong> → <strong>Verificado</strong> →
-          <strong>Cerrado</strong> (todo completado correctamente). <strong>Cancelada</strong> interrumpe el proceso.
+          <strong>Cerrado</strong>. <strong>Cancelada</strong> interrumpe el proceso.
         </p>
 
         {#if actionLoading}
@@ -348,13 +442,68 @@
         <span class={badgeFor(solicitud.estado)}>{ESTADO_LABEL[solicitud.estado]}</span>
         <p class="hint-text">
           {#if solicitud.estado === 'cerrado'}
-            Estado terminal de <strong>éxito</strong>: el proceso se completó. Puedes seguir editando notas si hace falta.
+            Estado terminal de <strong>éxito</strong>. Puedes seguir editando notas.
           {:else}
-            Estado terminal: la solicitud fue <strong>cancelada</strong>. Puedes conservar las notas para auditoría.
+            Estado terminal: <strong>cancelada</strong>. Las notas quedan para auditoría.
           {/if}
         </p>
       </div>
     {/if}
+
+    <div class="card audit-card">
+      <div class="audit-head">
+        <h3>Auditoría del expediente</h3>
+        <button
+          type="button"
+          class="btn-ghost-sm"
+          disabled={auditoriaLoading}
+          onclick={() => cargarAuditoria(solicitud.id)}
+        >
+          {auditoriaLoading ? 'Cargando…' : 'Actualizar'}
+        </button>
+      </div>
+      <p class="hint-text">Registro de cambios de estado, verificación, cierre y notas (solo backoffice).</p>
+
+      {#if auditoriaError}
+        <div class="error-banner">{auditoriaError}</div>
+      {/if}
+
+      {#if auditoriaLoading && auditoria.length === 0}
+        <LoadingHint message="Cargando historial de auditoría…" compact />
+      {:else if auditoria.length === 0}
+        <p class="empty-audit">Aún no hay eventos registrados para este expediente.</p>
+      {:else}
+        <ol class="audit-list">
+          {#each auditoria as ev}
+            <li class="audit-item">
+              <div class="audit-meta">
+                <span class="audit-accion">{labelAccion(ev.accion)}</span>
+                <time datetime={ev.fecha}>{formatFecha(ev.fecha)}</time>
+              </div>
+              <div class="audit-body">
+                {#if ev.estadoAnterior || ev.estadoNuevo}
+                  <p class="audit-estados">
+                    {#if ev.estadoAnterior}
+                      <span class="badge badge-progress">{ESTADO_LABEL[ev.estadoAnterior]}</span>
+                      <span class="arrow">→</span>
+                    {/if}
+                    {#if ev.estadoNuevo}
+                      <span class={badgeFor(ev.estadoNuevo)}>{ESTADO_LABEL[ev.estadoNuevo]}</span>
+                    {/if}
+                  </p>
+                {/if}
+                {#if ev.motivo}
+                  <p class="audit-motivo">{ev.motivo}</p>
+                {/if}
+                <p class="audit-actor">
+                  {ev.actorTipo}: <code>{ev.actorId}</code>
+                </p>
+              </div>
+            </li>
+          {/each}
+        </ol>
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -381,13 +530,11 @@
         <label>Cómo se verificó<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
       {:else if modal === 'cerrar'}
         <h2>Cerrar expediente (completado)</h2>
-        <p class="hint-text">
-          Usa este estado solo cuando el proceso terminó <strong>correctamente</strong> (averiguación y gestiones asociadas).
-        </p>
+        <p class="hint-text">Solo cuando el proceso terminó <strong>correctamente</strong>.</p>
         <label>Resultado final<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
       {:else if modal === 'cancelar'}
         <h2>Cancelar solicitud</h2>
-        <p class="hint-text">No es un cierre exitoso: el expediente no continúa.</p>
+        <p class="hint-text">No es un cierre exitoso.</p>
         <label>Motivo de cancelación<textarea bind:value={motivo} rows="3" disabled={actionLoading}></textarea></label>
       {/if}
       {#if actionError}<div class="error-banner">{actionError}</div>{/if}
@@ -409,7 +556,7 @@
   .detalle-wrap {
     max-width: 960px;
     margin: 2rem auto 5rem;
-    padding: 0 1.5rem;
+    padding: 0 var(--page-pad-x, 1rem);
   }
   .back-btn {
     margin-bottom: 1.5rem;
@@ -498,7 +645,6 @@
   .pipe-label {
     font-size: 0.72rem;
     color: var(--text-muted);
-    line-height: 1.25;
   }
   .pipeline-cancel {
     margin: 0;
@@ -506,7 +652,7 @@
   }
   .info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
     gap: 1.25rem;
     margin-bottom: 1.25rem;
   }
@@ -542,7 +688,6 @@
   .notes-card textarea {
     width: 100%;
     margin-top: 0.5rem;
-    font-family: inherit;
   }
   .msg-label {
     display: block;
@@ -554,6 +699,7 @@
     align-items: center;
     gap: 1rem;
     margin-top: 0.85rem;
+    flex-wrap: wrap;
   }
   .inline-err {
     color: var(--color-alert, #b84c4c);
@@ -576,6 +722,82 @@
     background: rgba(217, 56, 58, 0.12);
     border: 1px solid rgba(217, 56, 58, 0.4);
     color: var(--color-alert, #b84c4c);
+  }
+  .audit-card {
+    margin-top: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  .audit-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .btn-ghost-sm {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .empty-audit {
+    margin: 0.75rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+  .audit-list {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .audit-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    background: var(--surface-muted);
+  }
+  .audit-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.35rem;
+  }
+  .audit-accion {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--gold);
+  }
+  .audit-meta time {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .audit-estados {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin: 0.25rem 0;
+  }
+  .arrow {
+    color: var(--text-muted);
+  }
+  .audit-motivo {
+    margin: 0.35rem 0;
+    font-size: 0.9rem;
+  }
+  .audit-actor {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .audit-actor code {
+    font-size: 0.78rem;
   }
   .modal-backdrop {
     position: fixed;
@@ -604,10 +826,15 @@
     justify-content: flex-end;
     gap: 0.75rem;
     margin-top: 1rem;
+    flex-wrap: wrap;
   }
   @media (max-width: 640px) {
     .pipeline-steps {
       grid-template-columns: repeat(2, 1fr);
+    }
+    .detalle-header {
+      flex-direction: column;
+      padding: 1.25rem;
     }
   }
 </style>
