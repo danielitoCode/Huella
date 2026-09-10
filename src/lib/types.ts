@@ -7,6 +7,23 @@ export type EstadoSolicitud =
   | 'cerrado'
   | 'cancelada';
 
+/** Valores del enum kycResultado en Appwrite. */
+export type KycResultado = 'approved' | 'declined' | 'expired' | 'failed';
+
+export const KYC_RESULTADO_OPTIONS: { value: KycResultado; label: string }[] = [
+  { value: 'approved', label: 'Aprobada (identidad confirmada)' },
+  { value: 'declined', label: 'Rechazada (no coincide / no válida)' },
+  { value: 'expired', label: 'Expirada (sesión o documento vencido)' },
+  { value: 'failed', label: 'Fallida (error técnico o incompleta)' },
+];
+
+export const KYC_RESULTADO_LABEL: Record<KycResultado, string> = {
+  approved: 'Aprobada',
+  declined: 'Rechazada',
+  expired: 'Expirada',
+  failed: 'Fallida',
+};
+
 export type Zona = 'public' | 'admin';
 
 export type RutaPublica = 'home' | 'solicitud' | 'seguimiento' | 'terminos';
@@ -55,7 +72,7 @@ export type Solicitud = {
   notasInternas?: string | null;
   diditSessionId?: string | null;
   diditVerificationUrl?: string | null;
-  kycResultado?: string | null;
+  kycResultado?: KycResultado | string | null;
   fechaCreacion: string;
   fechaActualizacion: string;
   operatorContact?: OperatorContact;
