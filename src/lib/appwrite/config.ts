@@ -8,6 +8,7 @@ export type AppwritePublicConfig = {
   projectId: string;
   databaseId: string;
   collectionSolicitudesId: string;
+  collectionAuditoriaId: string;
   /** Opcional: Worker (Didit/email/PIN). Vacío = solo SDK. */
   apiBaseUrl: string;
   functionApiId: string;
@@ -38,6 +39,8 @@ export function getAppwriteConfig(): AppwritePublicConfig {
     collectionSolicitudesId:
       (import.meta.env.VITE_APPWRITE_COLLECTION_SOLICITUDES_ID ?? 'solicitudes').trim() ||
       'solicitudes',
+    collectionAuditoriaId:
+      (import.meta.env.VITE_APPWRITE_COLLECTION_AUDITORIA_ID ?? 'auditoria').trim() || 'auditoria',
     apiBaseUrl: (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, ''),
     functionApiId: (import.meta.env.VITE_APPWRITE_FUNCTION_API_ID ?? '').trim(),
     publicAppUrl:
