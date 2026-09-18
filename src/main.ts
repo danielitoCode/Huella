@@ -1,13 +1,16 @@
 /**
  * BLOQUE: Bootstrap de la aplicación Huella.
- * Propósito: montar App.svelte e hidratar sesión de operador (Supabase Auth).
+ * Propósito: router + montaje App + hidratar sesión operador (Supabase Auth).
  */
 import { mount } from 'svelte';
 import './app.css';
 import App from './App.svelte';
+import { initRouter } from './lib/stores/router';
 import { loadSession } from './lib/stores/session';
 
-// Restaurar sesión Supabase antes/mientras se monta la UI admin.
+initRouter();
+
+// Restaurar sesión Supabase en paralelo al primer paint.
 void loadSession();
 
 const app = mount(App, {
