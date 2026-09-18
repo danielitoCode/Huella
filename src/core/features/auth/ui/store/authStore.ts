@@ -1,10 +1,6 @@
 /**
  * BLOQUE: Store de UI — sesión de operador (feature auth).
- * Propósito: estado reactivo que consumen Login, Header, App y SecurityGate.
- * Puente de compatibilidad: exporta sessionUser/sessionLoading con forma legible
- * por el código legacy mientras termina la migración completa.
- *
- * Rutas: store → ui → auth → features → core → src  ⇒  ../../../../../lib/...
+ * Incluye acciones de SecurityGate (password + PIN).
  */
 
 import { writable, derived, get } from 'svelte/store';
@@ -13,7 +9,6 @@ import { createAuthModule, type AuthModule } from '../../di/auth.module';
 import type { OperadorAuth } from '../../domain/entities/OperadorAuth';
 import type { OperadorRol } from '../../../../../lib/types';
 
-/** Forma legacy usada por App.svelte / Header (compatibilidad). */
 export type SessionUser = {
   $id: string;
   email: string;
@@ -51,13 +46,9 @@ export const authUser = writable<OperadorAuth | null>(null);
 export const authLoading = writable<boolean>(true);
 export const authError = writable<string | null>(null);
 
-/** Compat: stores que el resto de la app ya importa desde session.ts */
 export const sessionUser = derived(authUser, ($u) => ($u ? toSessionUser($u) : null));
 export const sessionLoading = authLoading;
 
-/**
- * BLOQUE: hidratar sesión al boot (llamado desde main o Layout).
- */
 export async function loadSession(): Promise<void> {
   authLoading.set(true);
   authError.set(null);
@@ -85,6 +76,20 @@ export async function logout(): Promise<void> {
   } finally {
     authUser.set(null);
   }
+}
+
+/** SecurityGate: nueva contraseña vía Supabase Auth + limpia flag en operadores. */
+export async function completePasswordChange(newPassword: string): Promise<OperadorAuth> {
+  const user = await getAuthModule().completePasswordChange(newPassword);
+  authUser.set(user);
+  return user;
+}
+
+/** SecurityGate: PIN de cancelación personal. */
+export async function completePinReset(pinActual: string, pinNuevo: string): Promise<OperadorAuth> {
+  const user = await getAuthModule().completePinReset({ pinActual, pinNuevo });
+  authUser.set(user);
+  return user;
 }
 
 export function getCurrentAuthUser(): OperadorAuth | null {

@@ -1,11 +1,6 @@
 /**
  * BLOQUE: Repositorio concreto — Auth + perfil operador vía Supabase Client SDK.
- * Propósito: reemplazar Appwrite Account + operadores.me (worker/function).
- * Flujo:
- *  1) auth.signInWithPassword
- *  2) select en tabla operadores filtrado por user_id = auth.uid()
- *  3) validar activo + rol
- *  4) touch ultimo_login_at
+ * Incluye SecurityGate: cambio de contraseña (Auth) y PIN de cancelación (tabla operadores).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -22,6 +17,20 @@ function authErrorMessage(err: unknown, fallback: string): string {
     return String((err as { message: string }).message);
   }
   return fallback;
+}
+
+/** Hash SHA-256 hex del PIN (no guardamos el PIN en claro). */
+async function hashPin(pin: string): Promise<string> {
+  const data = new TextEncoder().encode(pin.trim());
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function isResetPinHash(hash: string | null | undefined): boolean {
+  const h = (hash ?? '').trim();
+  return !h || h === '0000' || h.toLowerCase() === 'reset';
 }
 
 export class SupabaseAuthRepository implements AuthRepository {
@@ -70,7 +79,6 @@ export class SupabaseAuthRepository implements AuthRepository {
   async logout(): Promise<void> {
     const { error } = await this.client.auth.signOut();
     if (error) {
-      // Idempotente: si ya no hay sesión, no fallar la UI.
       console.warn('[auth] logout:', authErrorMessage(error, 'signOut'));
     }
   }
@@ -88,14 +96,108 @@ export class SupabaseAuthRepository implements AuthRepository {
     return perfil;
   }
 
-  async changePassword(newPassword: string): Promise<void> {
+  async completePasswordChange(params: { newPassword: string }): Promise<OperadorAuth> {
+    const newPassword = params.newPassword;
     if (!newPassword || newPassword.length < 8) {
       throw new Error('La nueva contraseña debe tener al menos 8 caracteres.');
     }
+    if (newPassword === '12345678') {
+      throw new Error('No uses la contraseña temporal 12345678.');
+    }
+
+    const { data: sessionData, error: sessionErr } = await this.client.auth.getSession();
+    if (sessionErr || !sessionData.session?.user?.id) {
+      throw new Error('No hay sesión activa. Vuelve a iniciar sesión.');
+    }
+    const userId = sessionData.session.user.id;
+
     const { error } = await this.client.auth.updateUser({ password: newPassword });
     if (error) {
-      throw new Error(error.message || 'No se pudo cambiar la contraseña.');
+      throw new Error(error.message || 'No se pudo cambiar la contraseña en Auth.');
     }
+
+    const perfil = await this.loadOperadorByUserId(userId);
+    if (!perfil) {
+      throw new Error('Perfil de operador no encontrado tras cambiar contraseña.');
+    }
+
+    const { error: updErr } = await this.client
+      .from('operadores')
+      .update({ must_change_password: false })
+      .eq('id', perfil.operadorId);
+
+    if (updErr) {
+      throw new Error(
+        `Contraseña actualizada en Auth, pero no se pudo limpiar must_change_password: ${updErr.message}. Revisa RLS UPDATE en operadores.`,
+      );
+    }
+
+    return {
+      ...perfil,
+      mustChangePassword: false,
+    };
+  }
+
+  async completePinReset(params: {
+    pinActual: string;
+    pinNuevo: string;
+  }): Promise<OperadorAuth> {
+    const pinNuevo = params.pinNuevo.trim();
+    const pinActual = params.pinActual.trim();
+
+    if (!/^\d{4}$/.test(pinNuevo) || pinNuevo === '0000') {
+      throw new Error('El nuevo PIN debe ser 4 dígitos y distinto de 0000.');
+    }
+
+    const { data: sessionData, error: sessionErr } = await this.client.auth.getSession();
+    if (sessionErr || !sessionData.session?.user?.id) {
+      throw new Error('No hay sesión activa. Vuelve a iniciar sesión.');
+    }
+
+    const perfil = await this.loadOperadorByUserId(sessionData.session.user.id);
+    if (!perfil) {
+      throw new Error('Perfil de operador no encontrado.');
+    }
+
+    // Tras reset admin el hash está vacío / 0000 / "reset"
+    const { data: row, error: readErr } = await this.client
+      .from('operadores')
+      .select('cancel_pin_hash')
+      .eq('id', perfil.operadorId)
+      .maybeSingle();
+
+    if (readErr) {
+      throw new Error(readErr.message || 'No se pudo leer el PIN actual.');
+    }
+
+    const currentHash = (row as { cancel_pin_hash?: string | null } | null)?.cancel_pin_hash;
+    if (!isResetPinHash(currentHash)) {
+      // Si ya hay PIN configurado, exigir que pinActual coincida con el hash
+      const actualHash = await hashPin(pinActual);
+      if (actualHash !== currentHash) {
+        throw new Error('El PIN actual no es correcto.');
+      }
+    } else if (pinActual && pinActual !== '0000') {
+      throw new Error('Tras un reseteo el PIN actual debe ser 0000.');
+    }
+
+    const newHash = await hashPin(pinNuevo);
+    const { error: updErr } = await this.client
+      .from('operadores')
+      .update({ cancel_pin_hash: newHash })
+      .eq('id', perfil.operadorId);
+
+    if (updErr) {
+      throw new Error(
+        `No se pudo guardar el PIN: ${updErr.message}. Revisa RLS UPDATE en operadores.`,
+      );
+    }
+
+    return {
+      ...perfil,
+      pinNeedsReset: false,
+      pinEstado: 'configurado',
+    };
   }
 
   private async loadOperadorByUserId(userId: string): Promise<OperadorAuth | null> {
@@ -123,7 +225,6 @@ export class SupabaseAuthRepository implements AuthRepository {
       .update({ ultimo_login_at: new Date().toISOString() })
       .eq('id', operadorId);
     if (error) {
-      // No bloquea el login; solo telemetría de último acceso.
       console.warn('[auth] touchUltimoLogin:', error.message);
     }
   }
