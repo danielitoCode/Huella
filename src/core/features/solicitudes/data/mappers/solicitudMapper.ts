@@ -1,6 +1,8 @@
 /**
  * BLOQUE: Mapper DTO ↔ tipos de aplicación (Solicitud / SeguimientoPublico).
  * Propósito: centralizar snake_case ↔ camelCase y valores por defecto de estado.
+ *
+ * Ruta: mappers → data → solicitudes → features → core → src ⇒ ../../../../../lib
  */
 
 import type {
@@ -8,7 +10,7 @@ import type {
   SeguimientoPublico,
   Solicitud,
   OperatorContact,
-} from '../../../../lib/types';
+} from '../../../../../lib/types';
 import type { SolicitudRowDto } from '../dto/SolicitudRowDto';
 
 const ESTADOS: EstadoSolicitud[] = [

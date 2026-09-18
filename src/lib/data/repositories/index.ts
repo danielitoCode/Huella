@@ -3,8 +3,9 @@ import { TransportHuellaRepository, type HuellaRepository } from './HuellaReposi
 export { WorkerHuellaRepository } from './WorkerHuellaRepository';
 export { AppwriteFunctionHuellaRepository } from './AppwriteFunctionHuellaRepository';
 export type { HuellaRepository } from './HuellaRepository';
+
+/** Facade solicitudes: implementación Supabase (migración). */
 export {
-  AppwriteSolicitudRepository,
   getSolicitudRepository,
   __setSolicitudRepositoryForTests,
 } from './SolicitudRepository';
@@ -15,6 +16,7 @@ export type {
   SolicitudListOptions,
   SolicitudListResult,
 } from './SolicitudRepository';
+
 export {
   AppwriteAuditoriaRepository,
   getAuditoriaRepository,
@@ -31,7 +33,7 @@ let repository: HuellaRepository | null = null;
 
 /**
  * Transporte RPC para operaciones que todavía requieren Worker/Function.
- * No usar para el CRUD de solicitudes: ese dominio va directo al SDK de Appwrite.
+ * CRUD de solicitudes: getSolicitudRepository() → Supabase.
  */
 export function getHuellaRepository(): HuellaRepository {
   if (!repository) repository = new TransportHuellaRepository(createApiTransport());

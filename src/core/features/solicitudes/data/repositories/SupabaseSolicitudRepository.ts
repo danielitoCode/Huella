@@ -1,7 +1,8 @@
 /**
  * BLOQUE: Repositorio concreto — solicitudes vía Supabase Client (PostgREST).
  * Propósito: sustituir Appwrite Databases; el front habla directo a PostgreSQL + RLS.
- * Operaciones: create, getById, getByCode (público), list (operador), update, delete.
+ *
+ * Ruta: repositories → data → solicitudes → features → core → src ⇒ ../../../../../lib
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -9,7 +10,7 @@ import type {
   EstadoSolicitud,
   SeguimientoPublico,
   Solicitud,
-} from '../../../../lib/types';
+} from '../../../../../lib/types';
 import type { SolicitudRowDto } from '../dto/SolicitudRowDto';
 import {
   mapRowToSeguimientoPublico,
@@ -70,7 +71,6 @@ export class SolicitudRepoError extends Error {
 const SELECT_FULL =
   'id, codigo_seguimiento, nombre_familiar, email, telefono, nombre_persona, relacion, descripcion, estado, mensaje_publico, notas_internas, didit_session_id, didit_verification_url, verification_url, kyc_resultado, motivo_cierre, creado_por_ip, created_at, updated_at';
 
-/** Campos mínimos para tracking público (RLS / vista puede restringir más). */
 const SELECT_PUBLIC =
   'codigo_seguimiento, estado, mensaje_publico, created_at, updated_at, didit_verification_url, verification_url';
 
@@ -144,7 +144,6 @@ export class SupabaseSolicitudRepository {
     if (error) mapError(error);
     if (!data) throw new SolicitudRepoError('NOT_FOUND', 'Solicitud no encontrada', 404);
 
-    // Completar shape mínima del DTO para el mapper público
     const partial = data as Partial<SolicitudRowDto> & {
       codigo_seguimiento: string;
       estado: string;
