@@ -3,8 +3,8 @@
 > Objetivo: migrar Huella a **Client → Supabase**, sin crear una nueva API. El cliente usará Supabase Auth, PostgreSQL, RLS y Realtime directamente. Las Edge Functions quedan reservadas para operaciones que no pueden ejecutarse de forma segura en el cliente, especialmente Didit y webhooks.
 
 ## 0. Preparación
-- [ ] Crear proyecto Supabase.
-- [ ] Configurar URL y publishable/anon key en el cliente.
+- [X] Crear proyecto Supabase.
+- [X] Configurar URL y publishable/anon key en el cliente.
 - [ ] Crear integración/cliente Supabase.
 - [ ] No crear una API intermedia `huella-api`.
 - [ ] Mantener mapa Appwrite → Supabase.
