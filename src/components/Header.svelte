@@ -1,10 +1,13 @@
 <script lang="ts">
   import { router, irAPublica, irAAdmin } from '../lib/stores/router';
   import { sessionUser, sessionLoading, logout } from '../lib/stores/session';
+  // Import empaquetado por Vite → URL hasheada en dist/assets (fiable en Appwrite Sites)
+  import logoHuellas from '../assets/icon_huellas.svg';
 
   let { zona, rutaAdmin } = $derived($router);
   let mobileMenuOpen = $state(false);
   let loggingOut = $state(false);
+  let logoBroken = $state(false);
 
   let isOperator = $derived(!$sessionLoading && $sessionUser !== null);
 
@@ -37,8 +40,21 @@
 <header class="header">
   <div class="header-inner">
     <button type="button" class="brand" onclick={() => { irAPublica('home'); closeMobile(); }}>
-      <div class="logo-wrapper">
-        <img src="/icon_huellas.svg" alt="" class="logo" width="30" height="30" />
+      <div class="logo-wrapper" aria-hidden="true">
+        {#if !logoBroken}
+          <img
+            src={logoHuellas}
+            alt=""
+            class="logo"
+            width="30"
+            height="30"
+            onerror={() => {
+              logoBroken = true;
+            }}
+          />
+        {:else}
+          <span class="logo-fallback">✦</span>
+        {/if}
       </div>
       <div class="brand-text">
         <span class="name">Huella</span>
@@ -165,9 +181,26 @@
   }
   .logo-wrapper {
     flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
   }
   .logo {
     display: block;
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+  }
+  .logo-fallback {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(197, 157, 99, 0.2);
+    color: var(--gold, #c59d63);
+    font-size: 1rem;
   }
   .brand-text {
     min-width: 0;
