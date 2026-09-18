@@ -2,12 +2,14 @@
   BLOQUE: Pantalla de login de operadores (feature auth / UI).
   Propósito: formulario de acceso al backoffice; delega en authStore.login (Supabase).
   Reemplaza el flujo Appwrite createEmailPasswordSession del Login.svelte legacy.
+
+  Rutas: screens → ui → auth → features → core → src  ⇒  ../../../../../lib/...
 -->
 <script lang="ts">
   import { login as authLogin } from '../store/authStore';
-  import { irAAdmin } from '../../../../lib/stores/router';
-  import { addDevLog } from '../../../../lib/stores/devLogger';
-  import { getSupabaseConfig } from '../../../../lib/supabase/config';
+  import { irAAdmin } from '../../../../../lib/stores/router';
+  import { addDevLog } from '../../../../../lib/stores/devLogger';
+  import { getSupabaseConfig } from '../../../../../lib/supabase/config';
 
   let email = $state('');
   let password = $state('');
