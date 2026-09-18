@@ -68,7 +68,6 @@ export class SolicitudRepoError extends Error {
   }
 }
 
-/** Columnas que deben existir en public.solicitudes del MVP. */
 const SELECT_FULL =
   'id, codigo_seguimiento, nombre_familiar, email, telefono, nombre_persona, relacion, descripcion, estado, mensaje_publico, notas_internas, didit_session_id, didit_verification_url, verification_url, kyc_resultado, motivo_cierre, created_at, updated_at';
 
@@ -87,8 +86,20 @@ function generateTrackingCode(): string {
 
 function mapError(err: { message?: string; code?: string; details?: string }): never {
   const msg = err.message || 'Error de Supabase';
-  if (msg.toLowerCase().includes('row-level security') || err.code === '42501') {
-    throw new SolicitudRepoError('FORBIDDEN', msg, 403);
+  const code = err.code || '';
+  if (
+    msg.toLowerCase().includes('row-level security') ||
+    code === '42501' ||
+    code === 'PGRST116'
+  ) {
+    // PGRST116 + 0 rows en UPDATE casi siempre = RLS sin policy UPDATE
+    throw new SolicitudRepoError(
+      'FORBIDDEN',
+      code === 'PGRST116'
+        ? 'No se pudo actualizar la solicitud (0 filas). Revisa policy UPDATE de operadores y que el id exista.'
+        : msg,
+      403,
+    );
   }
   throw new SolicitudRepoError('SUPABASE', msg);
 }
@@ -206,10 +217,16 @@ export class SupabaseSolicitudRepository {
       .update(patch)
       .eq('id', id)
       .select(SELECT_FULL)
-      .single();
+      .maybeSingle();
 
     if (error) mapError(error);
-    if (!data) throw new SolicitudRepoError('NOT_FOUND', 'Solicitud no encontrada', 404);
+    if (!data) {
+      throw new SolicitudRepoError(
+        'FORBIDDEN',
+        'No se actualizó ninguna fila. Falta policy UPDATE para operadores o el id no existe.',
+        403,
+      );
+    }
     return mapRowToSolicitud(data as SolicitudRowDto);
   }
 
