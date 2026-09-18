@@ -2,12 +2,14 @@
 
 > Objetivo: migrar Huella a **Client → Supabase**, sin crear una nueva API. El cliente usará Supabase Auth, PostgreSQL, RLS y Realtime directamente. Las Edge Functions quedan reservadas para operaciones que no pueden ejecutarse de forma segura en el cliente, especialmente Didit y webhooks.
 
+> Rama de trabajo: **`migration`**. Merge a `master` solo cuando el esquema funcional esté listo.
+
 ## 0. Preparación
-- [X] Crear proyecto Supabase.
-- [X] Configurar URL y publishable/anon key en el cliente.
-- [ ] Crear integración/cliente Supabase.
-- [ ] No crear una API intermedia `huella-api`.
-- [ ] Mantener mapa Appwrite → Supabase.
+- [x] Crear proyecto Supabase. *(usuario: tablas ya creadas)*
+- [x] Configurar URL y publishable/anon key en el cliente. *(código: `src/lib/supabase/*` + `.env.example`)*
+- [x] Crear integración/cliente Supabase. *(singleton `getSupabase()`)*
+- [x] No crear una API intermedia `huella-api` para auth.
+- [ ] Mantener mapa Appwrite → Supabase (datos históricos).
 - [ ] Definir estrategia de corte y rollback.
 
 ## 1. Modelo de datos PostgreSQL
@@ -29,12 +31,12 @@
 - [ ] Crear FK e índices.
 
 ### 1.3 operadores
-- [ ] Crear `operadores`.
-- [ ] Vincular `user_id` con `auth.users(id)`.
-- [ ] Migrar `email`, `nombre`, `rol`.
-- [ ] Convertir `activo` de string a boolean.
-- [ ] Migrar `cancel_pin_hash`, `must_change_password`, `ultimo_login_at`.
-- [ ] Conservar timestamps.
+- [x] Crear `operadores`. *(usuario: ya en Supabase)*
+- [x] Vincular `user_id` con `auth.users(id)`. *(repo espera `user_id`)*
+- [x] Migrar `email`, `nombre`, `rol`. *(mapper + DTO)*
+- [x] Convertir `activo` de string a boolean. *(mapper `asBool`)*
+- [x] Migrar `cancel_pin_hash`, `must_change_password`, `ultimo_login_at`.
+- [ ] Conservar timestamps / backfill datos Appwrite.
 - [ ] Crear restricciones/índices de unicidad.
 
 ### 1.4 auditoria
@@ -43,16 +45,27 @@
 - [ ] Usar `jsonb` para `metadata`.
 - [ ] Crear índices para solicitud, fecha y actor.
 
-## 2. Supabase Auth
-- [ ] Configurar Supabase Auth.
-- [ ] Mapear usuarios Appwrite → Supabase Auth.
-- [ ] Resolver `operadores.user_id → auth.users.id`.
-- [ ] Implementar login desde el cliente.
-- [ ] Implementar logout.
-- [ ] Implementar recuperación/cambio de contraseña.
-- [ ] Mantener `must_change_password`.
-- [ ] Actualizar `ultimo_login_at`.
-- [ ] No exponer secretos en variables Vite.
+## 2. Supabase Auth — **EN CURSO (rama migration)**
+- [x] Configurar cliente Supabase Auth en el front.
+- [ ] Mapear usuarios Appwrite → Supabase Auth *(crear usuarios en Auth + filas operadores).*
+- [x] Resolver `operadores.user_id → auth.users.id` en login/restore.
+- [x] Implementar login desde el cliente (`signInWithPassword`).
+- [x] Implementar logout.
+- [ ] Implementar recuperación/cambio de contraseña (UI SecurityGate).
+- [x] Mantener `must_change_password` en entidad de sesión.
+- [x] Actualizar `ultimo_login_at` al login.
+- [x] No exponer secretos en variables Vite (solo anon key).
+
+### Feature clean-architecture (`src/core/features/auth/`)
+- [x] `domain/entities` — OperadorAuth
+- [x] `domain/repositories` — contrato AuthRepository
+- [x] `domain/use-cases` — Login, Logout, RestoreSession
+- [x] `data/dto` — OperadorRowDto
+- [x] `data/mappers` — operadorMapper
+- [x] `data/repositories` — SupabaseAuthRepository
+- [x] `di` — auth.module
+- [x] `ui/store` — authStore (+ facade session.ts)
+- [x] `ui/screens` — LoginScreen
 
 ## 3. RLS y seguridad
 > RLS será la frontera principal entre el cliente y PostgreSQL.
