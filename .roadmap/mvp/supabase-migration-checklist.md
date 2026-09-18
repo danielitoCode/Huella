@@ -45,7 +45,7 @@
 - [ ] Usar `jsonb` para `metadata`.
 - [ ] Crear índices para solicitud, fecha y actor.
 
-## 2. Supabase Auth — **EN CURSO (rama migration)**
+## 2. Supabase Auth — **cerrado en código; falta validar en runtime**
 - [x] Configurar cliente Supabase Auth en el front.
 - [ ] Mapear usuarios Appwrite → Supabase Auth *(crear usuarios en Auth + filas operadores).*
 - [x] Resolver `operadores.user_id → auth.users.id` en login/restore.
@@ -53,7 +53,7 @@
 - [x] Implementar logout.
 - [ ] Implementar recuperación/cambio de contraseña (UI SecurityGate).
 - [x] Mantener `must_change_password` en entidad de sesión.
-- [x] Actualizar `ultimo_login_at` al login.
+- [x] Actualizar `ultimo_login_at` al login. *(requiere policy UPDATE propia)*
 - [x] No exponer secretos en variables Vite (solo anon key).
 
 ### Feature clean-architecture (`src/core/features/auth/`)
@@ -71,12 +71,13 @@
 > RLS será la frontera principal entre el cliente y PostgreSQL.
 
 ### Operadores
-- [ ] Crear patrón seguro para identificar operador autenticado.
-- [ ] Restringir lectura de `operadores`.
-- [ ] Permitir administración solo a `admin`.
-- [ ] Permitir operaciones operativas según rol.
-- [ ] Proteger `rol`, `activo` y `cancel_pin_hash`.
-- [ ] No exponer hashes/datos internos a usuarios públicos.
+- [x] Crear patrón seguro para identificar operador autenticado. *(`auth.uid() = user_id`)*
+- [x] Restringir lectura de `operadores`. *(policy `operador_lee_propio` FOR SELECT)*
+- [x] Permitir update del propio perfil (p. ej. `ultimo_login_at`). *(policy `operador_update_propio` FOR UPDATE + WITH CHECK)*
+- [ ] Permitir administración solo a `admin` *(listar/editar otros operadores).*
+- [ ] Permitir operaciones operativas según rol *(cuando existan policies en `solicitudes`).*
+- [ ] Proteger columnas sensibles en UPDATE (`rol`, `activo`, `cancel_pin_hash`) — idealmente con trigger o policy que impida auto-escalada.
+- [x] No exponer hashes/datos internos a usuarios públicos. *(anon sin SELECT en operadores)*
 
 ### Solicitudes públicas
 - [ ] Definir campos públicos exactos.
@@ -247,3 +248,17 @@
 - [ ] Datos históricos fueron reconciliados.
 - [ ] Tests críticos pasan.
 - [ ] Appwrite puede retirarse sin romper el MVP.
+
+---
+
+## Siguiente paso recomendado
+
+**Validar auth end-to-end** (antes de abrir otra feature):
+
+1. Crear 1 usuario en Supabase Auth.
+2. Insertar fila en `operadores` con el mismo `user_id`.
+3. `npm install` + `VITE_SUPABASE_*` en `.env`.
+4. Probar en rama `migration`: login OK, restore al recargar, logout, `ultimo_login_at` actualizado.
+5. Casos negativos: password mala, usuario sin fila en `operadores`, `activo = false`.
+
+Cuando eso esté verde → **feature `solicitudes`** (mismo esquema data/domain/ui + RLS de lectura pública por código y CRUD de operadores).
