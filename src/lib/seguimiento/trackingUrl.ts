@@ -1,19 +1,16 @@
-import { getPublicConfig } from '../appwrite/client';
-
-/** URL pública de seguimiento para un código (compartible / imprimible). */
-export function buildTrackingUrl(codigo: string): string {
+/** URL de seguimiento público (sin Appwrite). */
+export function getTrackingUrl(codigo: string): string {
   const base =
-    getPublicConfig().publicAppUrl ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PUBLIC_APP_URL) ||
     (typeof window !== 'undefined' ? window.location.origin : '');
-  const code = codigo.trim().toUpperCase();
-  return `${base.replace(/\/$/, '')}/seguimiento/${encodeURIComponent(code)}`;
+  const code = encodeURIComponent(codigo.trim().toUpperCase());
+  return `${String(base).replace(/\/$/, '')}/?ruta=seguimiento&codigo=${code}`;
 }
 
-export async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
+export function getPublicAppUrl(): string {
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PUBLIC_APP_URL) {
+    return String(import.meta.env.VITE_PUBLIC_APP_URL).replace(/\/$/, '');
   }
+  if (typeof window !== 'undefined') return window.location.origin;
+  return '';
 }
