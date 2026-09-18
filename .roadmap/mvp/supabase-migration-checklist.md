@@ -28,113 +28,74 @@
 
 ### 1.3 operadores
 - [x] Tabla + vínculo `user_id` → `auth.users`.
-- [x] Campos usados por login (rol, activo, pin, must_change_password, ultimo_login_at).
+- [x] Campos usados por login.
 - [ ] Índices/unicidad y backfill histórico.
 
 ### 1.4 auditoria
-- [ ] Tabla + policies + escritura en cambios de estado.
+- [x] Tabla + repo Supabase + policies INSERT/SELECT.
+- [x] **Escritura y lectura validadas en runtime (backoffice).**
 
-## 2. Auth — **VALIDADO EN RUNTIME** ✅
-- [x] Feature clean-arch `src/core/features/auth/` (domain, data, di, ui).
-- [x] Login `signInWithPassword`.
-- [x] Logout + restore session al boot.
-- [x] Perfil desde `operadores` por `user_id`.
-- [x] `ultimo_login_at` al login.
-- [x] Solo anon key en Vite (sin service_role).
-- [x] **Prueba local: autenticación efectiva.**
-- [ ] Cambio de contraseña / SecurityGate sobre Supabase.
+## 2. Auth — **VALIDADO** ✅
+- [x] Feature clean-arch, login, logout, restore, perfil operadores.
+- [x] RLS propio (SELECT/UPDATE).
+- [x] Prueba local OK.
+- [ ] SecurityGate cambio de contraseña / PIN sobre Supabase.
 - [ ] Migrar resto de usuarios Appwrite → Auth (prod).
 
-## 3. RLS
+## 3. RLS solicitudes / auditoría
+- [x] INSERT/SELECT públicos solicitudes.
+- [x] UPDATE operadores activos (cambio de estado OK).
+- [x] INSERT/SELECT auditoría (operador + lectura timeline).
+- [ ] Endurecer SELECT público (RPC por código).
 
-### Operadores
-- [x] `operador_lee_propio` (SELECT, `auth.uid() = user_id`).
-- [x] `operador_update_propio` (UPDATE + WITH CHECK).
-- [ ] Admin gestiona otros operadores.
-- [ ] Bloqueo de auto-escalada de `rol` / `activo` / pin.
-
-### Solicitudes
-- [x] `publico_insert_solicitud` (INSERT, anon + authenticated, `WITH CHECK (true)`).
-- [x] `publico_select_solicitudes` (SELECT; post-insert y tracking).
-- [x] **Prueba local: crear solicitud desde formulario público OK.**
-- [x] **Prueba local: seguimiento por código OK.**
-- [ ] Policy UPDATE solo operadores activos.
-- [ ] Endurecer SELECT público (RPC por `codigo_seguimiento`).
-- [ ] Validar list/update en backoffice con sesión operador.
-
-### Auditoría
-- [ ] Policies + triggers o insert desde cliente autenticado.
-
-## 4. Solicitudes — cliente directo
-- [x] `SupabaseSolicitudRepository` (create, getById, getByCode, list, update, delete).
-- [x] Facade `getSolicitudRepository()` → Supabase.
-- [x] **Create desde UI pública validado (runtime).**
-- [x] **Seguimiento por código (UI pública) validado (runtime).**
-- [ ] Listado + detalle admin validados.
-- [ ] Cambio de estado (pendiente → sin_verificar → verificado → cerrado / cancelada).
-- [ ] Notas internas en update.
+## 4. Solicitudes — cliente directo — **VALIDADO núcleo MVP** ✅
+- [x] Create público.
+- [x] Seguimiento por código.
+- [x] Listado + detalle admin.
+- [x] Cambio de estado (incl. verificado + notas / kyc_resultado).
+- [x] Auditoría en cambios de estado (Supabase, no Appwrite).
 
 ## 5. Dashboard / backoffice
-- [ ] Confirmar listado, filtros, detalle, transiciones con repo Supabase.
-- [ ] Skeletons / errores alineados a mensajes Supabase.
+- [x] Listado, detalle, transiciones con repo Supabase.
+- [ ] Pulir mensajes de error / skeletons si hace falta.
 
 ## 6. Realtime
 - [ ] Suscripción a cambios de `solicitudes` en dashboard.
 
 ## 7. KYC / Didit
-- [ ] Edge Function create-session (secreto Didit).
+- [ ] Edge Function create-session.
 - [ ] Edge Function webhook + idempotencia.
 
-## 8–9. RPC atómicas / migración de datos
-- [ ] Solo si hace falta atomicidad multi-tabla.
-- [ ] Export/import Appwrite → Supabase y reconciliación.
+## 8–9. Datos históricos / corte
+- [ ] Backfill Appwrite → Supabase.
+- [ ] Quitar dependencias Appwrite del front y CI.
 
-## 10. Pruebas MVP (runtime)
-
-### Auth
-- [x] Login válido.
-- [ ] Logout, sesión persistente, credenciales inválidas, sin perfil operador, inactivo.
-
-### Solicitudes
-- [x] Crear (público).
-- [x] Tracking por código.
-- [ ] Listar / detalle / update (operador).
-- [ ] Rechazo de estados inválidos.
-
-### Seguridad
-- [ ] Público no lista todo el inventario de forma trivial (mejorar con RPC).
-- [ ] Notas internas no en tracking.
-- [ ] Dashboard sin sesión bloqueado (ya en App.svelte).
-
-## 11–12. Corte Appwrite / Definition of Done
-- [ ] Pendiente hasta cerrar §4–5 y Didit mínimo.
+## 10. Pruebas MVP
+- [x] Auth login.
+- [x] Crear + tracking.
+- [x] Listar / detalle / update operador.
+- [x] Auditoría registrar + listar.
+- [ ] Casos negativos (inactivo, sin perfil, etc.).
 
 ---
 
-## Hecho en esta fase (resumen)
+## Hecho (resumen)
 
 | Área | Estado |
 |------|--------|
-| Auth operadores (código + login local) | ✅ |
-| RLS operadores (SELECT/UPDATE propio) | ✅ |
-| Repo solicitudes Supabase + facade | ✅ |
-| Create solicitud pública + RLS INSERT/SELECT | ✅ |
-| Seguimiento público por código | ✅ |
-| CI paths / exports | ✅ |
+| Auth operadores | ✅ |
+| Create + seguimiento público | ✅ |
+| Backoffice list/detalle/estados | ✅ |
+| Auditoría Supabase | ✅ |
+| Appwrite en flujo principal solicitudes/auth/audit | ❌ ya no |
 
 ---
 
 ## Siguiente paso recomendado
 
-**Backoffice operador:**
+1. **Cerrar ciclo público de hitos** — en `/seguimiento`, tras un cambio de estado, confirmar que aparecen hitos de auditoría (no solo sintéticos).
+2. **SecurityGate** — cambio de contraseña / `must_change_password` con Supabase Auth.
+3. **Quitar restos Appwrite** del bundle (imports muertos, `package.json` cuando no quede nada).
+4. **Didit** solo cuando haga falta KYC real (Edge Functions + secrets).
 
-1. Login → listado de solicitudes → detalle.
-2. Cambio de estado (`pendiente` → `sin_verificar`, etc.) + notas internas.
-3. Si UPDATE da 403, policy:
-   ```sql
-   CREATE POLICY "operador_update_solicitudes"
-   ON public.solicitudes FOR UPDATE TO authenticated
-   USING (EXISTS (SELECT 1 FROM operadores o WHERE o.user_id = auth.uid() AND o.activo IS TRUE))
-   WITH CHECK (EXISTS (SELECT 1 FROM operadores o WHERE o.user_id = auth.uid() AND o.activo IS TRUE));
-   ```
-4. Luego: auditoría en cambios de estado.
+Opcional de calidad: RPC `get_seguimiento(codigo)` y Realtime en el dashboard.
