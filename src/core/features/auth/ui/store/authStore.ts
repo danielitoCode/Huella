@@ -3,13 +3,15 @@
  * Propósito: estado reactivo que consumen Login, Header, App y SecurityGate.
  * Puente de compatibilidad: exporta sessionUser/sessionLoading con forma legible
  * por el código legacy mientras termina la migración completa.
+ *
+ * Rutas: store → ui → auth → features → core → src  ⇒  ../../../../../lib/...
  */
 
 import { writable, derived, get } from 'svelte/store';
-import { getSupabase } from '../../../../lib/supabase/client';
+import { getSupabase } from '../../../../../lib/supabase/client';
 import { createAuthModule, type AuthModule } from '../../di/auth.module';
 import type { OperadorAuth } from '../../domain/entities/OperadorAuth';
-import type { OperadorRol } from '../../../../lib/types';
+import type { OperadorRol } from '../../../../../lib/types';
 
 /** Forma legacy usada por App.svelte / Header (compatibilidad). */
 export type SessionUser = {
