@@ -2,7 +2,7 @@
  * BLOQUE: Repositorio concreto — solicitudes vía Supabase Client (PostgREST).
  * Propósito: sustituir Appwrite Databases; el front habla directo a PostgreSQL + RLS.
  *
- * Ruta: repositories → data → solicitudes → features → core → src ⇒ ../../../../../lib
+ * SELECT alineado al schema real (sin creado_por_ip u otras columnas no migradas).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -68,8 +68,9 @@ export class SolicitudRepoError extends Error {
   }
 }
 
+/** Columnas que deben existir en public.solicitudes del MVP. */
 const SELECT_FULL =
-  'id, codigo_seguimiento, nombre_familiar, email, telefono, nombre_persona, relacion, descripcion, estado, mensaje_publico, notas_internas, didit_session_id, didit_verification_url, verification_url, kyc_resultado, motivo_cierre, creado_por_ip, created_at, updated_at';
+  'id, codigo_seguimiento, nombre_familiar, email, telefono, nombre_persona, relacion, descripcion, estado, mensaje_publico, notas_internas, didit_session_id, didit_verification_url, verification_url, kyc_resultado, motivo_cierre, created_at, updated_at';
 
 const SELECT_PUBLIC =
   'codigo_seguimiento, estado, mensaje_publico, created_at, updated_at, didit_verification_url, verification_url';
@@ -167,7 +168,6 @@ export class SupabaseSolicitudRepository {
       verification_url: partial.verification_url ?? null,
       kyc_resultado: null,
       motivo_cierre: null,
-      creado_por_ip: null,
       created_at: partial.created_at,
       updated_at: partial.updated_at,
     };

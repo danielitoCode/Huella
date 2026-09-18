@@ -1,8 +1,5 @@
 /**
  * BLOQUE: Mapper DTO ↔ tipos de aplicación (Solicitud / SeguimientoPublico).
- * Propósito: centralizar snake_case ↔ camelCase y valores por defecto de estado.
- *
- * Ruta: mappers → data → solicitudes → features → core → src ⇒ ../../../../../lib
  */
 
 import type {
@@ -39,11 +36,11 @@ export function mapRowToSolicitud(row: SolicitudRowDto): Solicitud {
     relacion: row.relacion,
     descripcion: row.descripcion ?? '',
     estado: asEstado(row.estado),
-    mensajePublico: row.mensaje_publico,
-    notasInternas: row.notas_internas,
-    diditSessionId: row.didit_session_id,
+    mensajePublico: row.mensaje_publico ?? null,
+    notasInternas: row.notas_internas ?? null,
+    diditSessionId: row.didit_session_id ?? null,
     diditVerificationUrl: verification,
-    kycResultado: row.kyc_resultado,
+    kycResultado: row.kyc_resultado ?? null,
     fechaCreacion: row.created_at,
     fechaActualizacion: row.updated_at,
   };
@@ -57,7 +54,7 @@ export function mapRowToSeguimientoPublico(
   return {
     codigoSeguimiento: row.codigo_seguimiento,
     estado,
-    mensajePublico: row.mensaje_publico,
+    mensajePublico: row.mensaje_publico ?? null,
     fechaCreacion: row.created_at,
     fechaActualizacion: row.updated_at,
     kycCompletado: estado === 'verificado' || estado === 'cerrado',
@@ -66,7 +63,6 @@ export function mapRowToSeguimientoPublico(
   };
 }
 
-/** Columnas a escribir en insert/update (solo las definidas). */
 export function mapUpdateToRow(
   input: Record<string, unknown>,
 ): Record<string, unknown> {
