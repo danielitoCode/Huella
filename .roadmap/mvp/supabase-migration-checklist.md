@@ -55,20 +55,21 @@
 
 ### Solicitudes
 - [x] `publico_insert_solicitud` (INSERT, anon + authenticated, `WITH CHECK (true)`).
-- [x] `publico_select_solicitudes` (SELECT; necesario para `.select()` post-insert y tracking).
+- [x] `publico_select_solicitudes` (SELECT; post-insert y tracking).
 - [x] **Prueba local: crear solicitud desde formulario público OK.**
+- [x] **Prueba local: seguimiento por código OK.**
 - [ ] Policy UPDATE solo operadores activos.
-- [ ] Endurecer SELECT público (RPC por `codigo_seguimiento`, evitar listado total).
+- [ ] Endurecer SELECT público (RPC por `codigo_seguimiento`).
 - [ ] Validar list/update en backoffice con sesión operador.
 
 ### Auditoría
 - [ ] Policies + triggers o insert desde cliente autenticado.
 
-## 4. Solicitudes — cliente directo — **parcialmente validado**
+## 4. Solicitudes — cliente directo
 - [x] `SupabaseSolicitudRepository` (create, getById, getByCode, list, update, delete).
 - [x] Facade `getSolicitudRepository()` → Supabase.
 - [x] **Create desde UI pública validado (runtime).**
-- [ ] Seguimiento por código (UI pública) validado.
+- [x] **Seguimiento por código (UI pública) validado (runtime).**
 - [ ] Listado + detalle admin validados.
 - [ ] Cambio de estado (pendiente → sin_verificar → verificado → cerrado / cancelada).
 - [ ] Notas internas en update.
@@ -96,7 +97,7 @@
 
 ### Solicitudes
 - [x] Crear (público).
-- [ ] Tracking por código.
+- [x] Tracking por código.
 - [ ] Listar / detalle / update (operador).
 - [ ] Rechazo de estados inválidos.
 
@@ -118,24 +119,22 @@
 | RLS operadores (SELECT/UPDATE propio) | ✅ |
 | Repo solicitudes Supabase + facade | ✅ |
 | Create solicitud pública + RLS INSERT/SELECT | ✅ |
-| CI paths / exports rotos | ✅ corregidos |
+| Seguimiento público por código | ✅ |
+| CI paths / exports | ✅ |
 
 ---
 
 ## Siguiente paso recomendado
 
-**Cerrar el circuito de solicitudes en runtime (mismo día, alto impacto):**
+**Backoffice operador:**
 
-1. **Seguimiento público** — abrir `/seguimiento` con el código `HUE-…` recién creado; confirmar estado y mensaje.
-2. **Backoffice** — login operador → listado de solicitudes → abrir detalle.
-3. **Transición de estado** — p. ej. `pendiente` → `sin_verificar` (y opcionalmente notas internas); confirmar que el UPDATE no da 403.
-4. Si el UPDATE falla: añadir policy:
+1. Login → listado de solicitudes → detalle.
+2. Cambio de estado (`pendiente` → `sin_verificar`, etc.) + notas internas.
+3. Si UPDATE da 403, policy:
    ```sql
    CREATE POLICY "operador_update_solicitudes"
    ON public.solicitudes FOR UPDATE TO authenticated
    USING (EXISTS (SELECT 1 FROM operadores o WHERE o.user_id = auth.uid() AND o.activo IS TRUE))
    WITH CHECK (EXISTS (SELECT 1 FROM operadores o WHERE o.user_id = auth.uid() AND o.activo IS TRUE));
    ```
-5. Cuando 1–3 estén verdes → **auditoría** en cambios de estado (tabla + insert desde el detalle admin).
-
-Opcional en paralelo: RPC `get_seguimiento(codigo)` para no dejar SELECT abierto a todo el mundo.
+4. Luego: auditoría en cambios de estado.
