@@ -1,11 +1,10 @@
 /**
- * BLOQUE: Facade SolicitudRepository — migra a Supabase; mantiene API usada por las páginas.
- * Propósito: las pantallas siguen importando getSolicitudRepository() sin conocer el backend.
+ * BLOQUE: Facade SolicitudRepository — Supabase únicamente.
  */
 
 import { getSupabase } from '../../supabase/client';
 import { isSupabaseConfigured } from '../../supabase/config';
-import { ApiError } from '../../appwrite/types';
+import { ApiError } from '../../errors';
 import type { EstadoSolicitud, SeguimientoPublico, Solicitud } from '../../types';
 import {
   SupabaseSolicitudRepository,
@@ -32,11 +31,17 @@ export interface SolicitudRepository {
 
 function toApiError(err: unknown): never {
   if (err instanceof SolicitudRepoError) {
-    throw new ApiError(err.code === 'NOT_FOUND' ? 'NOT_FOUND' : 'APPWRITE', err.message, err.status);
+    const code =
+      err.code === 'NOT_FOUND'
+        ? 'NOT_FOUND'
+        : err.code === 'FORBIDDEN'
+          ? 'FORBIDDEN'
+          : 'SUPABASE';
+    throw new ApiError(code, err.message, err.status);
   }
   if (err instanceof ApiError) throw err;
   const msg = err instanceof Error ? err.message : String(err);
-  throw new ApiError('APPWRITE', msg);
+  throw new ApiError('SUPABASE', msg);
 }
 
 class SupabaseSolicitudRepositoryAdapter implements SolicitudRepository {
@@ -68,7 +73,7 @@ export function getSolicitudRepository(): SolicitudRepository {
   if (!repository) {
     if (!isSupabaseConfigured()) {
       throw new ApiError(
-        'APPWRITE',
+        'CONFIG',
         'Supabase no configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.',
       );
     }
@@ -83,5 +88,4 @@ export function __setSolicitudRepositoryForTests(next: SolicitudRepository | nul
   repository = next;
 }
 
-// re-export tipos de estado por si algún import los espera aquí
 export type { EstadoSolicitud };

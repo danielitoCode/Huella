@@ -7,7 +7,7 @@ export type EstadoSolicitud =
   | 'cerrado'
   | 'cancelada';
 
-/** Valores del enum kycResultado en Appwrite. */
+/** Valores del enum kyc_resultado en Supabase. */
 export type KycResultado = 'approved' | 'declined' | 'expired' | 'failed';
 
 export const KYC_RESULTADO_OPTIONS: { value: KycResultado; label: string }[] = [
@@ -47,7 +47,6 @@ export type Operador = {
   activo: boolean;
   pinNeedsReset: boolean;
   pinEstado: 'reseteado_0000' | 'configurado' | string;
-  /** Solo admin + PIN reseteado: valor de auditoría 0000 */
   pinVisibleAuditoria?: string;
   mustChangePassword: boolean;
   ultimoLoginAt?: string | null;
@@ -68,7 +67,6 @@ export type Solicitud = {
   descripcion: string;
   estado: EstadoSolicitud;
   mensajePublico?: string | null;
-  /** Notas internas del operador (no visibles en seguimiento público). */
   notasInternas?: string | null;
   diditSessionId?: string | null;
   diditVerificationUrl?: string | null;
@@ -96,7 +94,6 @@ export type CreateSolicitudResult = {
   id: string;
 };
 
-/** Etiquetas de UI — dominio: pendiente → atendido-sin verificar → verificado → cerrado | cancelada */
 export const ESTADO_LABEL: Record<EstadoSolicitud, string> = {
   pendiente: 'Pendiente',
   sin_verificar: 'Atendido · no verificado',
@@ -113,5 +110,4 @@ export const ESTADO_DESCRIPCION_OPERADOR: Record<EstadoSolicitud, string> = {
   cancelada: 'Solicitud anulada; no continúa el proceso.',
 };
 
-/** Versión de los términos (actualizar al revisar el texto legal). */
 export const TERMINOS_VERSION = '2026-09-09';

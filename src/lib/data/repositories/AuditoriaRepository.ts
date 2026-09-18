@@ -1,6 +1,5 @@
 /**
- * BLOQUE: Facade auditoría — Supabase (migración).
- * Mantiene los mismos tipos/API que usaban SolicitudDetalle y Seguimiento.
+ * BLOQUE: Facade auditoría — Supabase.
  */
 
 import { getSupabase } from '../../supabase/client';
@@ -17,9 +16,6 @@ import {
 
 export type { AccionAuditoria, ActorTipo, EventoAuditoria, HitoPublico, RegistrarAuditoriaInput };
 export { hitosSinteticos };
-
-/** Alias de compatibilidad con imports antiguos. */
-export class AppwriteAuditoriaRepository extends SupabaseAuditoriaRepository {}
 
 let repo: SupabaseAuditoriaRepository | null = null;
 
