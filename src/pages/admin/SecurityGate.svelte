@@ -1,14 +1,22 @@
+<!--
+  BLOQUE: SecurityGate — actualización obligatoria de contraseña (Supabase Auth)
+  y PIN de cancelación (tabla operadores).
+  Sustituye executeApi('operadores.changeOwnPassword' / setOwnCancelPin).
+-->
 <script lang="ts">
-  import { sessionUser, loadSession } from '../../lib/stores/session';
-  import { executeApi, ApiError } from '../../lib/appwrite';
+  import {
+    sessionUser,
+    completePasswordChange,
+    completePinReset,
+  } from '../../lib/stores/session';
 
-  let passwordActual = $state('12345678');
   let passwordNueva = $state('');
   let passwordConfirm = $state('');
   let pinActual = $state('0000');
   let pinNuevo = $state('');
   let pinConfirm = $state('');
   let errorMsg = $state('');
+  let okMsg = $state('');
   let busy = $state(false);
 
   const needPassword = $derived(Boolean($sessionUser?.mustChangePassword));
@@ -17,6 +25,7 @@
   async function submitPassword(e: Event) {
     e.preventDefault();
     errorMsg = '';
+    okMsg = '';
     if (passwordNueva.length < 8) {
       errorMsg = 'La nueva contraseña debe tener al menos 8 caracteres';
       return;
@@ -31,13 +40,12 @@
     }
     busy = true;
     try {
-      await executeApi('operadores.changeOwnPassword', {
-        passwordActual,
-        passwordNueva,
-      });
-      await loadSession();
+      await completePasswordChange(passwordNueva);
+      passwordNueva = '';
+      passwordConfirm = '';
+      okMsg = 'Contraseña actualizada. Continúa con el PIN si se solicita.';
     } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'No se pudo cambiar la contraseña';
+      errorMsg = err instanceof Error ? err.message : 'No se pudo cambiar la contraseña';
     } finally {
       busy = false;
     }
@@ -46,6 +54,7 @@
   async function submitPin(e: Event) {
     e.preventDefault();
     errorMsg = '';
+    okMsg = '';
     if (!/^\d{4}$/.test(pinNuevo) || pinNuevo === '0000') {
       errorMsg = 'El nuevo PIN debe ser 4 dígitos y distinto de 0000';
       return;
@@ -56,13 +65,12 @@
     }
     busy = true;
     try {
-      await executeApi('operadores.setOwnCancelPin', {
-        pinActual,
-        pin: pinNuevo,
-      });
-      await loadSession();
+      await completePinReset(pinActual, pinNuevo);
+      pinNuevo = '';
+      pinConfirm = '';
+      okMsg = 'PIN guardado. Ya puedes usar el panel.';
     } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'No se pudo guardar el PIN';
+      errorMsg = err instanceof Error ? err.message : 'No se pudo guardar el PIN';
     } finally {
       busy = false;
     }
@@ -81,22 +89,24 @@
     {#if errorMsg}
       <div class="error-banner" role="alert">{errorMsg}</div>
     {/if}
+    {#if okMsg}
+      <div class="ok-banner" role="status">{okMsg}</div>
+    {/if}
 
     {#if needPassword}
       <form class="block" onsubmit={submitPassword}>
         <h2>Nueva contraseña de acceso</h2>
-        <p class="hint">La temporal tras reset es <code>12345678</code>.</p>
-        <label>
-          Contraseña actual (temporal)
-          <input type="password" bind:value={passwordActual} disabled={busy} />
-        </label>
+        <p class="hint">
+          Tras un reseteo de administrador la temporal suele ser <code>12345678</code>.
+          Ya estás autenticado; solo define una contraseña nueva (Supabase Auth).
+        </p>
         <label>
           Nueva contraseña
-          <input type="password" bind:value={passwordNueva} minlength="8" disabled={busy} required />
+          <input type="password" bind:value={passwordNueva} minlength="8" disabled={busy} required autocomplete="new-password" />
         </label>
         <label>
           Confirmar
-          <input type="password" bind:value={passwordConfirm} minlength="8" disabled={busy} required />
+          <input type="password" bind:value={passwordConfirm} minlength="8" disabled={busy} required autocomplete="new-password" />
         </label>
         <button type="submit" class="btn btn-gold" disabled={busy}>Guardar contraseña</button>
       </form>
@@ -107,7 +117,7 @@
         <h2>PIN de cancelación personal</h2>
         <p class="hint">
           Tras un reseteo el PIN es <code>0000</code>. Elige uno personal de 4 dígitos (no puede ser
-          0000).
+          0000). Se guarda como hash en <code>operadores.cancel_pin_hash</code>.
         </p>
         <label>
           PIN actual (0000)
@@ -163,6 +173,14 @@
     background: rgba(217, 56, 58, 0.12);
     border: 1px solid rgba(217, 56, 58, 0.4);
     color: var(--color-alert, #b84c4c);
+    margin-top: 1rem;
+  }
+  .ok-banner {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    background: rgba(46, 160, 90, 0.12);
+    border: 1px solid rgba(46, 160, 90, 0.35);
+    color: #2ea05a;
     margin-top: 1rem;
   }
 </style>

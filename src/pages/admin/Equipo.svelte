@@ -1,12 +1,13 @@
+<!--
+  BLOQUE: Equipo — gestión de operadores con Supabase (sin worker / Appwrite JWT).
+-->
 <script lang="ts">
   import { irAAdmin } from '../../lib/stores/router';
-  import { sessionUser, sessionLoading, loadSession } from '../../lib/stores/session';
-  import { ApiError } from '../../lib/appwrite';
-  import { getHuellaRepository } from '../../lib/data/repositories';
+  import { sessionUser, sessionLoading, loadSession, completePinReset } from '../../lib/stores/session';
+  import { getSupabase } from '../../lib/supabase/client';
+  import { getOperadoresRepository } from '../../core/features/auth/data/repositories/SupabaseOperadoresRepository';
   import type { Operador, OperadorRol } from '../../lib/types';
   import LoadingHint from '../../components/ui/LoadingHint.svelte';
-
-  type ListResult = { operadores: Operador[]; total: number };
 
   let operadores = $state<Operador[]>([]);
   let me = $state<Operador | null>(null);
@@ -16,36 +17,33 @@
   let busy = $state(false);
   let loadToken = 0;
 
-  let nuevo = $state({ nombre: '', email: '', rol: 'operador' as OperadorRol });
   let pinActual = $state('');
   let pinNuevo = $state('');
 
-  /** Admin si el perfil API lo dice o la sesión (labels / me previo). */
-  const isAdmin = $derived(
-    me?.rol === 'admin' || $sessionUser?.rol === 'admin',
-  );
+  const isAdmin = $derived(me?.rol === 'admin' || $sessionUser?.rol === 'admin');
+
+  function repo() {
+    return getOperadoresRepository(getSupabase());
+  }
 
   async function cargar() {
     const token = ++loadToken;
     cargando = true;
     errorMsg = '';
     try {
-      // 1) Siempre perfil propio (fuente de verdad del rol)
-      const perfil = await getHuellaRepository().request<Operador>('operadores.me', {});
+      const perfil = await repo().me();
       if (token !== loadToken) return;
       me = perfil;
 
-      // 2) Listado completo solo admin
       if (perfil.rol === 'admin') {
         try {
-          const res = await getHuellaRepository().request<ListResult>('operadores.list', { limit: 100 });
+          const res = await repo().list(100);
           if (token !== loadToken) return;
           operadores = res.operadores ?? [];
         } catch (listErr) {
-          // Si list falla, al menos mostrar el propio perfil y el error
           operadores = [perfil];
           errorMsg =
-            listErr instanceof ApiError
+            listErr instanceof Error
               ? `Listado: ${listErr.message}`
               : 'No se pudo listar el equipo (se muestra solo tu perfil).';
         }
@@ -54,7 +52,7 @@
       }
     } catch (err) {
       if (token !== loadToken) return;
-      errorMsg = err instanceof ApiError ? err.message : 'No se pudo cargar el equipo.';
+      errorMsg = err instanceof Error ? err.message : 'No se pudo cargar el equipo.';
       operadores = [];
       me = null;
     } finally {
@@ -62,7 +60,6 @@
     }
   }
 
-  // Esperar a que la sesión deje de cargar y entonces pedir equipo
   $effect(() => {
     if ($sessionLoading) return;
     if (!$sessionUser) return;
@@ -74,39 +71,15 @@
     setTimeout(() => (okMsg = ''), 3200);
   }
 
-  async function crearUsuario(e: Event) {
-    e.preventDefault();
-    if (!isAdmin) return;
-    busy = true;
-    errorMsg = '';
-    try {
-      const res = await getHuellaRepository().request<Operador>('operadores.create', {
-        nombre: nuevo.nombre.trim(),
-        email: nuevo.email.trim(),
-        rol: nuevo.rol,
-      });
-      nuevo = { nombre: '', email: '', rol: 'operador' };
-      flash(
-        res.mensaje ||
-          'Usuario creado. Password temporal 12345678 · PIN 0000 (debe cambiarlos al entrar).',
-      );
-      await cargar();
-    } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'Error al crear usuario';
-    } finally {
-      busy = false;
-    }
-  }
-
   async function setRole(op: Operador, rol: OperadorRol) {
     busy = true;
     errorMsg = '';
     try {
-      await getHuellaRepository().request('operadores.setRole', { operadorId: op.id, rol });
+      await repo().setRole(op.id, rol);
       flash('Rol actualizado');
       await cargar();
     } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'Error al cambiar rol';
+      errorMsg = err instanceof Error ? err.message : 'Error al cambiar rol';
     } finally {
       busy = false;
     }
@@ -116,41 +89,26 @@
     busy = true;
     errorMsg = '';
     try {
-      await getHuellaRepository().request('operadores.setActive', { operadorId: op.id, activo: !op.activo });
+      await repo().setActive(op.id, !op.activo);
       flash(op.activo ? 'Usuario desactivado' : 'Usuario activado');
       await cargar();
     } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'Error al cambiar estado';
+      errorMsg = err instanceof Error ? err.message : 'Error al cambiar estado';
     } finally {
       busy = false;
     }
   }
 
   async function resetPin(op: Operador) {
-    if (!confirm(`¿Resetear PIN de ${op.nombre} a 0000? Deberá establecer uno nuevo.`)) return;
+    if (!confirm(`¿Resetear PIN de ${op.nombre}? Deberá establecer uno nuevo (SecurityGate).`)) return;
     busy = true;
     errorMsg = '';
     try {
-      const res = await getHuellaRepository().request<Operador>('operadores.resetCancelPin', { operadorId: op.id });
-      flash(res.mensaje || 'PIN reseteado a 0000');
+      await repo().resetCancelPin(op.id);
+      flash('PIN reseteado. El usuario deberá configurar uno nuevo.');
       await cargar();
     } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'Error al resetear PIN';
-    } finally {
-      busy = false;
-    }
-  }
-
-  async function resetPassword(op: Operador) {
-    if (!confirm(`¿Resetear contraseña de ${op.nombre} a 12345678?`)) return;
-    busy = true;
-    errorMsg = '';
-    try {
-      const res = await getHuellaRepository().request<Operador>('operadores.resetPassword', { operadorId: op.id });
-      flash(res.mensaje || 'Contraseña reseteada a 12345678');
-      await cargar();
-    } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'Error al resetear contraseña';
+      errorMsg = err instanceof Error ? err.message : 'Error al resetear PIN';
     } finally {
       busy = false;
     }
@@ -165,17 +123,17 @@
     busy = true;
     errorMsg = '';
     try {
-      await getHuellaRepository().request('operadores.setOwnCancelPin', {
-        pinActual: pinActual || (me?.pinNeedsReset || $sessionUser?.pinNeedsReset ? '0000' : ''),
-        pin: pinNuevo,
-      });
+      await completePinReset(
+        pinActual || (me?.pinNeedsReset || $sessionUser?.pinNeedsReset ? '0000' : ''),
+        pinNuevo,
+      );
       pinActual = '';
       pinNuevo = '';
       flash('PIN personal actualizado');
       await loadSession();
       await cargar();
     } catch (err) {
-      errorMsg = err instanceof ApiError ? err.message : 'Error al guardar PIN';
+      errorMsg = err instanceof Error ? err.message : 'Error al guardar PIN';
     } finally {
       busy = false;
     }
@@ -188,7 +146,8 @@
       <span class="eyebrow">Administración</span>
       <h1 class="serif-title">Equipo y seguridad</h1>
       <p class="sub">
-        Los administradores resetean (PIN → 0000, password → 12345678). Cada usuario establece los suyos.
+        Gestión directa en Supabase. Crear cuentas Auth y reset de password se hacen en el panel de
+        Supabase Auth (MVP); el PIN se resetea aquí.
       </p>
       {#if me}
         <p class="hint">Sesión: <strong>{me.nombre}</strong> · rol <code>{me.rol}</code></p>
@@ -206,7 +165,7 @@
     <h2>Mi PIN de cancelación</h2>
     <p class="hint">
       {#if me?.pinNeedsReset || $sessionUser?.pinNeedsReset}
-        Tu PIN está en <strong>0000</strong> (reseteado). Debes poner uno personal.
+        Tu PIN está reseteado. Debes poner uno personal.
       {:else}
         Estado: <strong>configurado</strong>. Puedes cambiarlo indicando el actual.
       {/if}
@@ -233,28 +192,19 @@
 
   {#if isAdmin}
     <div class="card block">
-      <h2>Crear cuenta</h2>
+      <h2>Crear cuenta (MVP)</h2>
       <p class="hint">
-        Se crea con password <code>12345678</code> y PIN <code>0000</code>; el usuario los cambia al entrar.
+        1) Supabase → Authentication → Add user (email + password temporal <code>12345678</code>).
+        2) Inserta fila en <code>operadores</code> con el mismo <code>user_id</code>, rol y
+        <code>must_change_password = true</code>, <code>cancel_pin_hash</code> vacío.
+        Más adelante: Edge Function con service_role.
       </p>
-      <form class="create-form" onsubmit={crearUsuario}>
-        <label>Nombre<input bind:value={nuevo.nombre} required disabled={busy} /></label>
-        <label>Email<input type="email" bind:value={nuevo.email} required disabled={busy} /></label>
-        <label>
-          Rol
-          <select bind:value={nuevo.rol} disabled={busy}>
-            <option value="operador">Operador</option>
-            <option value="admin">Administrador</option>
-          </select>
-        </label>
-        <button type="submit" class="btn btn-gold" disabled={busy}>Crear usuario</button>
-      </form>
     </div>
   {:else if !cargando && me}
     <div class="card block">
       <p class="hint">
-        Tu rol es <code>{me.rol}</code>. Solo un <strong>admin</strong> ve el listado completo y puede crear
-        cuentas / resetear credenciales.
+        Tu rol es <code>{me.rol}</code>. Solo un <strong>admin</strong> ve el listado completo y puede
+        resetear PIN / roles.
       </p>
     </div>
   {/if}
@@ -262,7 +212,7 @@
   <div class="card block">
     <h2>{isAdmin ? 'Miembros del equipo' : 'Tu perfil'}</h2>
     {#if cargando || $sessionLoading}
-      <LoadingHint message="Cargando equipo desde el servidor…" />
+      <LoadingHint message="Cargando equipo desde Supabase…" />
     {:else if operadores.length === 0}
       <p class="hint">No hay operadores para mostrar.</p>
       <button type="button" class="btn btn-secondary" onclick={() => cargar()}>Reintentar</button>
@@ -275,7 +225,7 @@
               <th>Email</th>
               <th>Rol</th>
               <th>Activo</th>
-              <th>PIN (auditoría)</th>
+              <th>PIN</th>
               {#if isAdmin}<th>Acciones</th>{/if}
             </tr>
           </thead>
@@ -302,8 +252,7 @@
                 <td>{op.activo ? 'Sí' : 'No'}</td>
                 <td>
                   {#if op.pinNeedsReset}
-                    <code title="Valor de fábrica tras reset">0000</code>
-                    <span class="muted"> (reseteado)</span>
+                    <code>reseteado</code>
                   {:else}
                     <span class="muted">configurado</span>
                   {/if}
@@ -314,10 +263,7 @@
                       {op.activo ? 'Desactivar' : 'Activar'}
                     </button>
                     <button type="button" class="btn btn-secondary btn-sm" disabled={busy} onclick={() => resetPin(op)}>
-                      Reset PIN → 0000
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" disabled={busy} onclick={() => resetPassword(op)}>
-                      Reset pass → 12345678
+                      Reset PIN
                     </button>
                   </td>
                 {/if}
@@ -358,7 +304,6 @@
     margin-bottom: 1.25rem;
     padding: 1.5rem;
   }
-  .create-form,
   .inline-form {
     display: flex;
     flex-wrap: wrap;
